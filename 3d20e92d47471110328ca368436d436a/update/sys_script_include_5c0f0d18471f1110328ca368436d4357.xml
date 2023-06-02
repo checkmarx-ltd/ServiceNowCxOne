@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_chec3_chexone.CheckmarxOneConfigUtil</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description>Wrapper class to assemble the components for CheckmarxConfigUtilBase</description>
+        <name>CheckmarxOneConfigUtil</name>
+        <script><![CDATA[var CheckmarxOneConfigUtil = Class.create();
+CheckmarxOneConfigUtil.prototype = Object.extendsObject(x_chec3_chexone.CheckmarxOneConfigUtilBase, {
+    type: 'CheckmarxOneConfigUtil'
+});]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2022-11-17 05:44:03</sys_created_on>
+        <sys_id>5c0f0d18471f1110328ca368436d4357</sys_id>
+        <sys_mod_count>4</sys_mod_count>
+        <sys_name>CheckmarxOneConfigUtil</sys_name>
+        <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
+        <sys_update_name>sys_script_include_5c0f0d18471f1110328ca368436d4357</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2023-02-28 04:09:40</sys_updated_on>
+    </sys_script_include>
+</record_update>

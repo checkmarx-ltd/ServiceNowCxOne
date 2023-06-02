@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="announcement">
+    <announcement action="INSERT_OR_UPDATE">
+        <active>false</active>
+        <click_target>urlNew</click_target>
+        <details/>
+        <details_link_text>[PA AppSec] Daily Data Collection</details_link_text>
+        <details_page/>
+        <details_url>/sysauto_pa.do?sys_id=a3e006e0b3301300e64be12b86a8dc67</details_url>
+        <dismiss_options>session_dismissible</dismiss_options>
+        <display_first>false</display_first>
+        <display_style display_value="La Jolla Urgent">7f8fe758c31023002ff2554d81d3ae99</display_style>
+        <from>2022-11-17 12:27:10</from>
+        <glyph>info-circle</glyph>
+        <glyph_alt_text/>
+        <name>Alert : Appsec Daily Data Collection</name>
+        <public>false</public>
+        <roles>admin</roles>
+        <show_for_unauthenticated_users_only>false</show_for_unauthenticated_users_only>
+        <summary>Please assign unlock Run As user or assign valid user.</summary>
+        <sys_class_name>announcement</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2022-11-17 12:27:10</sys_created_on>
+        <sys_id>1ccb66d447535110328ca368436d434b</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Alert : Appsec Daily Data Collection</sys_name>
+        <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
+        <sys_update_name>announcement_1ccb66d447535110328ca368436d434b</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2022-11-17 12:27:10</sys_updated_on>
+        <title>Invalid Run As User</title>
+        <to/>
+        <type>67eaf134e7a3320075c2a117c2f6a9d2,52fa79f8e763320075c2a117c2f6a991</type>
+    </announcement>
+    <sys_translated_text action="delete_multiple" query="documentkey=1ccb66d447535110328ca368436d434b"/>
+</record_update>

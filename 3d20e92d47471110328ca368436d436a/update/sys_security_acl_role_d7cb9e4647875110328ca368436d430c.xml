@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_security_acl_role">
+    <sys_security_acl_role action="INSERT_OR_UPDATE">
+        <sys_class_name>sys_security_acl_role</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2022-11-10 11:31:09</sys_created_on>
+        <sys_id>d7cb9e4647875110328ca368436d430c</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>x_chec3_chexone_checkmarxone_configuration.x_chec3_chexone.checkmarxone_configuration_user</sys_name>
+        <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
+        <sys_security_acl display_value="x_chec3_chexone_checkmarxone_configuration">1bcb9e4647875110328ca368436d4309</sys_security_acl>
+        <sys_update_name>sys_security_acl_role_d7cb9e4647875110328ca368436d430c</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2022-11-10 11:31:09</sys_updated_on>
+        <sys_user_role display_value="x_chec3_chexone.checkmarxone_configuration_user" name="x_chec3_chexone.checkmarxone_configuration_user">0bcb1aca47c35110328ca368436d43e3</sys_user_role>
+        <transaction_id/>
+    </sys_security_acl_role>
+</record_update>

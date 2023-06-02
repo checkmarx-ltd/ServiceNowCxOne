@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_schema_attribute">
+    <sys_schema_attribute action="INSERT_OR_UPDATE">
+        <applies_to>COLUMN</applies_to>
+        <applies_to_description/>
+        <column_on_table/>
+        <column_type/>
+        <description/>
+        <label>Edge Encryption Enabled</label>
+        <name>u_edge_encryption_enabled</name>
+        <on_table/>
+        <read_roles/>
+        <remove_roles/>
+        <sys_class_name>sys_schema_attribute</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2023-01-17 12:43:25</sys_created_on>
+        <sys_id>0868340847a46110328ca368436d4324</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Edge Encryption Enabled</sys_name>
+        <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
+        <sys_update_name>sys_schema_attribute_0868340847a46110328ca368436d4324</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2023-01-17 12:43:25</sys_updated_on>
+        <update_roles/>
+        <value_description/>
+        <value_type display_value="Password (2 Way Encrypted)">0327382ac611228101bb3e9aaa3b3f11</value_type>
+    </sys_schema_attribute>
+</record_update>

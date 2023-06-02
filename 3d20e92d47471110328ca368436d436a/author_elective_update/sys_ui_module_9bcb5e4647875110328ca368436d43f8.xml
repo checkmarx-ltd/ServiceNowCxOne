@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_ui_module">
+    <sys_ui_module action="DELETE">
+        <active>true</active>
+        <application/>
+        <filter/>
+        <name>CheckmarxOne Configurations</name>
+        <order/>
+        <path/>
+        <path_relative_to_root>false</path_relative_to_root>
+        <roles>x_chec3_chexone.checkmarxone_configuration_user</roles>
+        <sys_class_name>sys_ui_module</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2022-11-10 11:31:09</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_domain_path>/</sys_domain_path>
+        <sys_id>9bcb5e4647875110328ca368436d43f8</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>CheckmarxOne Configurations</sys_name>
+        <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
+        <sys_update_name>sys_ui_module_9bcb5e4647875110328ca368436d43f8</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2022-11-10 11:31:09</sys_updated_on>
+        <table>x_chec3_chexone_checkmarxone_configuration</table>
+        <uncancelable>false</uncancelable>
+        <view_name/>
+    </sys_ui_module>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</application>
+        <file_path/>
+        <instance_id>d0ae16b4dbe1ed909831ac44d4961975</instance_id>
+        <instance_name>ven05995</instance_name>
+        <name>sys_ui_module_9bcb5e4647875110328ca368436d43f8</name>
+        <payload><![CDATA[<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_ui_module"><sys_ui_module action="INSERT_OR_UPDATE"><active>true</active><application/><filter/><name>CheckmarxOne Configurations</name><order/><path/><path_relative_to_root>false</path_relative_to_root><roles>x_chec3_chexone.checkmarxone_configuration_user</roles><sys_class_name>sys_ui_module</sys_class_name><sys_created_by>admin</sys_created_by><sys_created_on>2022-11-10 11:31:09</sys_created_on><sys_domain>global</sys_domain><sys_domain_path>/</sys_domain_path><sys_id>9bcb5e4647875110328ca368436d43f8</sys_id><sys_mod_count>0</sys_mod_count><sys_name>CheckmarxOne Configurations</sys_name><sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package><sys_policy/><sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope><sys_update_name>sys_ui_module_9bcb5e4647875110328ca368436d43f8</sys_update_name><sys_updated_by>admin</sys_updated_by><sys_updated_on>2022-11-10 11:31:09</sys_updated_on><table>x_chec3_chexone_checkmarxone_configuration</table><uncancelable>false</uncancelable><view_name/></sys_ui_module></record_update>]]></payload>
+        <payload_hash>112352582</payload_hash>
+        <record_name>CheckmarxOne Configurations</record_name>
+        <reverted_from/>
+        <source>68ef7d429721a510026f72021153af93</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>apoorva.singh@checkmarx.com</sys_created_by>
+        <sys_created_on>2023-03-14 16:06:23</sys_created_on>
+        <sys_id>84fff1829721a510026f72021153af92</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>186e0df6a4b0000001</sys_recorded_at>
+        <sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
+        <sys_updated_on>2023-03-14 16:06:23</sys_updated_on>
+        <type>Module</type>
+        <update_guid>44fff182e021a510202624c0a6600892</update_guid>
+        <update_guid_history>eebeb1029521a510cf32c2b1e4602bd5:621420329,eebeb1029521a510cf32c2b1e4602bd5:621420329,aaa781c24e6d65100e8b695b645cf4e7:583659542,0edf533541ede110674c305fb7f5e165:1310511584</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete/>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>apoorva.singh@checkmarx.com</sys_created_by>
+        <sys_created_on>2023-03-20 10:21:15</sys_created_on>
+        <sys_db_object display_value="" name="sys_ui_module">sys_ui_module</sys_db_object>
+        <sys_id>1f5f95edb3914612932ca31f30e39fe4</sys_id>
+        <sys_metadata>9bcb5e4647875110328ca368436d43f8</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>CheckmarxOne Configurations</sys_name>
+        <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+        <sys_parent/>
+        <sys_policy/>
+        <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
+        <sys_scope_delete display_value="">1348287208a74f8284e0e99a8a2472c1</sys_scope_delete>
+        <sys_update_name>sys_ui_module_9bcb5e4647875110328ca368436d43f8</sys_update_name>
+        <sys_update_version display_value="sys_ui_module_9bcb5e4647875110328ca368436d43f8">84fff1829721a510026f72021153af92</sys_update_version>
+        <sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
+        <sys_updated_on>2023-03-20 10:21:15</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element db_object_id="44df5ff197ede110026f72021153afb6" label="Checkmarx One Configuration" max_length="40" name="x_chec3_chexone_checkmarxone_configuration" type="collection">
+        <element label="Access Token" max_length="1000" name="access_token" read_only="true" type="string"/>
+        <element default="https://eu.ast.checkmarx.net" label="API Base Url" mandatory="true" max_length="200" name="checkmarxone_api_base_url" type="string"/>
+        <element default="https://eu.iam.checkmarx.net" label="IAM Url" mandatory="true" max_length="200" name="checkmarxone_server_url" type="string"/>
+        <element label="Client ID" mandatory="true" max_length="200" name="client_id" type="string"/>
+        <element label="Client Secret" mandatory="true" max_length="255" name="client_secret" type="password2"/>
+        <element attributes="u_edge_encryption_enabled=true" display="true" label="CheckmarxOne Configuration" max_length="200" name="configuration" type="string"/>
+        <element default="1" label="Count of Scans" max_length="40" name="count_of_scans" type="string"/>
+        <element attributes="edge_encryption_enabled=true" label="Include SAST" mandatory="true" max_length="40" name="import_sast" type="boolean"/>
+        <element attributes="edge_encryption_enabled=true" label="Include SCA" mandatory="true" max_length="40" name="import_sca" type="boolean"/>
+        <element attributes="edge_encryption_enabled=true,encode_utf8=false" label="Integration Instance" max_length="32" name="integration_instance" reference="sn_sec_int_impl" reference_qual="integration=e5dffb5c47575110328ca368436d436b^EQ" reference_qual_condition="integration=e5dffb5c47575110328ca368436d436b^EQ" type="reference"/>
+        <element attributes="edge_encryption_enabled=true" default="50" label="limit" max_length="40" name="limit" type="integer"/>
+        <element label="MID Server" max_length="32" name="mid_server" reference="ecc_agent" reference_qual="name=MID_CxOne^EQ" reference_qual_condition="name=MID_CxOne^EQ" type="reference"/>
+        <element label="Single Tenant" max_length="40" name="single_tenant" type="boolean"/>
+        <element label="Tenant" mandatory="true" max_length="200" name="tenant" type="string"/>
+        <element attributes="edge_encryption_enabled=true" default="true" label="Triaging In ServiceNow" max_length="40" name="triaging_in_snow" type="boolean"/>
+        <index name="index">
+            <element name="integration_instance"/>
+        </index>
+        <index name="index2">
+            <element name="mid_server"/>
+        </index>
+    </element>
+</database>

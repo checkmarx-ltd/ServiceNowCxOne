@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_package_dependency_m2m">
+    <sys_package_dependency_m2m action="INSERT_OR_UPDATE">
+        <dependency display_value="Security Support Common" source="sn_sec_cmn">f38c97005301120034c69816a11c081d</dependency>
+        <min_version>13.5.2</min_version>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2022-11-08 18:23:29</sys_created_on>
+        <sys_id>77b6e16147c71110328ca368436d4315</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+        <sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
+        <sys_updated_on>2023-03-23 06:23:57</sys_updated_on>
+    </sys_package_dependency_m2m>
+</record_update>

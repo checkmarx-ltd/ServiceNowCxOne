@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sn_sec_int_impl">
+    <sn_sec_int_impl action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <description>Checkmarx One Application Vulnerability</description>
+        <integration display_value="Checkmarx One Application Security">e5dffb5c47575110328ca368436d436b</integration>
+        <is_default>false</is_default>
+        <name>Checkmarx One Application Vulnerability</name>
+        <sys_class_name>sn_sec_int_impl</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2022-11-17 18:37:21</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_id>ad7fff1c47575110328ca368436d437e</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>Checkmarx One Application Vulnerability</sys_name>
+        <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
+        <sys_update_name>sn_sec_int_impl_ad7fff1c47575110328ca368436d437e</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2023-03-02 05:55:19</sys_updated_on>
+        <validation_status>unvalidated</validation_status>
+    </sn_sec_int_impl>
+</record_update>

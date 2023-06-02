@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_metadata_link">
+    <sys_metadata_link action="INSERT_OR_UPDATE">
+        <directory>update</directory>
+        <documentkey>a8a28e069721a510026f72021153af2b</documentkey>
+        <payload><![CDATA[<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sn_vul_int_data_src">
+    <sn_vul_int_data_src action="INSERT_OR_UPDATE">
+        <ds_group_number>0</ds_group_number>
+        <last_used>2023-05-25 10:00:04</last_used>
+        <sn_vul_integration display_value="Checkmarx One Application List Integration">820d02a047131110328ca368436d43d0</sn_vul_integration>
+        <sys_created_by>apoorva.singh@checkmarx.com</sys_created_by>
+        <sys_created_on>2023-03-14 16:18:09</sys_created_on>
+        <sys_data_source display_value="CheckmarxOne Application List2">2a8652a847131110328ca368436d4388</sys_data_source>
+        <sys_domain>global</sys_domain>
+        <sys_id>a8a28e069721a510026f72021153af2b</sys_id>
+        <sys_mod_count>3</sys_mod_count>
+        <sys_updated_by>VR.System</sys_updated_by>
+        <sys_updated_on>2023-05-25 10:00:04</sys_updated_on>
+    </sn_vul_int_data_src>
+</record_update>
+]]></payload>
+        <sys_class_name>sys_metadata_link</sys_class_name>
+        <sys_created_by>apoorva.singh@checkmarx.com</sys_created_by>
+        <sys_created_on>2023-06-01 13:03:45</sys_created_on>
+        <sys_id>13bb48a7870fed10a1fc52883cbb3569</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>CheckmarxOne Application List2</sys_name>
+        <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
+        <sys_update_name>sys_metadata_link_13bb48a7870fed10a1fc52883cbb3569</sys_update_name>
+        <sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
+        <sys_updated_on>2023-06-01 13:03:45</sys_updated_on>
+        <tablename>sn_vul_int_data_src</tablename>
+    </sys_metadata_link>
+</record_update>

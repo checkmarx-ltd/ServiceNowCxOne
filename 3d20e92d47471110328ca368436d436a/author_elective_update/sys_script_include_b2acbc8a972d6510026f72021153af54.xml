@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="DELETE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_chec3_chexone.CheckmarxOneAppListProcessor</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description>Converts the appinfo xml data into a json object that can be consumed by the VR Application Vulnerability API.</description>
+        <name>CheckmarxOneAppListProcessor</name>
+        <script><![CDATA[var CheckmarxOneAppListProcessor = Class.create();
+CheckmarxOneAppListProcessor.prototype = Object.extendsObject(sn_vul.ApplicationVulnerabilityImportProcessorBase, {
+    /*
+     * Converts an xml string of application information objects into javascript objects
+     *    passed individually to the VR AppVul API
+     */
+    MSG: 'CheckmarxOne AppListProcessor:',
+    process: function(attachment) {
+        if (!attachment) {
+            gs.warn(gs.getMessage('CheckmarxOneAppListProcessor: Called with no attachment'));
+            return;
+        }
+        try {
+            //Parsing the Project List attachment
+            var appDoc = new XMLDocument2();
+            appDoc.parseXML(new GlideSysAttachment().getContent(attachment));
+            var listNode = appDoc.getNode("/appInfoList/xml/projects");
+            var iter = listNode.getChildNodeIterator();
+            if (iter.hasNext())
+                iter.next();
+            while (iter.hasNext()) {
+                var appNode = iter.next();
+                var attributes = appNode.getAttributes();
+                //map attributes from Checkmarx into the servicenow expected format'
+                var appObj = {
+                    source_app_id: attributes.id,
+                    app_name: attributes.name,
+                    source_assigned_teams: attributes.groups,
+                    description: attributes.description,
+                };
+                gs.info("id of app" + attributes.id);
+                //Updating the project information in ServiceNow table
+                var result = this.AVR_API.createOrUpdateApp(appObj);
+                if (result != null) {
+                    if (result.inserted)
+                        this.import_counts.inserted++;
+                    else if (result.updated)
+                        this.import_counts.updated++;
+                    else if (result.unchanged)
+                        this.import_counts.unchanged++;
+                }
+                if (iter.hasNext())
+                    iter.next();
+            }
+        } catch (ex) {
+            errorMessage = gs.getMessage("Error in retriving data for app list integration!");
+            gs.error(this.MSG + "errorMessage " + ex);
+            throw ex;
+        }
+
+        this.completeProcess(this.integrationProcessGr, this.import_counts);
+    },
+
+
+    type: 'CheckmarxOneAppListProcessor'
+});]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>apoorva.singh@checkmarx.com</sys_created_by>
+        <sys_created_on>2023-03-14 11:13:34</sys_created_on>
+        <sys_id>b2acbc8a972d6510026f72021153af54</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>CheckmarxOneAppListProcessor</sys_name>
+        <sys_package display_value="Checkmarx One " source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Checkmarx One ">3d20e92d47471110328ca368436d436a</sys_scope>
+        <sys_update_name>sys_script_include_b2acbc8a972d6510026f72021153af54</sys_update_name>
+        <sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
+        <sys_updated_on>2023-03-14 11:13:34</sys_updated_on>
+    </sys_script_include>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</application>
+        <file_path/>
+        <instance_id>d0ae16b4dbe1ed909831ac44d4961975</instance_id>
+        <instance_name>ven05995</instance_name>
+        <name>sys_script_include_b2acbc8a972d6510026f72021153af54</name>
+        <payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="sys_script_include"&gt;&lt;sys_script_include action="INSERT_OR_UPDATE"&gt;&lt;access&gt;public&lt;/access&gt;&lt;active&gt;true&lt;/active&gt;&lt;api_name&gt;x_chec3_chexone.CheckmarxOneAppListProcessor&lt;/api_name&gt;&lt;caller_access/&gt;&lt;client_callable&gt;false&lt;/client_callable&gt;&lt;description&gt;Converts the appinfo xml data into a json object that can be consumed by the VR Application Vulnerability API.&lt;/description&gt;&lt;name&gt;CheckmarxOneAppListProcessor&lt;/name&gt;&lt;script&gt;&lt;![CDATA[var CheckmarxOneAppListProcessor = Class.create();
+CheckmarxOneAppListProcessor.prototype = Object.extendsObject(sn_vul.ApplicationVulnerabilityImportProcessorBase, {
+    /*
+     * Converts an xml string of application information objects into javascript objects
+     *    passed individually to the VR AppVul API
+     */
+    MSG: 'CheckmarxOne AppListProcessor:',
+    process: function(attachment) {
+        if (!attachment) {
+            gs.warn(gs.getMessage('CheckmarxOneAppListProcessor: Called with no attachment'));
+            return;
+        }
+        try {
+            //Parsing the Project List attachment
+            var appDoc = new XMLDocument2();
+            appDoc.parseXML(new GlideSysAttachment().getContent(attachment));
+            var listNode = appDoc.getNode("/appInfoList/xml/projects");
+            var iter = listNode.getChildNodeIterator();
+            if (iter.hasNext())
+                iter.next();
+            while (iter.hasNext()) {
+                var appNode = iter.next();
+                var attributes = appNode.getAttributes();
+                //map attributes from Checkmarx into the servicenow expected format'
+                var appObj = {
+                    source_app_id: attributes.id,
+                    app_name: attributes.name,
+                    source_assigned_teams: attributes.groups,
+                    description: attributes.description,
+                };
+                gs.info("id of app" + attributes.id);
+                //Updating the project information in ServiceNow table
+                var result = this.AVR_API.createOrUpdateApp(appObj);
+                if (result != null) {
+                    if (result.inserted)
+                        this.import_counts.inserted++;
+                    else if (result.updated)
+                        this.import_counts.updated++;
+                    else if (result.unchanged)
+                        this.import_counts.unchanged++;
+                }
+                if (iter.hasNext())
+                    iter.next();
+            }
+        } catch (ex) {
+            errorMessage = gs.getMessage("Error in retriving data for app list integration!");
+            gs.error(this.MSG + "errorMessage " + ex);
+            throw ex;
+        }
+
+        this.completeProcess(this.integrationProcessGr, this.import_counts);
+    },
+
+
+    type: 'CheckmarxOneAppListProcessor'
+});]]&gt;&lt;/script&gt;&lt;sys_class_name&gt;sys_script_include&lt;/sys_class_name&gt;&lt;sys_created_by&gt;apoorva.singh@checkmarx.com&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2023-03-14 11:13:34&lt;/sys_created_on&gt;&lt;sys_id&gt;b2acbc8a972d6510026f72021153af54&lt;/sys_id&gt;&lt;sys_mod_count&gt;0&lt;/sys_mod_count&gt;&lt;sys_name&gt;CheckmarxOneAppListProcessor&lt;/sys_name&gt;&lt;sys_package display_value="Checkmarx One " source="x_chec3_chexone"&gt;3d20e92d47471110328ca368436d436a&lt;/sys_package&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="Checkmarx One "&gt;3d20e92d47471110328ca368436d436a&lt;/sys_scope&gt;&lt;sys_update_name&gt;sys_script_include_b2acbc8a972d6510026f72021153af54&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;apoorva.singh@checkmarx.com&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2023-03-14 11:13:34&lt;/sys_updated_on&gt;&lt;/sys_script_include&gt;&lt;/record_update&gt;</payload>
+        <payload_hash>-1446472177</payload_hash>
+        <record_name>CheckmarxOneAppListProcessor</record_name>
+        <reverted_from/>
+        <source>608b33f997212510026f72021153af19</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>apoorva.singh@checkmarx.com</sys_created_by>
+        <sys_created_on>2023-03-14 11:13:34</sys_created_on>
+        <sys_id>feecbc8a972d6510026f72021153af65</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>186dfd354940000001</sys_recorded_at>
+        <sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
+        <sys_updated_on>2023-03-14 11:13:34</sys_updated_on>
+        <type>Script Include</type>
+        <update_guid>3aecbc8a342d651003b2756de8dcbb65</update_guid>
+        <update_guid_history>3aecbc8a342d651003b2756de8dcbb65:-1446472177</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete/>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>apoorva.singh@checkmarx.com</sys_created_by>
+        <sys_created_on>2023-03-14 11:48:12</sys_created_on>
+        <sys_db_object display_value="" name="sys_script_include">sys_script_include</sys_db_object>
+        <sys_id>be8ff48ae8214a2c8373ab52c15ee690</sys_id>
+        <sys_metadata>b2acbc8a972d6510026f72021153af54</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>CheckmarxOneAppListProcessor</sys_name>
+        <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+        <sys_parent/>
+        <sys_policy/>
+        <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
+        <sys_scope_delete/>
+        <sys_update_name>sys_script_include_b2acbc8a972d6510026f72021153af54</sys_update_name>
+        <sys_update_version display_value="sys_script_include_b2acbc8a972d6510026f72021153af54">feecbc8a972d6510026f72021153af65</sys_update_version>
+        <sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
+        <sys_updated_on>2023-03-14 11:48:12</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element db_object_id="5cdf9ff197ede110026f72021153af15" extends="sys_import_set_row" label="CheckmarxOne  AppVul Item Import" max_length="40" name="x_chec3_chexone_checkmarxone_appvul_item_import" type="collection">
+        <element attributes="edge_encryption_enabled=true,import_attribute_name=&lt;CheckmarxOneAppVulItemIntegration/&gt;" label="&lt;CheckmarxOneAppVulItemIntegration/&gt;" max_length="40" name="u__checkmarxon_mintegration__" type="string"/>
+    </element>
+</database>

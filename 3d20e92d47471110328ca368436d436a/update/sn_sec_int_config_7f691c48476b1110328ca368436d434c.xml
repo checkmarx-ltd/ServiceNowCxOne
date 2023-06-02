@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sn_sec_int_config">
+    <sn_sec_int_config action="INSERT_OR_UPDATE">
+        <default_value/>
+        <display_name>CheckmarxOne Application Security - CheckmarxOne API Base Url</display_name>
+        <elem_type>string</elem_type>
+        <help_text>Insert the CheckmarxOne API Base Url here</help_text>
+        <integration display_value="Checkmarx One Application Security">e5dffb5c47575110328ca368436d436b</integration>
+        <label>CheckmarxOne API Base Url</label>
+        <mandatory>true</mandatory>
+        <name>checkmarxone_api_base_url</name>
+        <order>100</order>
+        <password_value/>
+        <sys_class_name>sn_sec_int_config</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2022-11-28 17:31:40</sys_created_on>
+        <sys_id>7f691c48476b1110328ca368436d434c</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>checkmarxone_api_base_url</sys_name>
+        <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
+        <sys_update_name>sn_sec_int_config_7f691c48476b1110328ca368436d434c</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2023-01-03 14:22:36</sys_updated_on>
+    </sn_sec_int_config>
+</record_update>

@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="DELETE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_chec3_chexone.CheckmarxOneScanSummaryProcessor</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description>This script process the payload from CheckmarxOne app summary endpoint.</description>
+        <name>CheckmarxOneScanSummaryProcessor</name>
+        <script><![CDATA[var CheckmarxOneScanSummaryProcessor = Class.create();
+CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.ApplicationVulnerabilityImportProcessorBase, {
+    MSG: 'CheckmarxOne Scan Summary Processor: ',
+    process: function(attachment) {
+        if (attachment) {
+            try {
+                var doc = new XMLDocument2();
+                doc.parseXML(new GlideSysAttachment().getContent(attachment));
+                var Node = doc.getNode('/scanData');
+                if (Node.toString().includes("sastScanData")) {
+                    var sastnodes = doc.getNode('/scanData/sastScanData/scans');
+                    var iteration = sastnodes.getChildNodeIterator();
+                    var sastdata = {};
+                    while (iteration.hasNext()) {
+                        var SastappNode = iteration.next();
+                        var Sastattributes = SastappNode.getAttributes();
+                        //map attributes from CheckmarxOne into the servicenow scan summary table
+                        sastdata['source_app_id'] = Sastattributes.app_id;
+                        sastdata['source_scan_id'] = 'sast' + Sastattributes.id;
+                        sastdata['detected_flaw_count'] = +Sastattributes.total_no_flaws;
+                        sastdata['last_scan_date'] = new GlideDateTime(Sastattributes.last_scan_date);
+                        sastdata['scan_summary_name'] = Sastattributes.app_name + ' ' + sastdata['last_scan_date'];
+                        this._upsert(sastdata);
+                    }
+                }
+                if (Node.toString().includes("scaScanData")) {
+                    var scanodes = doc.getNode('/scanData/scaScanData/scans');
+                    var data = {};
+                    var iter = scanodes.getChildNodeIterator();
+                    while (iter.hasNext()) {
+                        var appNode = iter.next();
+                        var attributes = appNode.getAttributes();
+                        //map attributes from Checkmarx into the servicenow scan summary table
+                        data['source_app_id'] = attributes.app_id;
+                        data['source_scan_id'] = 'sca' + attributes.id;
+                        data['detected_flaw_count'] = +attributes.total_no_flaws;
+                        data['last_scan_date'] = new GlideDateTime(attributes.last_scan_date);
+                        data['scan_summary_name'] = attributes.app_name + ' ' + data['last_scan_date'];
+                        this._upsert(data);
+                    }
+                }
+                this.completeProcess(this.integrationProcessGr, this.import_counts);
+            } catch (ex) {
+                errorMessage = gs.getMessage("Error in retriving data for scan list integration!");
+                gs.error(this.MSG + "errorMessage " + ex);
+                throw ex;
+            }
+
+        } else
+            gs.warn(this.MSG + ':process called with no attachment');
+    },
+
+    _parseStatic: function(node, data) {
+        try {
+            this._handleScanType(node, data, 'last_static_scan_date');
+        } catch (err) {
+            gs.error(this.MSG + " _parseStatic : Error while parsing the date and rating field.");
+            throw err;
+        }
+    },
+
+    _handleScanType: function(node, data, dateField) {
+        try {
+            data[dateField] = new GlideDateTime(node.getAttribute('last_scan_date'));
+            if (gs.nil(data['last_scan_date']) >= data['last_scan_date']) {
+                data['last_scan_date'] = data[dateField];
+            }
+        } catch (err) {
+            gs.error(this.MSG + " _handleScanType : Error while handling scan type.");
+            throw err;
+        }
+    },
+
+    _upsert: function(data) {
+        try {
+            var result = this.AVR_API.createOrUpdateSummary(data);
+            if (!result)
+                return;
+            if (result.updated)
+                this.import_counts.updated++;
+            else if (result.inserted)
+                this.import_counts.inserted++;
+            else if (result.unchanged)
+                this.import_counts.unchanged++;
+        } catch (err) {
+            gs.error(this.MSG + " _upsert : Error while inserting data into ServiceNow DB.");
+            throw err;
+        }
+    },
+
+
+    type: 'CheckmarxOneScanSummaryProcessor'
+});]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>apoorva.singh@checkmarx.com</sys_created_by>
+        <sys_created_on>2023-03-14 11:20:58</sys_created_on>
+        <sys_id>921e70ca972d6510026f72021153afc4</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>CheckmarxOneScanSummaryProcessor</sys_name>
+        <sys_package display_value="Checkmarx One " source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_scope display_value="Checkmarx One ">3d20e92d47471110328ca368436d436a</sys_scope>
+        <sys_update_name>sys_script_include_921e70ca972d6510026f72021153afc4</sys_update_name>
+        <sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
+        <sys_updated_on>2023-03-14 11:20:58</sys_updated_on>
+    </sys_script_include>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</application>
+        <file_path/>
+        <instance_id>d0ae16b4dbe1ed909831ac44d4961975</instance_id>
+        <instance_name>ven05995</instance_name>
+        <name>sys_script_include_921e70ca972d6510026f72021153afc4</name>
+        <payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="sys_script_include"&gt;&lt;sys_script_include action="INSERT_OR_UPDATE"&gt;&lt;access&gt;public&lt;/access&gt;&lt;active&gt;true&lt;/active&gt;&lt;api_name&gt;x_chec3_chexone.CheckmarxOneScanSummaryProcessor&lt;/api_name&gt;&lt;caller_access/&gt;&lt;client_callable&gt;false&lt;/client_callable&gt;&lt;description&gt;This script process the payload from CheckmarxOne app summary endpoint.&lt;/description&gt;&lt;name&gt;CheckmarxOneScanSummaryProcessor&lt;/name&gt;&lt;script&gt;&lt;![CDATA[var CheckmarxOneScanSummaryProcessor = Class.create();
+CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.ApplicationVulnerabilityImportProcessorBase, {
+    MSG: 'CheckmarxOne Scan Summary Processor: ',
+    process: function(attachment) {
+        if (attachment) {
+            try {
+                var doc = new XMLDocument2();
+                doc.parseXML(new GlideSysAttachment().getContent(attachment));
+                var Node = doc.getNode('/scanData');
+                if (Node.toString().includes("sastScanData")) {
+                    var sastnodes = doc.getNode('/scanData/sastScanData/scans');
+                    var iteration = sastnodes.getChildNodeIterator();
+                    var sastdata = {};
+                    while (iteration.hasNext()) {
+                        var SastappNode = iteration.next();
+                        var Sastattributes = SastappNode.getAttributes();
+                        //map attributes from CheckmarxOne into the servicenow scan summary table
+                        sastdata['source_app_id'] = Sastattributes.app_id;
+                        sastdata['source_scan_id'] = 'sast' + Sastattributes.id;
+                        sastdata['detected_flaw_count'] = +Sastattributes.total_no_flaws;
+                        sastdata['last_scan_date'] = new GlideDateTime(Sastattributes.last_scan_date);
+                        sastdata['scan_summary_name'] = Sastattributes.app_name + ' ' + sastdata['last_scan_date'];
+                        this._upsert(sastdata);
+                    }
+                }
+                if (Node.toString().includes("scaScanData")) {
+                    var scanodes = doc.getNode('/scanData/scaScanData/scans');
+                    var data = {};
+                    var iter = scanodes.getChildNodeIterator();
+                    while (iter.hasNext()) {
+                        var appNode = iter.next();
+                        var attributes = appNode.getAttributes();
+                        //map attributes from Checkmarx into the servicenow scan summary table
+                        data['source_app_id'] = attributes.app_id;
+                        data['source_scan_id'] = 'sca' + attributes.id;
+                        data['detected_flaw_count'] = +attributes.total_no_flaws;
+                        data['last_scan_date'] = new GlideDateTime(attributes.last_scan_date);
+                        data['scan_summary_name'] = attributes.app_name + ' ' + data['last_scan_date'];
+                        this._upsert(data);
+                    }
+                }
+                this.completeProcess(this.integrationProcessGr, this.import_counts);
+            } catch (ex) {
+                errorMessage = gs.getMessage("Error in retriving data for scan list integration!");
+                gs.error(this.MSG + "errorMessage " + ex);
+                throw ex;
+            }
+
+        } else
+            gs.warn(this.MSG + ':process called with no attachment');
+    },
+
+    _parseStatic: function(node, data) {
+        try {
+            this._handleScanType(node, data, 'last_static_scan_date');
+        } catch (err) {
+            gs.error(this.MSG + " _parseStatic : Error while parsing the date and rating field.");
+            throw err;
+        }
+    },
+
+    _handleScanType: function(node, data, dateField) {
+        try {
+            data[dateField] = new GlideDateTime(node.getAttribute('last_scan_date'));
+            if (gs.nil(data['last_scan_date']) &gt;= data['last_scan_date']) {
+                data['last_scan_date'] = data[dateField];
+            }
+        } catch (err) {
+            gs.error(this.MSG + " _handleScanType : Error while handling scan type.");
+            throw err;
+        }
+    },
+
+    _upsert: function(data) {
+        try {
+            var result = this.AVR_API.createOrUpdateSummary(data);
+            if (!result)
+                return;
+            if (result.updated)
+                this.import_counts.updated++;
+            else if (result.inserted)
+                this.import_counts.inserted++;
+            else if (result.unchanged)
+                this.import_counts.unchanged++;
+        } catch (err) {
+            gs.error(this.MSG + " _upsert : Error while inserting data into ServiceNow DB.");
+            throw err;
+        }
+    },
+
+
+    type: 'CheckmarxOneScanSummaryProcessor'
+});]]&gt;&lt;/script&gt;&lt;sys_class_name&gt;sys_script_include&lt;/sys_class_name&gt;&lt;sys_created_by&gt;apoorva.singh@checkmarx.com&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2023-03-14 11:20:58&lt;/sys_created_on&gt;&lt;sys_id&gt;921e70ca972d6510026f72021153afc4&lt;/sys_id&gt;&lt;sys_mod_count&gt;0&lt;/sys_mod_count&gt;&lt;sys_name&gt;CheckmarxOneScanSummaryProcessor&lt;/sys_name&gt;&lt;sys_package display_value="Checkmarx One " source="x_chec3_chexone"&gt;3d20e92d47471110328ca368436d436a&lt;/sys_package&gt;&lt;sys_policy&gt;read&lt;/sys_policy&gt;&lt;sys_scope display_value="Checkmarx One "&gt;3d20e92d47471110328ca368436d436a&lt;/sys_scope&gt;&lt;sys_update_name&gt;sys_script_include_921e70ca972d6510026f72021153afc4&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;apoorva.singh@checkmarx.com&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2023-03-14 11:20:58&lt;/sys_updated_on&gt;&lt;/sys_script_include&gt;&lt;/record_update&gt;</payload>
+        <payload_hash>-1930433835</payload_hash>
+        <record_name>CheckmarxOneScanSummaryProcessor</record_name>
+        <reverted_from/>
+        <source>608b33f997212510026f72021153af19</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>apoorva.singh@checkmarx.com</sys_created_by>
+        <sys_created_on>2023-03-14 11:20:58</sys_created_on>
+        <sys_id>1f9efcca972d6510026f72021153afb3</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>186dfda1c010000001</sys_recorded_at>
+        <sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
+        <sys_updated_on>2023-03-14 11:20:58</sys_updated_on>
+        <type>Script Include</type>
+        <update_guid>579efccab12d651025c4df599288eab3</update_guid>
+        <update_guid_history>579efccab12d651025c4df599288eab3:-1930433835</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete/>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>apoorva.singh@checkmarx.com</sys_created_by>
+        <sys_created_on>2023-03-14 11:48:11</sys_created_on>
+        <sys_db_object display_value="" name="sys_script_include">sys_script_include</sys_db_object>
+        <sys_id>4da2fa341b23477cb740a7a4c4324a69</sys_id>
+        <sys_metadata>921e70ca972d6510026f72021153afc4</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>CheckmarxOneScanSummaryProcessor</sys_name>
+        <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+        <sys_parent/>
+        <sys_policy>read</sys_policy>
+        <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
+        <sys_scope_delete/>
+        <sys_update_name>sys_script_include_921e70ca972d6510026f72021153afc4</sys_update_name>
+        <sys_update_version display_value="sys_script_include_921e70ca972d6510026f72021153afc4">1f9efcca972d6510026f72021153afb3</sys_update_version>
+        <sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
+        <sys_updated_on>2023-03-14 11:48:11</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>

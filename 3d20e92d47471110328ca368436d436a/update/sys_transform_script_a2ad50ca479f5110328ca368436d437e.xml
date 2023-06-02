@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_transform_script">
+    <sys_transform_script action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <map display_value="CheckMarxOne Application List">025d5c8a479f5110328ca368436d4351</map>
+        <order>100</order>
+        <script><![CDATA[(function runTransformScript(source, map, log, target) {
+
+	new sn_vul.VulnerabilityIntegrationHelper().processDataSource(import_set.getValue('data_source'));
+
+})(source, map, log, target);]]></script>
+        <sys_class_name>sys_transform_script</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2022-11-22 12:36:16</sys_created_on>
+        <sys_id>a2ad50ca479f5110328ca368436d437e</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>onComplete</sys_name>
+        <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
+        <sys_update_name>sys_transform_script_a2ad50ca479f5110328ca368436d437e</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2022-11-22 12:36:16</sys_updated_on>
+        <when>onComplete</when>
+    </sys_transform_script>
+</record_update>

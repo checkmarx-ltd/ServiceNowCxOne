@@ -1,0 +1,357 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="DELETE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_chec3_chexone.CheckmarxOneAppVulItemProcessor</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description>This scripts processes the detailed xml report from Checkmarx One and persists the data in Application Vulnerable Item and entry table.</description>
+        <name>CheckmarxOneAppVulItemProcessor</name>
+        <script><![CDATA[var CheckmarxOneAppVulItemProcessor = Class.create();
+CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.ApplicationVulnerabilityImportProcessorBase, {
+
+    MSG: 'CheckmarxOne Application Vulnerable Item Processor: ',
+    NOT_AVAILABLE: 'Not Available',
+
+    import_static_flaws: null,
+
+    process: function(attachment) {
+
+        if (attachment) {
+            try {
+                var doc = new XMLDocument2();
+                doc.parseXML(new GlideSysAttachment().getContent(attachment));
+                var listNode = doc.getNode('/detailedreport/xml/results');
+                var reportData = {};
+                if (listNode) {
+                    var iter = listNode.getChildNodeIterator();
+                    if (iter.hasNext())
+                        iter.next();
+                    while (iter.hasNext()) {
+                        var node = iter.next();
+                        reportData['source_app_id'] = node.getAttribute('app_id');
+                        reportData['app_name'] = node.getAttribute('app_name');
+                        reportData['source_scan_id'] = node.getAttribute('scan_id');
+                        reportData['last_scan_date'] = new GlideDateTime(node.getAttribute('last_scan_date'));
+                        reportData['scan_summary_name'] = reportData['app_name'] + ' ' + reportData['last_scan_date'];
+                        reportData['scan_type'] = node.getAttribute('scan_type');
+                        var queryData = {};
+                        var resultObj = {};
+                        var source_severity_string = node.getAttribute('source_severity');
+                        if (source_severity_string == 'HIGH') {
+                            var source_severity = 1;
+                        } else if (source_severity_string == 'MEDIUM') {
+                            source_severity = 2;
+                        } else if (source_severity_string == 'LOW') {
+                            source_severity = 3;
+                        }
+                        queryData['category_name'] = node.getAttribute('category_name');
+                        var query_id = 'Checkmarx One' + "-" + node.getAttribute('id');
+                        queryData['scan_type'] = node.getAttribute('scan_type');
+                        queryData['source_severity'] = source_severity;
+                        queryData['threat'] = '';
+                        queryData['cweId'] = node.getAttribute('cweId');
+                        queryData['cvss_base_score'] = node.getAttribute('cvssScore');
+                        queryData['cvss_vector'] = node.getAttribute('cvssVector');
+                        queryData['last_detection_date'] = reportData.last_scan_date.getDate();
+                        queryData['first_detection_date'] = new GlideDateTime(node.getAttribute('first_found_date')).getDate();
+                        queryData['package_unique_id'] = node.getAttribute('package_unique_id');
+                        queryData['package_name'] = node.getAttribute('package_name');
+                        reportData['cweName'] = node.getAttribute('cweName');
+                        if (node.getAttribute('recommendation') != '') {
+                            queryData['source_recommendation'] = 'Recommended version-' + node.getAttribute('recommendation');
+                            resultObj['source_recommendation'] = 'Recommended version-' + node.getAttribute('recommendation') ;
+                        }
+
+                        queryData['source_entry_id'] = 'Checkmarx One' + "-" + queryData['cweId'];
+                        queryData['cwe_list'] = [{
+                            cwe_id: queryData['cweId'],
+                            name: queryData['category_name']
+                        }];
+
+                        resultObj['source_app_id'] = reportData['source_app_id'];
+                        resultObj['app_name'] = reportData.app_name;
+                        resultObj['scan_type'] = reportData['scan_type'];
+                        resultObj['package_unique_id'] = node.getAttribute('package_unique_id');
+                        resultObj['package_name'] = node.getAttribute('package_name');
+                        resultObj['source_notes'] = node.getAttribute('source_notes');
+                        resultObj['location'] = node.getAttribute('location');
+                        resultObj['source_link'] = node.getAttribute('sourcefile');
+                        if (node.getAttribute('line_no') != '') {
+                            resultObj['line_number'] = parseInt(node.getAttribute('line_no'));
+                        }
+                        resultObj['source_scan_id'] = reportData['source_scan_id'];
+                        resultObj['last_scan_date'] = reportData['last_scan_date'];
+                        resultObj['scan_summary_name'] = reportData['scan_summary_name'];
+                        resultObj['source_avit_id'] = node.getAttribute('cweId');
+                        resultObj['description'] = node.getFirstChild().getTextContent().toString();
+                        resultObj['source_references'] = node.getAttribute('references');
+                        resultObj['source_vulnerability_summary'] = node.getFirstChild().getTextContent().toString();
+                        resultObj['source_remediation_status'] = this.NOT_AVAILABLE;
+                        resultObj['last_found'] = reportData.last_scan_date.getDate();
+                        resultObj['first_found'] = new GlideDateTime(node.getAttribute('first_found_date')).getDate();
+                        resultObj['application_module'] = this.NOT_AVAILABLE;
+                        resultObj['source_severity'] = source_severity_string;
+                        resultObj['complies_with_policy'] = 'not_applicable';
+                        resultObj['source_entry_id'] = queryData['source_entry_id'];
+
+                        resultObj['category_name'] = queryData['category_name'];
+                        var scan_type = node.getAttribute('scan_type');
+                        this._upsertQuery(queryData);
+                        this._upsertAVIT(resultObj);
+
+                    }
+                }
+            } catch (ex) {
+                errorMessage = gs.getMessage("Error in retriving data for app list integration!");
+                gs.error(this.MSG + "errorMessage " + ex);
+                throw ex;
+            }
+
+        }
+        this.completeProcess(this.integrationProcessGr, this.import_counts);
+
+
+    },
+
+    //updating data to app vul entry table
+    _upsertQuery: function(data) {
+        try {
+            var result = this.AVR_API.createOrUpdateAppVulEntry(data);
+            if (!result)
+                return;
+            if (result.updated)
+                this.import_counts.updated++;
+            else if (result.inserted)
+                this.import_counts.inserted++;
+            else if (result.unchanged)
+                this.import_counts.unchanged++;
+        } catch (err) {
+            gs.error(this.MSG + " _upsert : Error while inserting data into ServiceNow DB.");
+            throw err;
+        }
+    },
+    //updating data to app vul item table
+    _upsertAVIT: function(data) {
+        try {
+            var result = this.AVR_API.createOrUpdateAVIT(data);
+            if (!result)
+                return;
+            if (result.updated)
+                this.import_counts.updated++;
+            else if (result.inserted)
+                this.import_counts.inserted++;
+            else if (result.unchanged)
+                this.import_counts.unchanged++;
+        } catch (err) {
+            gs.error(this.MSG + " _upsert : Error while inserting data into ServiceNow DB.");
+            throw err;
+        }
+    },
+
+
+    type: 'CheckmarxOneAppVulItemProcessor'
+});]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>apoorva.singh@checkmarx.com</sys_created_by>
+        <sys_created_on>2023-03-14 11:28:18</sys_created_on>
+        <sys_id>d8df780e972d6510026f72021153af35</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>CheckmarxOneAppVulItemProcessor</sys_name>
+        <sys_package display_value="Checkmarx One " source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Checkmarx One ">3d20e92d47471110328ca368436d436a</sys_scope>
+        <sys_update_name>sys_script_include_d8df780e972d6510026f72021153af35</sys_update_name>
+        <sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
+        <sys_updated_on>2023-03-14 11:28:18</sys_updated_on>
+    </sys_script_include>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</application>
+        <file_path/>
+        <instance_id>d0ae16b4dbe1ed909831ac44d4961975</instance_id>
+        <instance_name>ven05995</instance_name>
+        <name>sys_script_include_d8df780e972d6510026f72021153af35</name>
+        <payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="sys_script_include"&gt;&lt;sys_script_include action="INSERT_OR_UPDATE"&gt;&lt;access&gt;public&lt;/access&gt;&lt;active&gt;true&lt;/active&gt;&lt;api_name&gt;x_chec3_chexone.CheckmarxOneAppVulItemProcessor&lt;/api_name&gt;&lt;caller_access/&gt;&lt;client_callable&gt;false&lt;/client_callable&gt;&lt;description&gt;This scripts processes the detailed xml report from Checkmarx One and persists the data in Application Vulnerable Item and entry table.&lt;/description&gt;&lt;name&gt;CheckmarxOneAppVulItemProcessor&lt;/name&gt;&lt;script&gt;&lt;![CDATA[var CheckmarxOneAppVulItemProcessor = Class.create();
+CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.ApplicationVulnerabilityImportProcessorBase, {
+
+    MSG: 'CheckmarxOne Application Vulnerable Item Processor: ',
+    NOT_AVAILABLE: 'Not Available',
+
+    import_static_flaws: null,
+
+    process: function(attachment) {
+
+        if (attachment) {
+            try {
+                var doc = new XMLDocument2();
+                doc.parseXML(new GlideSysAttachment().getContent(attachment));
+                var listNode = doc.getNode('/detailedreport/xml/results');
+                var reportData = {};
+                if (listNode) {
+                    var iter = listNode.getChildNodeIterator();
+                    if (iter.hasNext())
+                        iter.next();
+                    while (iter.hasNext()) {
+                        var node = iter.next();
+                        reportData['source_app_id'] = node.getAttribute('app_id');
+                        reportData['app_name'] = node.getAttribute('app_name');
+                        reportData['source_scan_id'] = node.getAttribute('scan_id');
+                        reportData['last_scan_date'] = new GlideDateTime(node.getAttribute('last_scan_date'));
+                        reportData['scan_summary_name'] = reportData['app_name'] + ' ' + reportData['last_scan_date'];
+                        reportData['scan_type'] = node.getAttribute('scan_type');
+                        var queryData = {};
+                        var resultObj = {};
+                        var source_severity_string = node.getAttribute('source_severity');
+                        if (source_severity_string == 'HIGH') {
+                            var source_severity = 1;
+                        } else if (source_severity_string == 'MEDIUM') {
+                            source_severity = 2;
+                        } else if (source_severity_string == 'LOW') {
+                            source_severity = 3;
+                        }
+                        queryData['category_name'] = node.getAttribute('category_name');
+                        var query_id = 'Checkmarx One' + "-" + node.getAttribute('id');
+                        queryData['scan_type'] = node.getAttribute('scan_type');
+                        queryData['source_severity'] = source_severity;
+                        queryData['threat'] = '';
+                        queryData['cweId'] = node.getAttribute('cweId');
+                        queryData['cvss_base_score'] = node.getAttribute('cvssScore');
+                        queryData['cvss_vector'] = node.getAttribute('cvssVector');
+                        queryData['last_detection_date'] = reportData.last_scan_date.getDate();
+                        queryData['first_detection_date'] = new GlideDateTime(node.getAttribute('first_found_date')).getDate();
+                        queryData['package_unique_id'] = node.getAttribute('package_unique_id');
+                        queryData['package_name'] = node.getAttribute('package_name');
+                        reportData['cweName'] = node.getAttribute('cweName');
+                        if (node.getAttribute('recommendation') != '') {
+                            queryData['source_recommendation'] = 'Recommended version-' + node.getAttribute('recommendation');
+                            resultObj['source_recommendation'] = 'Recommended version-' + node.getAttribute('recommendation') ;
+                        }
+
+                        queryData['source_entry_id'] = 'Checkmarx One' + "-" + queryData['cweId'];
+                        queryData['cwe_list'] = [{
+                            cwe_id: queryData['cweId'],
+                            name: queryData['category_name']
+                        }];
+
+                        resultObj['source_app_id'] = reportData['source_app_id'];
+                        resultObj['app_name'] = reportData.app_name;
+                        resultObj['scan_type'] = reportData['scan_type'];
+                        resultObj['package_unique_id'] = node.getAttribute('package_unique_id');
+                        resultObj['package_name'] = node.getAttribute('package_name');
+                        resultObj['source_notes'] = node.getAttribute('source_notes');
+                        resultObj['location'] = node.getAttribute('location');
+                        resultObj['source_link'] = node.getAttribute('sourcefile');
+                        if (node.getAttribute('line_no') != '') {
+                            resultObj['line_number'] = parseInt(node.getAttribute('line_no'));
+                        }
+                        resultObj['source_scan_id'] = reportData['source_scan_id'];
+                        resultObj['last_scan_date'] = reportData['last_scan_date'];
+                        resultObj['scan_summary_name'] = reportData['scan_summary_name'];
+                        resultObj['source_avit_id'] = node.getAttribute('cweId');
+                        resultObj['description'] = node.getFirstChild().getTextContent().toString();
+                        resultObj['source_references'] = node.getAttribute('references');
+                        resultObj['source_vulnerability_summary'] = node.getFirstChild().getTextContent().toString();
+                        resultObj['source_remediation_status'] = this.NOT_AVAILABLE;
+                        resultObj['last_found'] = reportData.last_scan_date.getDate();
+                        resultObj['first_found'] = new GlideDateTime(node.getAttribute('first_found_date')).getDate();
+                        resultObj['application_module'] = this.NOT_AVAILABLE;
+                        resultObj['source_severity'] = source_severity_string;
+                        resultObj['complies_with_policy'] = 'not_applicable';
+                        resultObj['source_entry_id'] = queryData['source_entry_id'];
+
+                        resultObj['category_name'] = queryData['category_name'];
+                        var scan_type = node.getAttribute('scan_type');
+                        this._upsertQuery(queryData);
+                        this._upsertAVIT(resultObj);
+
+                    }
+                }
+            } catch (ex) {
+                errorMessage = gs.getMessage("Error in retriving data for app list integration!");
+                gs.error(this.MSG + "errorMessage " + ex);
+                throw ex;
+            }
+
+        }
+        this.completeProcess(this.integrationProcessGr, this.import_counts);
+
+
+    },
+
+    //updating data to app vul entry table
+    _upsertQuery: function(data) {
+        try {
+            var result = this.AVR_API.createOrUpdateAppVulEntry(data);
+            if (!result)
+                return;
+            if (result.updated)
+                this.import_counts.updated++;
+            else if (result.inserted)
+                this.import_counts.inserted++;
+            else if (result.unchanged)
+                this.import_counts.unchanged++;
+        } catch (err) {
+            gs.error(this.MSG + " _upsert : Error while inserting data into ServiceNow DB.");
+            throw err;
+        }
+    },
+    //updating data to app vul item table
+    _upsertAVIT: function(data) {
+        try {
+            var result = this.AVR_API.createOrUpdateAVIT(data);
+            if (!result)
+                return;
+            if (result.updated)
+                this.import_counts.updated++;
+            else if (result.inserted)
+                this.import_counts.inserted++;
+            else if (result.unchanged)
+                this.import_counts.unchanged++;
+        } catch (err) {
+            gs.error(this.MSG + " _upsert : Error while inserting data into ServiceNow DB.");
+            throw err;
+        }
+    },
+
+
+    type: 'CheckmarxOneAppVulItemProcessor'
+});]]&gt;&lt;/script&gt;&lt;sys_class_name&gt;sys_script_include&lt;/sys_class_name&gt;&lt;sys_created_by&gt;apoorva.singh@checkmarx.com&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2023-03-14 11:28:18&lt;/sys_created_on&gt;&lt;sys_id&gt;d8df780e972d6510026f72021153af35&lt;/sys_id&gt;&lt;sys_mod_count&gt;0&lt;/sys_mod_count&gt;&lt;sys_name&gt;CheckmarxOneAppVulItemProcessor&lt;/sys_name&gt;&lt;sys_package display_value="Checkmarx One " source="x_chec3_chexone"&gt;3d20e92d47471110328ca368436d436a&lt;/sys_package&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="Checkmarx One "&gt;3d20e92d47471110328ca368436d436a&lt;/sys_scope&gt;&lt;sys_update_name&gt;sys_script_include_d8df780e972d6510026f72021153af35&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;apoorva.singh@checkmarx.com&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2023-03-14 11:28:18&lt;/sys_updated_on&gt;&lt;/sys_script_include&gt;&lt;/record_update&gt;</payload>
+        <payload_hash>1865182962</payload_hash>
+        <record_name>CheckmarxOneAppVulItemProcessor</record_name>
+        <reverted_from/>
+        <source>608b33f997212510026f72021153af19</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>apoorva.singh@checkmarx.com</sys_created_by>
+        <sys_created_on>2023-03-14 11:28:18</sys_created_on>
+        <sys_id>ee40094e972d6510026f72021153af51</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>186dfe0d0ec0000001</sys_recorded_at>
+        <sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
+        <sys_updated_on>2023-03-14 11:28:18</sys_updated_on>
+        <type>Script Include</type>
+        <update_guid>2a40094e062d6510c080f95d6442e051</update_guid>
+        <update_guid_history>2a40094e062d6510c080f95d6442e051:1865182962</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete/>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>apoorva.singh@checkmarx.com</sys_created_by>
+        <sys_created_on>2023-03-14 11:48:12</sys_created_on>
+        <sys_db_object display_value="" name="sys_script_include">sys_script_include</sys_db_object>
+        <sys_id>0eb8216dd256498083cca52d7ef61900</sys_id>
+        <sys_metadata>d8df780e972d6510026f72021153af35</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>CheckmarxOneAppVulItemProcessor</sys_name>
+        <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+        <sys_parent/>
+        <sys_policy/>
+        <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
+        <sys_scope_delete/>
+        <sys_update_name>sys_script_include_d8df780e972d6510026f72021153af35</sys_update_name>
+        <sys_update_version display_value="sys_script_include_d8df780e972d6510026f72021153af35">ee40094e972d6510026f72021153af51</sys_update_version>
+        <sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
+        <sys_updated_on>2023-03-14 11:48:12</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>

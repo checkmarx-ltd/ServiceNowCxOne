@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_user_role">
+    <sys_user_role action="INSERT_OR_UPDATE">
+        <assignable_by display_value="sn_vul.app_manage_app_vul_permissions" name="sn_vul.app_manage_app_vul_permissions">1f15c566b7a1101004aae3fdde11a9a9</assignable_by>
+        <can_delegate>true</can_delegate>
+        <description>Can Configure CheckmarxOne integration.</description>
+        <elevated_privilege>false</elevated_privilege>
+        <grantable>true</grantable>
+        <includes_roles/>
+        <name>x_chec3_chexone.configure_integration</name>
+        <requires_subscription>-1</requires_subscription>
+        <scoped_admin>false</scoped_admin>
+        <suffix>configure_integration</suffix>
+        <sys_class_name>sys_user_role</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2022-11-24 05:30:54</sys_created_on>
+        <sys_id>426fc5ae47131110328ca368436d4305</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>x_chec3_chexone.configure_integration</sys_name>
+        <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
+        <sys_update_name>sys_user_role_426fc5ae47131110328ca368436d4305</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2022-11-24 05:30:54</sys_updated_on>
+    </sys_user_role>
+</record_update>

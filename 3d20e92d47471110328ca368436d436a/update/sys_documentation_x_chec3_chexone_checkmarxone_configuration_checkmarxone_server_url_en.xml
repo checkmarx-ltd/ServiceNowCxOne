@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update>
+    <sys_documentation element="checkmarxone_server_url" label="IAM Url" language="en" table="x_chec3_chexone_checkmarxone_configuration">
+        <sys_documentation action="INSERT_OR_UPDATE">
+            <element>checkmarxone_server_url</element>
+            <help/>
+            <hint/>
+            <label>IAM Url</label>
+            <language>en</language>
+            <name>x_chec3_chexone_checkmarxone_configuration</name>
+            <plural>IAM Urls</plural>
+            <sys_class_name>sys_documentation</sys_class_name>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2022-11-14 04:02:30</sys_created_on>
+            <sys_mod_count>3</sys_mod_count>
+            <sys_name>IAM Url</sys_name>
+            <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+            <sys_policy/>
+            <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
+            <sys_update_name>sys_documentation_x_chec3_chexone_checkmarxone_configuration_checkmarxone_server_url_en</sys_update_name>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2022-12-15 08:53:40</sys_updated_on>
+            <url/>
+            <url_target/>
+        </sys_documentation>
+    </sys_documentation>
+</record_update>

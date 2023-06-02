@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element db_object_id="10df9ff197ede110026f72021153af52" extends="sys_import_set_row" label="CheckmarxOne Application List Integratio" max_length="40" name="x_chec3_chexone_checkmarxone_application_list_integratio" type="collection"/>
+</database>

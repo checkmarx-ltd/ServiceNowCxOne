@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sn_sec_int_integration">
+    <sn_sec_int_integration action="INSERT_OR_UPDATE">
+        <banner_logo>9fea57dc47a56110b6966285d36d43c6</banner_logo>
+        <categories/>
+        <configurable>true</configurable>
+        <description>Allows application security information to be downloaded from Checkmarx One Server</description>
+        <external_link/>
+        <help_link/>
+        <host_attributes_table/>
+        <id>com.snc.vulnerability.appvul.checkmarxone</id>
+        <include_proof_in_vi_key>false</include_proof_in_vi_key>
+        <instance_setup_script/>
+        <integration_type>Application Vulnerability Integration</integration_type>
+        <ire_source_name/>
+        <is_auto_close_supported>true</is_auto_close_supported>
+        <is_multi_source_supported>false</is_multi_source_supported>
+        <is_reapply_ci_lookup_supported>false</is_reapply_ci_lookup_supported>
+        <lookup_by_network>false</lookup_by_network>
+        <name>Checkmarx One Application Security</name>
+        <order>100</order>
+        <short_description>Checkmarx One application security integration</short_description>
+        <source>Checkmarx One</source>
+        <sys_class_name>sn_sec_int_integration</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2022-11-17 18:37:11</sys_created_on>
+        <sys_id>e5dffb5c47575110328ca368436d436b</sys_id>
+        <sys_mod_count>11</sys_mod_count>
+        <sys_name>Checkmarx One Application Security</sys_name>
+        <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
+        <sys_update_name>sn_sec_int_integration_e5dffb5c47575110328ca368436d436b</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2023-03-09 12:14:33</sys_updated_on>
+        <validation_script><![CDATA[(function validation(configId){
+	var valid = true;
+	gs.info("CheckmarxOne Application Security integration getting validated.");
+	var impl = new GlideRecord('sn_sec_int_impl');
+	if(impl.get(configId)) {
+		impl.setValue('validation_status', valid? 'valid' : 'invalid');
+		impl.update();
+	}
+  
+	return valid;
+})(sn_sec_int_impl);]]></validation_script>
+    </sn_sec_int_integration>
+</record_update>

@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_chec3_chexone.CheckmarxOneAppVulItemIntegration</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description>Integration script for use with the Checkmarx Application Vulnerability Item Integration run.</description>
+        <name>CheckmarxOneAppVulItemIntegration</name>
+        <script><![CDATA[var CheckmarxOneAppVulItemIntegration = Class.create();
+CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.ApplicationVulnerabilityIntegrationBase, {
+
+    UTIL: new x_chec3_chexone.CheckmarxOneUtil(),
+    MSG: "CheckmarxOneAppVulItemIntegration",
+
+    retrieveData: function() {
+        var params = this._getParameters(this.PROCESS.getValue('parameters'));
+        var response = "<null/>";
+        if (params.run) {
+            //   scanId, offset
+            response = this.getDetailedReport(Object.keys(params.run)[0], params.run[Object.keys(params.run)[0]]);
+            gs.debug(this.MSG + ' getDetailedReport response:' + response);
+
+        }
+        params = this._serializeParameters(this._nextParameters(params));
+        this.setNextRunParameters(params);
+
+        //Saving delta_start_time
+        if (!params.run) {
+            var latest = this.LATEST ? this.LATEST : '';
+            this.INTEGRATION.setValue('delta_start_time', latest);
+            this.INTEGRATION.update();
+            this.hasMoreData(false);
+        } else
+            this.hasMoreData(true);
+
+        return {
+            contents: new GlideSysAttachment().write(this.PROCESS, this.FILENAME, "xml", response),
+            contentType: "sys_attachment",
+            extension: "xml"
+        };
+    },
+
+    getDetailedReport: function(scanId, offset) {
+        try {
+            var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
+            var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
+            var config = this.UTIL._getConfig(this.IMPLEMENTATION);
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var scanDetailedRootNodeStart = "<detailedreport><xml id=\"checkmarxone\"><results>";
+            var scanDetailedRootNodeEnd = "</results></xml></detailedreport>";
+            var SCAscanDetailedAll = '';
+            var SASTscanDetailedAll = '';
+            var scanDetailedAll = '';
+            var lastscandate = '';
+            var sca = 'sca';
+            var sast = 'sast';
+            var description = '';
+            var appname = '';
+            var appId = '';
+            var line = '';
+            var ref = '';
+			var reference = '';
+            var notes = '';
+            var recommendedVersion = '';
+            var source_file = '';
+            var location = '';
+            var scanSummaryAll = '';
+            var package_unique_id = " ";
+            var package_name = " ";
+            var cvssScore = " ";
+            var cvssVector = " ";
+            var newoffset = offset - 1;
+            var responseLastScanSummary = this.UTIL.getScanDetails(this.IMPLEMENTATION, scanId);
+            var jsonLastScanSummResp = JSON.parse(responseLastScanSummary.getBody());
+            gs.debug(this.MSG + " getSummaryReport : parsed scanInfoResponse " + JSON.stringify(jsonLastScanSummResp));
+            for (var value in jsonLastScanSummResp.scans) {
+                scanSummaryAll += '<scan id="' + jsonLastScanSummResp.scans[value].id + '" app_id="' + jsonLastScanSummResp.scans[value].projectId +
+                    '" last_scan_date="' + this.UTIL.parseDate(jsonLastScanSummResp.scans[value].updatedAt) +
+                    '" app_name="' + jsonLastScanSummResp.scans[value].projectName + '"/>';
+                lastscandate += this.UTIL.parseDate(jsonLastScanSummResp.scans[value].updatedAt);
+                appname += jsonLastScanSummResp.scans[value].projectId;
+                appId += jsonLastScanSummResp.scans[value].projectId;
+
+            }
+            var responseLastScanReport = this.UTIL.getVulInfo(this.IMPLEMENTATION, scanId, newoffset);
+            gs.debug(this.MSG + " getDetailedReport : scanInfoResponse " + responseLastScanReport);
+            var jsonLastScanReportResp = JSON.parse(responseLastScanReport.getBody());
+            var scan_type = "static";
+            for (var item in jsonLastScanReportResp.results) {
+                if (jsonLastScanReportResp.results[item].type == "sast") {
+                    for (var j in jsonLastScanReportResp.results[item].data.nodes) {
+                        var nodeId = 'nodeId:' + jsonLastScanReportResp.results[item].data.nodes[j].nodeID + ', path:' + jsonLastScanReportResp.results[item].data.nodes[j].fileName;
+                        notes += nodeId + '.  ';
+                    }
+                    SASTscanDetailedAll += '<result id="' + jsonLastScanReportResp.results[item].id + '" scan_type="' + scan_type +
+                        '" cweId="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId +
+                        '" cweName="' + jsonLastScanReportResp.results[item].data.queryName +
+                        '" category_name="' + jsonLastScanReportResp.results[item].data.group +
+                        '" source_severity="' + jsonLastScanReportResp.results[item].severity +
+                        '" package_unique_id="' + package_unique_id +
+                        '" package_name="' + package_name +
+                        '" location="' + jsonLastScanReportResp.results[item].data.nodes[0].fileName +
+                        '" line_no="' + jsonLastScanReportResp.results[item].data.nodes[0].line +
+                        '" cvssScore="' + cvssScore +
+                        '" recommendation="' + recommendedVersion +
+                        '" source_notes="' + notes +
+                        '" sourcefile="' + apibaseurl + '/results/' + scanId + '/' + appId + '/sast' +
+                        '" cvssVector="' + cvssVector +
+                        '" first_found_date="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt) +
+						'" state="' + jsonLastScanReportResp.results[item].state +
+                        '" status="' + jsonLastScanReportResp.results[item].status +
+                        '" app_id="' + appId +
+                        '" app_name="' + appname +
+                        '" last_scan_date="' + lastscandate +
+                        '" scan_id="' + 'sast' + scanId + '">' +
+						'<references><' + '![CDATA[' + reference + ']]' + '></references>' +
+                        '<description><' + '![CDATA[' + jsonLastScanReportResp.results[item].description + ']]' + '></description></result>';
+
+                }
+                if (jsonLastScanReportResp.results[item].type == "sca") {
+
+                    for (var k in jsonLastScanReportResp.results[item].data.packageData) {
+                        var url = jsonLastScanReportResp.results[item].data.packageData[k].url;
+                        ref += url + ',  ';
+                    }
+
+                    SCAscanDetailedAll += '<result id="' + jsonLastScanReportResp.results[item].id + '" scan_type="' + jsonLastScanReportResp.results[item].type +
+                        '" cweId="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId +
+                        '" cweName="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cveName +
+						
+                        '" cvssScore="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cvssScore +
+                        '" cvssVector="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cvss.attackVector +
+                        '" category_name="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId +
+                        '" source_severity="' + jsonLastScanReportResp.results[item].severity +
+                        '" first_found_date="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt) +
+                        '" state="' + jsonLastScanReportResp.results[item].state +
+						'" status="' + jsonLastScanReportResp.results[item].status +
+                        '" package_unique_id="' + jsonLastScanReportResp.results[item].data.packageIdentifier +
+                        '" recommendation="' + jsonLastScanReportResp.results[item].data.recommendedVersion +
+                        '" package_name="' + jsonLastScanReportResp.results[item].data.packageIdentifier +
+                        '" source_notes="' + notes +
+                        '" sourcefile="' + apibaseurl + '/sca/#/projects/' + appId + '/reports/' + scanId +
+                        '/vulnerabilities/' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId + '%3AMaven-commons-collections%3Acommons-collections-3.2.1/vulnerabilityDetails' +
+                        '" line_no="' + line +
+                        '" location="' + location +
+                        '" app_id="' + appId +
+                        '" app_name="' + appname +
+                        '" last_scan_date="' + lastscandate +
+                        '" scan_id="' + 'sca' + scanId + '">' +
+						'<references><' + '![CDATA[' + ref + ']]' + '></references>' +
+                        '<description><' + '![CDATA[' + jsonLastScanReportResp.results[item].description + ']]' + '></description></result>';
+                }  
+				//   '" references="' + ref.replace(/</g, " ") +
+            }
+            if (includesca) {
+                scanDetailedAll += SCAscanDetailedAll;
+            }
+            if (includesast) {
+                scanDetailedAll += SASTscanDetailedAll;
+            }
+            var reportContent = scanDetailedRootNodeStart + scanDetailedAll + scanDetailedRootNodeEnd;
+
+        } catch (err) {
+            gs.info(this.MSG + " getDetailedReport : Error while getting the detailed report." + err);
+            throw err;
+        }
+        return reportContent;
+    },
+
+    // Gets the integration parameters as a map
+    _getParameters: function(parameters) {
+        var params = {
+            run: null,
+            remaining: {}
+        };
+
+        try {
+            if (parameters) {
+                params = JSON.parse(parameters);
+                if (params.latest) {
+                    var latest = new GlideDateTime();
+                    latest.setValue(params.latest);
+                    params.latest = latest;
+                    this.LATEST = latest;
+                }
+            } else {
+                this.LATEST = new GlideDateTime(this.DELTA_START_TIME || '1970-01-01T10:16:06.17544Z').getDate();
+                var apps = this.AVR_API.getAppReleases();
+                var app = '';
+                for (var i in apps) {
+                    var appId = apps[i].source_app_id;
+                    //var created = apps[i].sys_created_on; && created > GlideDateTime('2023-02-20T23:00:06.17544Z').getDate()
+                    if (appId !== "undefined") {
+
+                        var scans = this._getScans(appId);
+                    }
+                    for (var j in scans) {
+                        var scanId = scans[j];
+                        var offsetId = this._getoffsets(appId, scanId);
+                        params.remaining[scanId] = offsetId;
+                    }
+                }
+                params = this._nextParameters(params);
+                if (params.run) {
+                    this.PROCESS.setValue('parameters', JSON.stringify(this._serializeParameters(params)));
+                    this.PROCESS.update();
+                }
+            }
+        } catch (err) {
+            gs.error(this.MSG + " _getParameters : Error while getting the integration parameters." + err);
+            throw err;
+        }
+        return params;
+    },
+    // Gets the start time of the integration
+    _getCurrentDeltaStartTime: function() {
+        try {
+            var delta = this.UTIL.parseTZDate(this.DELTA_START_TIME) || '1970-01-01T10:16:06.17544Z';
+        } catch (err) {
+            gs.error(this.MSG + " _getCurrentDeltaStartTime : Error while getting the current delta start time." + err);
+            throw err;
+        }
+        return delta;
+    },
+
+    // Gets the scan list for the particular app
+    _getScans: function(appId) {
+
+        var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
+        var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
+        var scans = [];
+        var scanId = '';
+        try {
+            var responseLastScan = this.UTIL.getScanList(this.IMPLEMENTATION, appId, this._getCurrentDeltaStartTime());
+            var jsonLastScanResp = JSON.parse(responseLastScan.getBody());
+            for (var item in jsonLastScanResp.scans) {
+                if (includesca) {
+                    if (jsonLastScanResp.scans[item].engines.toString().includes("sca")) {
+                        scanId = this._getScan(appId, jsonLastScanResp.scans[item].id);
+                    }
+                }
+                if (includesast) {
+                    if (jsonLastScanResp.scans[item].engines.toString().includes("sast")) {
+                        scanId = this._getScan(appId, jsonLastScanResp.scans[item].id);
+                    }
+                }
+                if (scanId) {
+                    scans.push(scanId);
+                    var date = new GlideDateTime(this.UTIL.parseDate(jsonLastScanResp.scans[item].updatedAt));
+                    if (!this.LATEST || date > this.LATEST)
+                        this.LATEST = date;
+                }
+
+            }
+        } catch (err) {
+            gs.info(this.MSG + " _getScans : Error while getting scans." + err);
+        }
+        return scans;
+    },
+    //to get offset (50 items at a time)
+    _getoffsets: function(appId, scanId) {
+        var offsets = [];
+        var offset = 0;
+        var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
+        var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
+
+        var ReportLength = this.UTIL.getTotalVulcount(this.IMPLEMENTATION, scanId);
+        var loopLength = ReportLength / 50;
+        //in result api offset value start from 0 and increment by 1, here it acts like page instead of number of item like other api
+        for (var i = 0; i <= parseInt(loopLength); i++) {
+            offset += 1;
+            var offsetId = this._getoffset(scanId, offset);
+            if (offsetId) {
+                offsets.push(offsetId);
+                var date = new GlideDateTime();
+            }
+        }
+        return offsets;
+    },
+    _getScan: function(appId, buildId) {
+        return buildId;
+    },
+
+    _getoffset: function(scanId, offsetId) {
+        return offsetId;
+    },
+
+    _serializeParameters: function(params) {
+        if (params.latest)
+            params.latest = params.latest.getValue();
+        else
+            delete params.latest;
+        return params;
+    },
+
+    _nextParameters: function(params) {
+        params.run = null;
+        var keys = Object.keys(params.remaining);
+        if (keys.length) {
+            params.run = {};
+            var key = keys[0];
+            params.run[key] = params.remaining[key][0];
+            params.remaining[key] = params.remaining[key].slice(1);
+            if (!params.remaining[key].length)
+                delete params.remaining[key];
+        }
+
+        params.latest = this.LATEST;
+        return params;
+    },
+
+    shouldRetry: function(process) {
+        return true;
+    },
+
+    _getObjValues: function(obj) {
+        var values = Object.keys(obj).map(function(e) {
+            return obj[e];
+        });
+        return values;
+    },
+
+
+
+    type: 'CheckmarxOneAppVulItemIntegration'
+});]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2022-11-21 12:06:20</sys_created_on>
+        <sys_id>891d8fed471f1110328ca368436d4334</sys_id>
+        <sys_mod_count>151</sys_mod_count>
+        <sys_name>CheckmarxOneAppVulItemIntegration</sys_name>
+        <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
+        <sys_update_name>sys_script_include_891d8fed471f1110328ca368436d4334</sys_update_name>
+        <sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
+        <sys_updated_on>2023-05-23 14:51:50</sys_updated_on>
+    </sys_script_include>
+</record_update>

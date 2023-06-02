@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update>
+    <sys_documentation element="mid_server" label="MID Server" language="en" table="x_chec3_chexone_checkmarxone_configuration">
+        <sys_documentation action="INSERT_OR_UPDATE">
+            <element>mid_server</element>
+            <help/>
+            <hint/>
+            <label>MID Server</label>
+            <language>en</language>
+            <name>x_chec3_chexone_checkmarxone_configuration</name>
+            <plural>MID Servers</plural>
+            <sys_class_name>sys_documentation</sys_class_name>
+            <sys_created_by>apoorva.singh@checkmarx.com</sys_created_by>
+            <sys_created_on>2023-04-25 13:54:40</sys_created_on>
+            <sys_mod_count>1</sys_mod_count>
+            <sys_name>MID Server</sys_name>
+            <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+            <sys_policy/>
+            <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
+            <sys_update_name>sys_documentation_x_chec3_chexone_checkmarxone_configuration_mid_server_en</sys_update_name>
+            <sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
+            <sys_updated_on>2023-04-27 04:52:45</sys_updated_on>
+            <url/>
+            <url_target/>
+        </sys_documentation>
+    </sys_documentation>
+</record_update>

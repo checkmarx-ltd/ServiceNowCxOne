@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element db_object_id="1cdf9ff197ede110026f72021153af24" extends="sys_import_set_row" label="CheckmarxOne Application List Import" max_length="40" name="x_chec3_chexone_checkmarxone_application_list_import" type="collection">
+        <element attributes="edge_encryption_enabled=true,import_attribute_name=&lt;appInfoList&gt;&lt;xml id=&quot;checkmarxone&quot;&gt;&lt;projects&gt;&lt;/projects&gt;&lt;/xml&gt;&lt;/appInfoList&gt;" label="&lt;appInfoList&gt;&lt;xml id=&quot;checkmarxone&quot;&gt;&lt;projects&gt;&lt;/projects&gt;&lt;/xml&gt;&lt;/appInfoList&gt;" max_length="40" name="u__appinfolist___appinfolist_" type="string"/>
+        <element attributes="edge_encryption_enabled=true,import_attribute_name=&lt;CheckmarxOne/&gt;" label="&lt;CheckmarxOne/&gt;" max_length="40" name="u__checkmarxone__" type="string"/>
+    </element>
+</database>

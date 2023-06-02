@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_view">
+    <sys_ui_view action="INSERT_OR_UPDATE">
+        <group/>
+        <hidden>false</hidden>
+        <name>exp_d750aa3be47412110328ca368436d4308</name>
+        <roles/>
+        <sys_class_name>sys_ui_view</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2023-02-20 11:13:56</sys_created_on>
+        <sys_id>f50aa3be47412110328ca368436d4309</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Exp_d750aa3be47412110328ca368436d4308</sys_name>
+        <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
+        <sys_update_name>sys_ui_view_f50aa3be47412110328ca368436d4309</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2023-02-20 11:13:56</sys_updated_on>
+        <title>Exp_d750aa3be47412110328ca368436d4308</title>
+        <user/>
+    </sys_ui_view>
+</record_update>

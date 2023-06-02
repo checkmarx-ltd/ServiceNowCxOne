@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_app_module">
+    <sys_app_module action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <application display_value="Checkmarx One Vulnerability Integration">277025e947471110328ca368436d43bf</application>
+        <assessment/>
+        <device_type/>
+        <filter table="sn_vul_app_integration">integration=e5dffb5c47575110328ca368436d436b^EQ<item display_table="sn_sec_int_integration" display_value="Checkmarx One Application Security" endquery="false" field="integration" goto="false" newquery="false" operator="=" or="false" value="e5dffb5c47575110328ca368436d436b"/>
+            <item endquery="true" field="" goto="false" newquery="false" operator="=" or="false" value=""/>
+        </filter>
+        <hint>Configure Checkmarx One Integrations</hint>
+        <homepage/>
+        <image/>
+        <link_type>LIST</link_type>
+        <map_page/>
+        <mobile_title>All</mobile_title>
+        <mobile_view_name>Mobile</mobile_view_name>
+        <name>sn_vul_app_integration</name>
+        <order>3</order>
+        <override_menu_roles>false</override_menu_roles>
+        <query/>
+        <report/>
+        <roles>x_chec3_chexone.configure_integration</roles>
+        <sys_class_name>sys_app_module</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2022-11-08 17:55:04</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_domain_path>/</sys_domain_path>
+        <sys_id>6f70256d47471110328ca368436d4380</sys_id>
+        <sys_mod_count>5</sys_mod_count>
+        <sys_name>Integrations</sys_name>
+        <sys_overrides/>
+        <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
+        <sys_update_name>sys_app_module_6f70256d47471110328ca368436d4380</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2023-02-28 17:26:02</sys_updated_on>
+        <timeline_page/>
+        <title>Integrations</title>
+        <uncancelable>false</uncancelable>
+        <view_name/>
+        <window_name/>
+    </sys_app_module>
+</record_update>

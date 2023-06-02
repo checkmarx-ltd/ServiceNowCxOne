@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update>
+    <sys_documentation element="u__checkmarxon_mintegration__" label="&lt;CheckmarxOneAppVulItemIntegration/&gt;" language="en" table="x_chec3_chexone_checkmarxone_appvul_item_import">
+        <sys_documentation action="INSERT_OR_UPDATE">
+            <element>u__checkmarxon_mintegration__</element>
+            <help/>
+            <hint/>
+            <label>&lt;CheckmarxOneAppVulItemIntegration/&gt;</label>
+            <language>en</language>
+            <name>x_chec3_chexone_checkmarxone_appvul_item_import</name>
+            <plural>&lt;CheckmarxOneAppVulItemIntegration/&gt;s</plural>
+            <sys_class_name>sys_documentation</sys_class_name>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2023-03-07 12:50:13</sys_created_on>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_name>&lt;CheckmarxOneAppVulItemIntegration/&gt;</sys_name>
+            <sys_package display_value="Global" source="global">global</sys_package>
+            <sys_policy/>
+            <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
+            <sys_update_name>sys_documentation_x_chec3_chexone_checkmarxone_appvul_item_import_u__checkmarxon_mintegration___en</sys_update_name>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2023-03-07 12:50:13</sys_updated_on>
+            <url/>
+            <url_target/>
+        </sys_documentation>
+    </sys_documentation>
+</record_update>
