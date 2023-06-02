@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<unload unload_date="2023-06-02 11:12:30">
+<sys_script_include action="INSERT_OR_UPDATE">
+<access>public</access>
+<active>true</active>
+<api_name>x_chec3_chexone.CheckmarxOneAppListIntegration</api_name>
+<caller_access/>
+<client_callable>false</client_callable>
+<description>Integration script for use with the CheckmarxOne Application List Integration run.</description>
+<name>CheckmarxOneAppListIntegration</name>
+<script><![CDATA[var CheckmarxOneAppListIntegration = Class.create();
+CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.ApplicationVulnerabilityIntegrationBase, {
+
+
+    UTIL: new CheckmarxOneUtil(),
+    MSG: 'CheckmarxOne AppListIntegration:',
+    retrieveData: function() {
+        gs.debug(this.MSG + 'retrieveData');
+        var params = this._getParameters(this.PROCESS.getValue('parameters'));
+        var response = "<null/>";
+        if (params.run) {
+            //  filteredcount,  offset
+            response = this.getAppList(Object.keys(params.run)[0], params.run[Object.keys(params.run)[0]]);
+            this.validateXML(response, 'error');
+        }
+        params = this._serializeParameters(this._nextParameters(params));
+        this.setNextRunParameters(params);
+
+        //Saving delta_start_time
+        if (!params.run) {
+            var latest = this.LATEST ? this.LATEST : '';
+            this.INTEGRATION.setValue('delta_start_time', latest);
+            this.INTEGRATION.update();
+            this.hasMoreData(false);
+        } else
+            this.hasMoreData(true);
+
+        return {
+            contents: new GlideSysAttachment().write(this.PROCESS, this.FILENAME, "xml", response),
+            contentType: "sys_attachment",
+            extension: "xml"
+        };
+
+    },
+
+    //Creates XML summary for Projects
+    getAppList: function(filteredCount, offset) {
+        try {
+
+            var appListRootNodeStart = "<appInfoList><xml id=\"checkmarxone\"><projects>";
+            var appListRootNodeEnd = "</projects></xml></appInfoList>";
+            var appListAll = '';
+            //to start offset from 0 and limit 50
+            var newoffset = offset - 50;
+            var response = this.UTIL.getNextProjectList(this.IMPLEMENTATION, newoffset);
+            var groups = '';
+            var groupval = ' ';
+            for (var item in response.projects) {
+                groups = +response.projects[item].groups.toString();
+                if (groups == 0) {
+                    appListAll += ' <project id="' + response.projects[item].id + '" name="' + response.projects[item].id + '" description="' + response.projects[item].name + ' createdAt:' + response.projects[item].createdAt + '" groups="' + groupval + '"/>';
+                } else {
+                    appListAll += ' <project id="' + response.projects[item].id + '" name="' + response.projects[item].id + '" description="' + response.projects[item].name + ' createdAt:' + response.projects[item].createdAt + '" groups="' + response.projects[item].groups.toString() + '"/>';
+                }
+            }
+
+            var reportContent = appListRootNodeStart + appListAll + appListRootNodeEnd;
+        } catch (err) {
+            gs.info(this.MSG + " getAppList : Error while getting the summary report." + err);
+            throw err;
+        }
+        return reportContent;
+    },
+
+    // Gets the integration parameters as a map
+    _getParameters: function(parameters) {
+        var params = {
+            run: null,
+            remaining: {}
+        };
+        try {
+            if (parameters) {
+                params = JSON.parse(parameters);
+                if (params.latest) {
+                    var latest = new GlideDateTime();
+                    latest.setValue(params.latest);
+                    params.latest = latest;
+                    this.LATEST = latest;
+                }
+            } else {
+                this.LATEST = new GlideDateTime(this.DELTA_START_TIME || '1970-01-01T10:16:06.17544Z');
+                var projectJSON = this.UTIL.getNewProjectList(this.IMPLEMENTATION);
+                var filteredCount = projectJSON.filteredTotalCount;
+                if (filteredCount !== "undefined") {
+                    var offsetId = this._getoffsets(filteredCount);
+                    params.remaining[filteredCount] = offsetId;
+                }
+                gs.debug(this.MSG + 'for appreleases complete');
+                params = this._nextParameters(params);
+                if (params.run) {
+                    this.PROCESS.setValue('parameters', JSON.stringify(this._serializeParameters(params)));
+                    this.PROCESS.update();
+                }
+            }
+        } catch (err) {
+            gs.error(this.MSG + " _getParameters : Error while getting the integration parameters." + err);
+            throw err;
+        }
+        return params;
+    },
+    //to get offset value from total length
+    _getoffsets: function(filteredCount) {
+        var offsets = [];
+        var projectJSON = this.UTIL.getNewProjectList(this.IMPLEMENTATION);
+        var loopLength = projectJSON.projects.length / 50;
+        var offset = 0;
+        for (var i = 0; i <= parseInt(loopLength); i++) {
+            offset += 50;
+            var offsetId = this._getoffset(filteredCount, offset);
+            if (offsetId) {
+                offsets.push(offsetId);
+                var date = new GlideDateTime();
+            }
+        }
+        //returning offset from 50 instead of 0 because remaining value in run will throw error if 0 is passed.
+        return offsets;
+    },
+
+    _getoffset: function(config, offsetId) {
+        return offsetId;
+    },
+    // Gets the start time of the integration
+    _getCurrentDeltaStartTime: function() {
+        try {
+            var delta = this.UTIL.parseTZDate(this.DELTA_START_TIME) || '1970-01-01T10:16:06.17544Z';
+        } catch (err) {
+            gs.error(this.MSG + " _getCurrentDeltaStartTime : Error while getting the current delta start time." + err);
+            throw err;
+        }
+        return delta;
+    },
+    _serializeParameters: function(params) {
+        if (params.latest)
+            params.latest = params.latest.getValue();
+        else
+            delete params.latest;
+        return params;
+    },
+
+    _nextParameters: function(params) {
+        params.run = null;
+        var keys = Object.keys(params.remaining);
+        if (keys.length) {
+            params.run = {};
+            var key = keys[0];
+            params.run[key] = params.remaining[key][0];
+            var offsets = [];
+            params.remaining[key] = params.remaining[key].slice(1);
+            if (!params.remaining[key].length)
+                delete params.remaining[key];
+
+        }
+        params.latest = this.LATEST;
+        return params;
+    },
+
+    shouldRetry: function(process) {
+        return true;
+    },
+
+    type: 'CheckmarxOneAppListIntegration'
+});]]></script>
+<sys_class_name>sys_script_include</sys_class_name>
+<sys_created_by>admin</sys_created_by>
+<sys_created_on>2022-11-18 05:11:38</sys_created_on>
+<sys_id>f60f0ee047131110328ca368436d43ba</sys_id>
+<sys_mod_count>129</sys_mod_count>
+<sys_name>CheckmarxOneAppListIntegration</sys_name>
+<sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
+<sys_policy/>
+<sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
+<sys_update_name>sys_script_include_f60f0ee047131110328ca368436d43ba</sys_update_name>
+<sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
+<sys_updated_on>2023-05-23 14:50:01</sys_updated_on>
+</sys_script_include>
+</unload>
