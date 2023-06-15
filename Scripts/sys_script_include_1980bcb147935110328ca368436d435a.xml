@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-06-02 11:04:54">
+<unload unload_date="2023-06-15 12:10:48">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -55,7 +55,7 @@ CheckmarxOneUtilBase.prototype = {
             var config = this._getConfig(configId);
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
             var apibaseurl = config.checkmarxone_api_base_url;
-			var limit_val = config.limit;
+            var limit_val = config.limit;
             var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
             var query = '/api/projects/?offset=' + offsetno + '&limit=' + limit_val;
@@ -95,7 +95,7 @@ CheckmarxOneUtilBase.prototype = {
             var config = this._getConfig(configId);
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
             var apibaseurl = config.checkmarxone_api_base_url;
-			var limit_val = config.limit;
+            var limit_val = config.limit;
             var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
             var query = '/api/scans/?offset=0&limit=1&statuses=Completed&project-id=' + appId + '&from-date=' + last_run_date + '&sort=%2Bcreated_at&sort=%2Bstatus&field=scan-ids';
@@ -186,13 +186,13 @@ CheckmarxOneUtilBase.prototype = {
             var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
             var count = 0;
-            var query = '/api/results/?scan-id=' + scanId + '&offset=0&limit=5000&sort=%2Btype';
+            var query = '/api/results/?scan-id=' + scanId + '&offset=0&limit=5000&sort=%-type';
             var responseLastScanReport = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
             var jsonLastScanReportResp = JSON.parse(responseLastScanReport.getBody());
             for (var item in jsonLastScanReportResp.results) {
-                
-                    count += 1;
-                
+
+                count += 1;
+
             }
         } catch (err) {
             gs.error(this.MSG + " getScanInfo: Error while getting the scan Ids.");
@@ -210,7 +210,7 @@ CheckmarxOneUtilBase.prototype = {
             var includesca = this.importScaFlaw(configId);
             var includesast = this.importSastFlaw(configId);
             var query = '';
-			var limit_val = config.limit;
+            var limit_val = config.limit;
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
             var apibaseurl = config.checkmarxone_api_base_url;
             var method = "post";
@@ -251,17 +251,15 @@ CheckmarxOneUtilBase.prototype = {
             var ScanSummaryJson = JSON.parse(body);
             var flaws = 0;
             for (var item in ScanSummaryJson.scansSummaries) {
-
                 for (var value in ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters) {
                     var counts = ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters[value].counter;
                     flaws += counts;
-
                 }
-
             }
         } catch (err) {
-            gs.error(this.MSG + " getScanSummaryInfo: Error while getting the scan summary Ids.");
-            throw err;
+            gs.error(this.MSG + " getScanSummaryInfo: Error while getting the scan summary Ids." + err + scanId);
+            return -1;
+
         }
         return flaws;
 
@@ -282,19 +280,34 @@ CheckmarxOneUtilBase.prototype = {
             var ScanSummaryJson = JSON.parse(body);
             var flaws = 0;
             for (var item in ScanSummaryJson.scansSummaries) {
-
                 for (var value in ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters) {
                     var counts = ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters[value].counter;
                     flaws += counts;
-
                 }
-
             }
         } catch (err) {
-            gs.error(this.MSG + " getScanSummaryInfo: Error while getting the scan summary Ids.");
-            throw err;
+            gs.error(this.MSG + " getScanSummaryInfo: Error while getting the scan summary Ids." + err + scanId);
+            return -1;
         }
         return flaws;
+
+    },
+    //To get remediation status for state mapping
+    getRemediationStatus: function(status, state) {
+        try {
+			
+            if((status == 'NEW' || status == 'RECURRENT') && state != 'TO_VERIFY' )
+				{
+				var	remediation_status = state;
+				}
+			else{
+				remediation_status = status;
+			}
+        } catch (err) {
+            gs.error(this.MSG + " getRemediationStatus: Error while getting the status." + err );
+           
+        }
+        return remediation_status;
 
     },
 
@@ -309,7 +322,7 @@ CheckmarxOneUtilBase.prototype = {
                 "tenant": gr.getValue("tenant"),
                 "checkmarxone_api_base_url": gr.getValue("checkmarxone_api_base_url"),
                 "checkmarxone_server_url": gr.getValue("checkmarxone_server_url"),
-				"limit": gr.getValue("limit"),
+                "limit": gr.getValue("limit"),
                 "import_sca": gr.getValue("import_sca") === "1",
                 "import_sast": gr.getValue("import_sast") === "1",
             };
@@ -333,7 +346,7 @@ CheckmarxOneUtilBase.prototype = {
                 request.setEndpoint(fullUrl);
                 request.setHttpMethod(method);
                 request.setLogLevel('all');
-				request.setRequestBody(query);
+                request.setRequestBody(query);
                 request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
                 request.setRequestHeader("Accept", "application/json");
                 //Convert the object to string and set it to Request Body-
@@ -511,20 +524,20 @@ CheckmarxOneUtilBase.prototype = {
         return this._getConfig(configId).import_sast;
     },
 
-   
+
     type: 'CheckmarxOneUtilBase'
 };]]></script>
 <sys_class_name>sys_script_include</sys_class_name>
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-21 19:26:28</sys_created_on>
 <sys_id>1980bcb147935110328ca368436d435a</sys_id>
-<sys_mod_count>140</sys_mod_count>
+<sys_mod_count>143</sys_mod_count>
 <sys_name>CheckmarxOneUtilBase</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_1980bcb147935110328ca368436d435a</sys_update_name>
 <sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
-<sys_updated_on>2023-05-23 14:57:15</sys_updated_on>
+<sys_updated_on>2023-06-15 11:30:08</sys_updated_on>
 </sys_script_include>
 </unload>
