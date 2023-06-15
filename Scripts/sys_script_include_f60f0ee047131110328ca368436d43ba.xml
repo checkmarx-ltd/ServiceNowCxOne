@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-06-02 11:12:30">
+<unload unload_date="2023-06-15 06:21:19">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -58,9 +58,18 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
             for (var item in response.projects) {
                 groups = +response.projects[item].groups.toString();
                 if (groups == 0) {
-                    appListAll += ' <project id="' + response.projects[item].id + '" name="' + response.projects[item].id + '" description="' + response.projects[item].name + ' createdAt:' + response.projects[item].createdAt + '" groups="' + groupval + '"/>';
+                    appListAll += '<project id="' + response.projects[item].id +
+                        '" name="' + response.projects[item].id +
+                        ' createdAt:' + response.projects[item].createdAt +
+                        '" groups="' + groupval + '">' +
+                        '<description><' + '![CDATA[' + response.projects[item].name + ']]' + '></description></project>';
+
                 } else {
-                    appListAll += ' <project id="' + response.projects[item].id + '" name="' + response.projects[item].id + '" description="' + response.projects[item].name + ' createdAt:' + response.projects[item].createdAt + '" groups="' + response.projects[item].groups.toString() + '"/>';
+                    appListAll += '<project id="' + response.projects[item].id +
+                        '" name="' + response.projects[item].id +
+                        ' createdAt:' + response.projects[item].createdAt +
+                        '" groups="' + response.projects[item].groups.toString() + '">' +
+                        '<description><' + '![CDATA[' + response.projects[item].name + ']]' + '></description></project>';
                 }
             }
 
@@ -88,7 +97,7 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
                     this.LATEST = latest;
                 }
             } else {
-                this.LATEST = new GlideDateTime(this.DELTA_START_TIME || '1970-01-01T10:16:06.17544Z');
+                this.LATEST = new GlideDateTime();
                 var projectJSON = this.UTIL.getNewProjectList(this.IMPLEMENTATION);
                 var filteredCount = projectJSON.filteredTotalCount;
                 if (filteredCount !== "undefined") {
@@ -174,13 +183,13 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-18 05:11:38</sys_created_on>
 <sys_id>f60f0ee047131110328ca368436d43ba</sys_id>
-<sys_mod_count>129</sys_mod_count>
+<sys_mod_count>131</sys_mod_count>
 <sys_name>CheckmarxOneAppListIntegration</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_f60f0ee047131110328ca368436d43ba</sys_update_name>
 <sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
-<sys_updated_on>2023-05-23 14:50:01</sys_updated_on>
+<sys_updated_on>2023-06-06 17:18:33</sys_updated_on>
 </sys_script_include>
 </unload>

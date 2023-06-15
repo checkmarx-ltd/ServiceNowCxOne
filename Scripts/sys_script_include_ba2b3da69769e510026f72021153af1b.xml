@@ -26,8 +26,6 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                 var reportData = {};
                 if (listNode) {
                     var iter = listNode.getChildNodeIterator();
-                    if (iter.hasNext())
-                        iter.next();
                     while (iter.hasNext()) {
                         var node = iter.next();
                         reportData['source_app_id'] = node.getAttribute('app_id');
