@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-06-02 11:11:33">
+<unload unload_date="2023-06-16 06:21:04">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -13,6 +13,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
 
     MSG: 'CheckmarxOne Application Vulnerable Item Processor: ',
     NOT_AVAILABLE: 'Not Available',
+	UTIL: new x_chec3_chexone.CheckmarxOneUtil(),
 
     import_static_flaws: null,
 
@@ -29,13 +30,13 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                     while (iter.hasNext()) {
                         var node = iter.next();
                         reportData['source_app_id'] = node.getAttribute('app_id');
-                        reportData['app_name'] = node.getAttribute('app_name');
+                        reportData['app_name'] = node.getAttribute('app_id');
                         reportData['source_scan_id'] = node.getAttribute('scan_id');
                         reportData['last_scan_date'] = new GlideDateTime(node.getAttribute('last_scan_date'));
                         reportData['scan_summary_name'] = reportData['app_name'] + ' ' + reportData['last_scan_date'];
                         reportData['scan_type'] = node.getAttribute('scan_type');
                         var queryData = {};
-						var nvdData = {};
+                        var nvdData = {};
                         var resultObj = {};
                         var source_severity_string = node.getAttribute('source_severity');
                         if (source_severity_string == 'HIGH') {
@@ -45,10 +46,11 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         } else if (source_severity_string == 'LOW') {
                             source_severity = 3;
                         }
+						
                         queryData['category_name'] = node.getAttribute('category_name');
                         var query_id = 'Checkmarx One' + "-" + node.getAttribute('id');
                         var cwe_name = node.getAttribute('cweName');
-                       // var url = node.getAttribute('url');
+                        // var url = node.getAttribute('url');
                         queryData['scan_type'] = node.getAttribute('scan_type');
                         queryData['source_severity'] = source_severity;
                         queryData['threat'] = '';
@@ -75,7 +77,12 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         } else {
                             queryData['source_entry_id'] = 'Checkmarx One' + "-" + node.getAttribute('id');
                         }
+                        if (scan_type != 'static') {
+                            resultObj['source_avit_id'] = node.getAttribute('id') + node.getAttribute('package_unique_id');
 
+                        } else {
+                            resultObj['source_avit_id'] = node.getAttribute('id');
+                        }
                         resultObj['source_app_id'] = reportData['source_app_id'];
                         resultObj['app_name'] = reportData.app_name;
                         resultObj['scan_type'] = reportData['scan_type'];
@@ -90,15 +97,15 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         resultObj['source_scan_id'] = reportData['source_scan_id'];
                         resultObj['last_scan_date'] = reportData['last_scan_date'];
                         resultObj['scan_summary_name'] = reportData['scan_summary_name'];
-                        if (scan_type == 'static') {
-                            resultObj['source_avit_id'] = node.getAttribute('id');
-                        } else {
-                            resultObj['source_avit_id'] = node.getAttribute('id') + node.getAttribute('package_unique_id');
-                        }
                         resultObj['description'] = node.getLastChild().getTextContent().toString();
                         resultObj['source_references'] = node.getFirstChild().getTextContent().toString();
                         resultObj['source_vulnerability_summary'] = node.getLastChild().getTextContent().toString();
-                        resultObj['source_remediation_status'] = node.getAttribute('status');
+						var status = this.UTIL.getRemediationStatus(node.getAttribute('status'),node.getAttribute('state'));
+                        resultObj['source_remediation_status'] = 'Status= ' + status;
+						var infObj = {};
+                        infObj[gs.getMessage("Project Name")] = node.getAttribute('app_name');
+                        resultObj['source_additional_info'] = JSON.stringify(infObj);
+                        resultObj['source_finding_status'] = 'State= ' +  node.getAttribute('state');
                         resultObj['last_found'] = reportData.last_scan_date.getDate();
                         resultObj['first_found'] = new GlideDateTime(node.getAttribute('first_found_date')).getDate();
                         resultObj['application_module'] = this.NOT_AVAILABLE;
@@ -108,7 +115,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
 
                         resultObj['category_name'] = queryData['category_name'];
                         if (scan_type != 'static') {
-							nvdData['cvss_base_score'] = node.getAttribute('cvssScore');
+                            nvdData['cvss_base_score'] = node.getAttribute('cvssScore');
                             nvdData['cvss_vector'] = node.getAttribute('cvssVector');
                             this._handleCVE(nvdData, resultObj, cwe_name);
                         }
@@ -152,12 +159,14 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
             var result = this.AVR_API.createOrUpdateAVIT(data);
             if (!result)
                 return;
-            if (result.updated)
+            if (result.updated) {
                 this.import_counts.updated++;
-            else if (result.inserted)
+            } else if (result.inserted) {
                 this.import_counts.inserted++;
-            else if (result.unchanged)
+            } else if (result.unchanged) {
                 this.import_counts.unchanged++;
+            }
+
         } catch (err) {
             gs.error(this.MSG + " _upsert : Error while inserting data into ServiceNow DB.");
             throw err;
@@ -167,8 +176,8 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
     _handleCVE: function(nvdData, resultObj, cve) {
         var name = cve;
         var url = resultObj.source_references;
-		var cvss_base_score = nvdData.cvss_base_score;
-		var cvss_vector = nvdData.cvss_vector;
+        var cvss_base_score = nvdData.cvss_base_score;
+        var cvss_vector = nvdData.cvss_vector;
 
         // insert to sn_vul_nvd_entry
         var nvd = new GlideRecord("sn_vul_nvd_entry");
@@ -177,30 +186,27 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
             nvd.initialize();
             nvd.setValue("id", name);
             nvd.setValue("summary", url);
-			nvd.setValue("v3_base_score", cvss_base_score);
-			nvd.setValue("v3_attack_vector", cvss_vector);
+            nvd.setValue("v3_base_score", cvss_base_score);
+            nvd.setValue("v3_attack_vector", cvss_vector);
             nvd.setValue("source", "Checkmarx One");
             nvd.setValue("integration_run", this.integrationProcessGr.integration_run + "");
             nvdExist = nvd.insert();
         }
 
     },
-
-
-
     type: 'CheckmarxOneAppVulItemProcessor'
 });]]></script>
 <sys_class_name>sys_script_include</sys_class_name>
 <sys_created_by>apoorva.singh@checkmarx.com</sys_created_by>
 <sys_created_on>2023-03-16 05:04:10</sys_created_on>
 <sys_id>ba2b3da69769e510026f72021153af1b</sys_id>
-<sys_mod_count>9</sys_mod_count>
+<sys_mod_count>21</sys_mod_count>
 <sys_name>CheckmarxOneAppVulItemProcessor</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_ba2b3da69769e510026f72021153af1b</sys_update_name>
-<sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
-<sys_updated_on>2023-05-23 14:52:48</sys_updated_on>
+<sys_updated_by>admin</sys_updated_by>
+<sys_updated_on>2023-06-16 05:35:59</sys_updated_on>
 </sys_script_include>
 </unload>
