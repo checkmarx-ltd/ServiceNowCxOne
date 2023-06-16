@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-06-16 10:53:42">
+<unload unload_date="2023-06-16 14:25:25">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -108,7 +108,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         resultObj['source_references'] = node.getFirstChild().getTextContent().toString();
                         resultObj['source_vulnerability_summary'] = node.getLastChild().getTextContent().toString();
                         var status = this.UTIL.getRemediationStatus(node.getAttribute('status'), node.getAttribute('state'));
-                        resultObj['source_remediation_status'] = 'Status= ' + status;
+                        resultObj['source_remediation_status'] = status;
                         var infObj = {};
                         infObj[gs.getMessage("Project Name")] = node.getAttribute('app_name');
                         resultObj['source_additional_info'] = JSON.stringify(infObj);
@@ -118,16 +118,16 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         resultObj['source_severity'] = source_severity_string;
                         resultObj['complies_with_policy'] = 'not_applicable';
                         resultObj['source_entry_id'] = queryData['source_entry_id'];
-
-                        resultObj['category_name'] = queryData['category_name'];
+                        resultObj['category_name'] = queryData['category_name'];					
                         if (scan_type != 'static') {
                             nvdData['cvss_base_score'] = node.getAttribute('cvssScore');
                             nvdData['cvss_vector'] = node.getAttribute('cvssVector');
                             this._handleCVE(nvdData, resultObj, cwe_name);
                         }
+						
                         this._upsertQuery(queryData);
-                        this._upsertAVIT(resultObj);
-
+						this._upsertAVIT(resultObj);
+                        
                     }
                 }
             } catch (ex) {
@@ -206,13 +206,13 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
 <sys_created_by>apoorva.singh@checkmarx.com</sys_created_by>
 <sys_created_on>2023-03-16 05:04:10</sys_created_on>
 <sys_id>ba2b3da69769e510026f72021153af1b</sys_id>
-<sys_mod_count>22</sys_mod_count>
+<sys_mod_count>21</sys_mod_count>
 <sys_name>CheckmarxOneAppVulItemProcessor</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_ba2b3da69769e510026f72021153af1b</sys_update_name>
-<sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2023-06-16 08:09:55</sys_updated_on>
+<sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
+<sys_updated_on>2023-06-16 14:25:10</sys_updated_on>
 </sys_script_include>
 </unload>
