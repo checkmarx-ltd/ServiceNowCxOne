@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-06-16 10:52:50">
+<unload unload_date="2023-06-19 13:21:07">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -179,24 +179,24 @@ CheckmarxOneUtilBase.prototype = {
     //to get total  vul item 
     getTotalVulcount: function(configId, scanId) {
         try {
-            var request = new sn_ws.RESTMessageV2();
+           var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
             var apibaseurl = config.checkmarxone_api_base_url;
             var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
-            var count = 0;
-            var query = '/api/results/?scan-id=' + scanId + '&offset=0&limit=5000&sort=%-type';
-            var responseLastScanReport = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
-            var jsonLastScanReportResp = JSON.parse(responseLastScanReport.getBody());
-            for (var item in jsonLastScanReportResp.results) {
 
-                count += 1;
-
+            var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=true';
+            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+            var body = resp.getBody();
+            var ScanSummaryJson = JSON.parse(body);
+            
+            for (var item in ScanSummaryJson.scansSummaries) {
+                var count = ScanSummaryJson.scansSummaries[item].scaCounters.totalCounter + ScanSummaryJson.scansSummaries[item].sastCounters.totalCounter;                         
             }
         } catch (err) {
-            gs.error(this.MSG + " getScanInfo: Error while getting the scan Ids.");
-            throw err;
+            gs.error(this.MSG + " getTotalVulcount: Error while getting the total vul count." + err + scanId);
+            return -1;
         }
 
         return count;
@@ -209,24 +209,15 @@ CheckmarxOneUtilBase.prototype = {
             var config = this._getConfig(configId);
             var includesca = this.importScaFlaw(configId);
             var includesast = this.importSastFlaw(configId);
-            var query = '';
-            var limit_val = config.limit;
+			var limit_val = config.limit;
+			//var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val; 
+            var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val +'&sort=%2Bstatus&sort=%2Bseverity' ; 
+			//var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=20' +'&sort=%2Bstatus&sort=%2Bseverity' ;      
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
             var apibaseurl = config.checkmarxone_api_base_url;
             var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
-            if (includesca) {
-                if (includesast) {
-                    query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val + '&sort=%2Btype';
-                } else {
-                    query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val + '&sort=%2Btype';
-                }
-            } else {
-                if (includesast) {
-                    query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val + '&sort=%-type';
-                }
-            }
-
+           
         } catch (err) {
             gs.error(this.MSG + " getVulInfo: Error while getting the vul Info." + err);
             throw err;
@@ -543,13 +534,13 @@ CheckmarxOneUtilBase.prototype = {
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-21 19:26:28</sys_created_on>
 <sys_id>1980bcb147935110328ca368436d435a</sys_id>
-<sys_mod_count>149</sys_mod_count>
+<sys_mod_count>154</sys_mod_count>
 <sys_name>CheckmarxOneUtilBase</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_1980bcb147935110328ca368436d435a</sys_update_name>
 <sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2023-06-16 10:45:03</sys_updated_on>
+<sys_updated_on>2023-06-19 13:11:08</sys_updated_on>
 </sys_script_include>
 </unload>

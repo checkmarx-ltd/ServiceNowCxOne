@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-06-16 06:21:29">
+<unload unload_date="2023-06-19 13:20:56">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -75,14 +75,11 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             var responseLastScanSummary = this.UTIL.getScanDetails(this.IMPLEMENTATION, scanId);
             var jsonLastScanSummResp = JSON.parse(responseLastScanSummary.getBody());
             gs.debug(this.MSG + " getSummaryReport : parsed scanInfoResponse " + JSON.stringify(jsonLastScanSummResp));
+			//to map value of last_scan_date, project name and project Id in XML
             for (var value in jsonLastScanSummResp.scans) {
-                scanSummaryAll += '<scan id="' + jsonLastScanSummResp.scans[value].id + '" app_id="' + jsonLastScanSummResp.scans[value].projectId +
-                    '" last_scan_date="' + this.UTIL.parseDate(jsonLastScanSummResp.scans[value].updatedAt) +
-                    '" app_name="' + jsonLastScanSummResp.scans[value].projectName + '"/>';
                 lastscandate += this.UTIL.parseDate(jsonLastScanSummResp.scans[value].updatedAt);
                 appname += jsonLastScanSummResp.scans[value].projectName;
                 appId += jsonLastScanSummResp.scans[value].projectId;
-
             }
             var responseLastScanReport = this.UTIL.getVulInfo(this.IMPLEMENTATION, scanId, newoffset);
             gs.debug(this.MSG + " getDetailedReport : scanInfoResponse " + responseLastScanReport);
@@ -189,8 +186,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                 var apps = this.AVR_API.getAppReleases();
                 var app = '';
                 for (var i in apps) {
-                    var appId = apps[i].source_app_id;
-                    //var created = apps[i].sys_created_on; && created > GlideDateTime('2023-02-20T23:00:06.17544Z').getDate()
+                    var appId = apps[i].source_app_id;                 
                     if (appId !== "undefined") {
 
                         var scans = this._getScans(appId);
@@ -262,10 +258,8 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
     _getoffsets: function(appId, scanId) {
         var offsets = [];
         var offset = 0;
-        var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
-        var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
-
         var ReportLength = this.UTIL.getTotalVulcount(this.IMPLEMENTATION, scanId);
+		//gs.info("Report Length" + ReportLength);
         var loopLength = ReportLength / 50;
         //in result api offset value start from 0 and increment by 1, here it acts like page instead of number of item like other api
         for (var i = 0; i <= parseInt(loopLength); i++) {
@@ -329,13 +323,13 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-21 12:06:20</sys_created_on>
 <sys_id>891d8fed471f1110328ca368436d4334</sys_id>
-<sys_mod_count>156</sys_mod_count>
+<sys_mod_count>164</sys_mod_count>
 <sys_name>CheckmarxOneAppVulItemIntegration</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_891d8fed471f1110328ca368436d4334</sys_update_name>
-<sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
-<sys_updated_on>2023-06-15 10:45:33</sys_updated_on>
+<sys_updated_by>admin</sys_updated_by>
+<sys_updated_on>2023-06-19 13:12:23</sys_updated_on>
 </sys_script_include>
 </unload>
