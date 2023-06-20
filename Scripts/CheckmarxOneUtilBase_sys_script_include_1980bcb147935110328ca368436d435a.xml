@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-06-19 13:21:07">
+<unload unload_date="2023-06-20 09:57:31">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -29,6 +29,22 @@ CheckmarxOneUtilBase.prototype = {
         }
         return this._makeRestCall(apiurl, configId, token, 'projects', "get");
     },
+	//get one project from project list
+	getProject: function(configId) {
+		try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "post";
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
+            var query = '/api/projects/?offset=0&limit=1';
+        } catch (err) {
+            gs.error(this.MSG + " getProjectInfo: Error while getting project.");
+            throw err;
+        }
+        return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+	},
     //get new project list
     getNewProjectList: function(configId) {
         try {
@@ -179,24 +195,22 @@ CheckmarxOneUtilBase.prototype = {
     //to get total  vul item 
     getTotalVulcount: function(configId, scanId) {
         try {
-           var request = new sn_ws.RESTMessageV2();
+            var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
             var apibaseurl = config.checkmarxone_api_base_url;
             var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
-
-            var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=true';
-            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
-            var body = resp.getBody();
-            var ScanSummaryJson = JSON.parse(body);
-            
-            for (var item in ScanSummaryJson.scansSummaries) {
-                var count = ScanSummaryJson.scansSummaries[item].scaCounters.totalCounter + ScanSummaryJson.scansSummaries[item].sastCounters.totalCounter;                         
-            }
-        } catch (err) {
-            gs.error(this.MSG + " getTotalVulcount: Error while getting the total vul count." + err + scanId);
-            return -1;
+                    var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=true';	
+            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");	
+            var body = resp.getBody();	
+            var ScanSummaryJson = JSON.parse(body);	  	
+            for (var item in ScanSummaryJson.scansSummaries) {	
+                var count = ScanSummaryJson.scansSummaries[item].scaCounters.totalCounter + ScanSummaryJson.scansSummaries[item].sastCounters.totalCounter;                         	
+            }	
+        } catch (err) {	
+            gs.error(this.MSG + " getTotalVulcount: Error while getting the total vul count." + err + scanId);	
+            return -1;	
         }
 
         return count;
@@ -327,6 +341,7 @@ CheckmarxOneUtilBase.prototype = {
                 "include_first_detection_date": gr.getValue("include_first_detection_date") === "1",
                 "import_sca": gr.getValue("import_sca") === "1",
                 "import_sast": gr.getValue("import_sast") === "1",
+				"access_token": gr.getValue("access_token"),
             };
         } catch (err) {
             gs.error(this.MSG + " :_getConfig :Error in getting the configuration.");
@@ -342,7 +357,7 @@ CheckmarxOneUtilBase.prototype = {
     _getToken: function(baseUrl, config, method, request, username, password, ast_client_id, tenant, currentToken) {
         try {
             var accessToken = currentToken;
-            if (accessToken == null || accessToken == "" || this.isTokenExpired(this.getExpTimeFromAccessToken(accessToken))) {
+            if (accessToken == null || accessToken == ""  || this._isTokenExpired(this._getExpTimeFromAccessToken(accessToken)) || !this._checkClientId(username, accessToken)) {
                 var fullUrl = baseUrl + '/auth/realms/' + tenant + '/protocol/openid-connect/token';
                 var query = "client_id=" + username + "&grant_type=" + "client_credentials" + "&client_secret=" + password;
                 request.setEndpoint(fullUrl);
@@ -366,7 +381,43 @@ CheckmarxOneUtilBase.prototype = {
         }
         return accessToken;
     },
-    _makeRestCall: function(apiurl, configId, token, apiPath, method, params) {
+	//Compare current clientId with accessToken's clientId
+    _checkClientId: function(clientId, accessToken) {
+        var tokenPayload = accessToken.split(".")[1];
+		var tokenPayloadJson = JSON.parse(gs.base64Decode(tokenPayload));
+		var clientIdToken = tokenPayloadJson.azp;
+		if(clientId == clientIdToken) 
+			return true;
+		return false;
+    },
+	// Get expiry token from JWT access token
+	_getExpTimeFromAccessToken: function(accessToken) {
+		try{
+		var splittedStr = accessToken.split(".");
+		var decodedToken = JSON.parse(gs.base64Decode(splittedStr[1]));
+		var expTime = decodedToken.exp;
+		} catch(err){
+			gs.error(this.MSG +" :getExpTimeFromAccessToken :Error in getExpTimeFromAccessToken.");
+			throw err;
+		}
+		return expTime;
+	},
+	// This method checks  if access token is expired or not.
+	_isTokenExpired: function(tokenExpTime) {
+		try {
+			var dateTime = new GlideDateTime();
+			var currentTime = dateTime.getNumericValue() / 1000;
+			currentTime = parseInt(currentTime);
+            if (currentTime > tokenExpTime) 
+                return true;
+			else 
+                return false;
+		} catch (err) {
+			gs.error(this.MSG + " :isTokenExpired :Error in isTokenExpired().");
+			throw err;
+		}
+	},
+	_makeRestCall: function(apiurl, configId, token, apiPath, method, params) {
         var request;
         try {
             request = this.setRequestParams(apiurl, configId, token, apiPath, method, params);
@@ -534,13 +585,13 @@ CheckmarxOneUtilBase.prototype = {
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-21 19:26:28</sys_created_on>
 <sys_id>1980bcb147935110328ca368436d435a</sys_id>
-<sys_mod_count>154</sys_mod_count>
+<sys_mod_count>172</sys_mod_count>
 <sys_name>CheckmarxOneUtilBase</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_1980bcb147935110328ca368436d435a</sys_update_name>
 <sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2023-06-19 13:11:08</sys_updated_on>
+<sys_updated_on>2023-06-20 09:57:20</sys_updated_on>
 </sys_script_include>
 </unload>
