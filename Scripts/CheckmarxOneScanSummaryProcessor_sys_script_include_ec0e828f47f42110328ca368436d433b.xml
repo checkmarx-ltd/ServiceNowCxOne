@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-06-23 11:12:33">
+<unload unload_date="2023-06-26 06:35:14">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -11,12 +11,12 @@
 <script><![CDATA[var CheckmarxOneScanSummaryProcessor = Class.create();
 CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.ApplicationVulnerabilityImportProcessorBase, {
     MSG: 'CheckmarxOne Scan Summary Processor: ',
-	UTIL: new x_chec3_chexone.CheckmarxOneUtil(),
+    UTIL: new x_chec3_chexone.CheckmarxOneUtil(),
 
     process: function(attachment) {
         if (attachment) {
             try {
-                this.UTIL.validateXML(new GlideSysAttachment().getContent(attachment), 'error');   
+                this.UTIL.validateXML(new GlideSysAttachment().getContent(attachment), 'error');
                 var doc = new XMLDocument2();
                 doc.parseXML(new GlideSysAttachment().getContent(attachment));
                 var Node = doc.getNode('/scanData');
@@ -41,7 +41,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         var Sastattributes = SastappNode.getAttributes();
                         //map attributes from CheckmarxOne into the servicenow scan summary table
                         sastdata['source_app_id'] = Sastattributes.app_id;
-                        sastdata['source_scan_id'] =  Sastattributes.id;
+                        sastdata['source_scan_id'] = Sastattributes.id;
                         sastdata['detected_flaw_count'] = +Sastattributes.total_no_flaws;
                         sastdata['last_scan_date'] = new GlideDateTime(Sastattributes.last_scan_date);
                         sastdata['scan_summary_name'] = Sastattributes.app_name + ' ' + sastdata['last_scan_date'];
@@ -69,7 +69,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         var attributes = appNode.getAttributes();
                         //map attributes from Checkmarx into the servicenow scan summary table
                         data['source_app_id'] = attributes.app_id;
-                        data['source_scan_id'] =  attributes.id;
+                        data['source_scan_id'] = attributes.id;
                         data['detected_flaw_count'] = +attributes.total_no_flaws;
                         data['last_scan_date'] = new GlideDateTime(attributes.last_scan_date);
                         data['scan_summary_name'] = attributes.app_name + ' ' + data['last_scan_date'];
@@ -89,6 +89,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
         } else
             gs.warn(this.MSG + ':process called with no attachment');
     },
+
 
     _parseStatic: function(node, data) {
         try {
@@ -142,6 +143,6 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_ec0e828f47f42110328ca368436d433b</sys_update_name>
 <sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2023-06-22 08:04:04</sys_updated_on>
+<sys_updated_on>2023-06-26 04:44:49</sys_updated_on>
 </sys_script_include>
 </unload>
