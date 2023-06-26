@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-06-26 06:36:02">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>package_private</access>
 <active>true</active>
@@ -64,6 +63,7 @@ CheckmarxOneConfigUtilBase.prototype = {
 				"include_first_detection_date": gr.getValue("include_first_detection_date") === "1",
                 "import_sca": gr.getValue("import_sca") === "1",
                 "import_sast": gr.getValue("import_sast") === "1",
+				"vulnerability_count_threshold_level" : gr.getValue("vulnerability_count_threshold_level"),
                 "triaging_in_snow": gr.getValue("triaging_in_snow") === "1",
 
             };
@@ -87,6 +87,5 @@ CheckmarxOneConfigUtilBase.prototype = {
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_508f0d54471f1110328ca368436d43f8</sys_update_name>
 <sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2023-06-26 04:04:49</sys_updated_on>
 </sys_script_include>
 </unload>
