@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-06-26 06:32:06">
+<unload unload_date="2023-06-26 13:07:49">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -142,15 +142,15 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
 
 
                     } catch (ex) {
-                        errorMessage = gs.getMessage("Error in retriving data for app list integration!");
-                        gs.error(this.MSG + "errorMessage " + ex);
-                        throw ex;
+                        errorMessage = gs.getMessage("Error in retriving data for app vulnerability item integration!");
+                        gs.error(this.MSG + " " + errorMessage + " " + ex.message);
+                        errorProcess += " | " + ex.message;
                     }
 
                 }
             }
             if (!gs.nil(errorProcess))
-                gs.error(this.MSG + "All errors that occurred while processing Vulnerability lists: " + errorProcess);
+                gs.error(this.MSG + " All errors that occurred while processing Vulnerability lists: " + errorProcess);
             this.completeProcess(this.integrationProcessGr, this.import_counts);
         } else
             gs.warn(this.MSG + ':process called with no attachment');
@@ -220,13 +220,13 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
 <sys_created_by>apoorva.singh@checkmarx.com</sys_created_by>
 <sys_created_on>2023-03-16 05:04:10</sys_created_on>
 <sys_id>ba2b3da69769e510026f72021153af1b</sys_id>
-<sys_mod_count>24</sys_mod_count>
+<sys_mod_count>26</sys_mod_count>
 <sys_name>CheckmarxOneAppVulItemProcessor</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_ba2b3da69769e510026f72021153af1b</sys_update_name>
 <sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2023-06-26 06:29:43</sys_updated_on>
+<sys_updated_on>2023-06-26 12:37:59</sys_updated_on>
 </sys_script_include>
 </unload>
