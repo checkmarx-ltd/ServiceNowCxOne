@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-06-26 14:02:31">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -9,7 +8,6 @@
 <description>Wrapper class to assemble the components for Checkmarx One integration calls.</description>
 <name>CheckmarxOneUtilBase</name>
 <script><![CDATA[var CheckmarxOneUtilBase = Class.create();
-
 CheckmarxOneUtilBase.prototype = {
     MSG: 'CheckmarxOneUtilBase:',
     initialize: function() {},
@@ -24,10 +22,26 @@ CheckmarxOneUtilBase.prototype = {
             var method = "post";
             var token = this.getAccessToken(baseUrl, config, method, request);
         } catch (err) {
-            gs.error(this.MSG + " getProjectList : Error while getting the project list.");
+            gs.error(this.MSG + " getProjectList : Error while getting the project list." + err);
             throw err;
         }
         return this._makeRestCall(apiurl, configId, token, 'projects', "get");
+    },
+    //get one project from project list
+    getProject: function(configId) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "post";
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
+            var query = '/api/projects/?offset=0&limit=1';
+        } catch (err) {
+            gs.error(this.MSG + " getProject: Error while getting project." + err);
+            throw err;
+        }
+        return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
     },
     //get new project list
     getNewProjectList: function(configId) {
@@ -43,7 +57,7 @@ CheckmarxOneUtilBase.prototype = {
             var body = resp.getBody();
             var projectJSON = JSON.parse(body);
         } catch (err) {
-            gs.error(this.MSG + " getProjectInfo: Error while getting the project info.");
+            gs.error(this.MSG + " getProjectInfo: Error while getting the project info." + err);
             throw err;
         }
         return projectJSON;
@@ -64,7 +78,7 @@ CheckmarxOneUtilBase.prototype = {
             var projectJSON = JSON.parse(body);
 
         } catch (err) {
-            gs.error(this.MSG + " getProjectInfo: Error while getting the project info.");
+            gs.error(this.MSG + " getProjectInfo: Error while getting the project info." + err);
             throw err;
         }
         return projectJSON;
@@ -88,7 +102,7 @@ CheckmarxOneUtilBase.prototype = {
         return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
     },
 
-    // 50 scan details of a given appId 
+    // last  scan details of a given appId 
     getScanInfo: function(configId, appId, offset, last_run_date) {
         try {
             var request = new sn_ws.RESTMessageV2();
@@ -100,7 +114,7 @@ CheckmarxOneUtilBase.prototype = {
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
             var query = '/api/scans/?offset=0&limit=1&statuses=Completed&project-id=' + appId + '&from-date=' + last_run_date + '&sort=%2Bcreated_at&sort=%2Bstatus&field=scan-ids';
         } catch (err) {
-            gs.error(this.MSG + " getScanInfo: Error while getting the scan Ids.");
+            gs.error(this.MSG + " getScanInfo: Error while getting the scan Ids." + err);
             throw err;
         }
         return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
@@ -119,63 +133,13 @@ CheckmarxOneUtilBase.prototype = {
 
 
         } catch (err) {
-            gs.error(this.MSG + " getScanInfo: Error while getting the scan Ids.");
+            gs.error(this.MSG + " getScanDetails: Error while getting the scan Ids." +err);
             throw err;
         }
         return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
 
     },
-    //to get total sca vul item 
-    getScaVulcount: function(configId, scanId) {
-        try {
-            var request = new sn_ws.RESTMessageV2();
-            var config = this._getConfig(configId);
-            var accesscontrolbaseUrl = config.checkmarxone_server_url;
-            var apibaseurl = config.checkmarxone_api_base_url;
-            var method = "post";
-            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
-            var count = 0;
-            var query = '/api/results/?scan-id=' + scanId + '&offset=0&limit=5000&sort=%2Btype';
-            var responseLastScanReport = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
-            var jsonLastScanReportResp = JSON.parse(responseLastScanReport.getBody());
-            for (var item in jsonLastScanReportResp.results) {
-                if (jsonLastScanReportResp.results[item].type == "sca") {
-                    count += 1;
-                }
-            }
-        } catch (err) {
-            gs.error(this.MSG + " getScanInfo: Error while getting the scan Ids.");
-            throw err;
-        }
 
-        return count;
-
-    },
-    //to get total sast vul item 
-    getSastVulcount: function(configId, scanId) {
-        try {
-            var request = new sn_ws.RESTMessageV2();
-            var config = this._getConfig(configId);
-            var accesscontrolbaseUrl = config.checkmarxone_server_url;
-            var apibaseurl = config.checkmarxone_api_base_url;
-            var method = "post";
-            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
-            var count = 0;
-            var query = '/api/results/?scan-id=' + scanId + '&offset=0&limit=5000&sort=%-type';
-            var responseLastScanReport = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
-            var jsonLastScanReportResp = JSON.parse(responseLastScanReport.getBody());
-            for (var item in jsonLastScanReportResp.results) {
-                if (jsonLastScanReportResp.results[item].type) {
-                    count += 1;
-                }
-            }
-        } catch (err) {
-            gs.error(this.MSG + " getScanInfo: Error while getting the scan Ids.");
-            throw err;
-        }
-
-        return count;
-    },
     //to get total  vul item 
     getTotalVulcount: function(configId, scanId) {
         try {
@@ -190,8 +154,7 @@ CheckmarxOneUtilBase.prototype = {
             var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
             var body = resp.getBody();
             var ScanSummaryJson = JSON.parse(body);
-			
-			for (var item in ScanSummaryJson.scansSummaries) {
+for (var item in ScanSummaryJson.scansSummaries) {
                 var count = ScanSummaryJson.scansSummaries[item].scaCounters.totalCounter + ScanSummaryJson.scansSummaries[item].sastCounters.totalCounter;                         
             }
         } catch (err) {
@@ -211,13 +174,12 @@ CheckmarxOneUtilBase.prototype = {
             var includesast = this.importSastFlaw(configId);
             var limit_val = config.limit;
             //var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val; 
-            var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val +'&sort=%2Bstatus&sort=%2Bseverity' ; 
-			//var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=20' +'&sort=%2Bstatus&sort=%2Bseverity' ;
-			var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val + '&sort=%2Bstatus&sort=%2Bseverity';
+            //var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=20' +'&sort=%2Bstatus&sort=%2Bseverity' ;      
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
             var apibaseurl = config.checkmarxone_api_base_url;
             var method = "post";
-            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);            
-
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
         } catch (err) {
             gs.error(this.MSG + " getVulInfo: Error while getting the vul Info." + err);
             throw err;
@@ -302,10 +264,26 @@ CheckmarxOneUtilBase.prototype = {
 
     },
     //To get remediation status for state mapping
-    getRemediationStatus: function(status, state) {
+    getSASTRemediationStatus: function(status, state) {
         try {
 
-            if ((status != 'NEW' || status != 'RECURRENT') && (state == 'TO_VERIFY' || state == 'NOT_IGNORED')) {
+            if (state == 'TO_VERIFY' || status == 'FIXED' || status == 'RESOLVED') {
+                var remediation_status = status;
+            } else {
+                remediation_status = state;
+            }
+        } catch (err) {
+            gs.error(this.MSG + " getRemediationStatus: Error while getting the status." + err);
+
+        }
+        return remediation_status;
+
+    },
+    //To get remediation status for state mapping
+    getSCARemediationStatus: function(status, state) {
+        try {
+
+            if (state == 'NOT_IGNORED' || status == 'FIXED' || status == 'RESOLVED') {
                 var remediation_status = status;
             } else {
                 remediation_status = state;
@@ -346,9 +324,11 @@ CheckmarxOneUtilBase.prototype = {
                 "include_first_detection_date": gr.getValue("include_first_detection_date") === "1",
                 "import_sca": gr.getValue("import_sca") === "1",
                 "import_sast": gr.getValue("import_sast") === "1",
+                "triaging_in_snow": gr.getValue("triaging_in_snow") === "1",
+                "access_token": gr.getValue("access_token"),
             };
         } catch (err) {
-            gs.error(this.MSG + " :_getConfig :Error in getting the configuration.");
+            gs.error(this.MSG + " :_getConfig :Error in getting the configuration." + err);
             throw err;
         }
         return newconfig;
@@ -361,7 +341,7 @@ CheckmarxOneUtilBase.prototype = {
     _getToken: function(baseUrl, config, method, request, username, password, ast_client_id, tenant, currentToken) {
         try {
             var accessToken = currentToken;
-            if (accessToken == null || accessToken == "" || this.isTokenExpired(this.getExpTimeFromAccessToken(accessToken))) {
+            if (accessToken == null || accessToken == "" || this._isTokenExpired(this._getExpTimeFromAccessToken(accessToken)) || !this._checkClientId(username, accessToken)) {
                 var fullUrl = baseUrl + '/auth/realms/' + tenant + '/protocol/openid-connect/token';
                 var query = "client_id=" + username + "&grant_type=" + "client_credentials" + "&client_secret=" + password;
                 request.setEndpoint(fullUrl);
@@ -380,11 +360,56 @@ CheckmarxOneUtilBase.prototype = {
             }
 
         } catch (err) {
-            gs.error(this.MSG + " :_getToken : Error while getting the token.");
+            gs.error(this.MSG + " :_getToken : Error while getting the token." + err);
             throw err;
         }
         return accessToken;
     },
+
+    //Compare current clientId with accessToken's clientId
+    _checkClientId: function(clientId, accessToken) {
+		try {
+        var tokenPayload = accessToken.split(".")[1];
+        var tokenPayloadJson = JSON.parse(gs.base64Decode(tokenPayload));
+        var clientIdToken = tokenPayloadJson.azp;
+        if (clientId == clientIdToken)
+            return true;
+        return false;
+		}
+		catch (err) {
+            gs.error(this.MSG + " :checkClientId :Error in checkClientId." + err);
+            throw err;
+        }
+
+    },
+    // Get expiry token from JWT access token
+    _getExpTimeFromAccessToken: function(accessToken) {
+        try {
+            var splittedStr = accessToken.split(".");
+            var decodedToken = JSON.parse(gs.base64Decode(splittedStr[1]));
+            var expTime = decodedToken.exp;
+        } catch (err) {
+            gs.error(this.MSG + " :getExpTimeFromAccessToken :Error in getExpTimeFromAccessToken.");
+            throw err;
+        }
+        return expTime;
+    },
+    // This method checks  if access token is expired or not.
+    _isTokenExpired: function(tokenExpTime) {
+        try {
+            var dateTime = new GlideDateTime();
+            var currentTime = dateTime.getNumericValue() / 1000;
+            currentTime = parseInt(currentTime);
+            if (currentTime > tokenExpTime)
+                return true;
+            else
+                return false;
+        } catch (err) {
+            gs.error(this.MSG + " :isTokenExpired :Error in isTokenExpired()." + err);
+            throw err;
+        }
+    },
+
     _makeRestCall: function(apiurl, configId, token, apiPath, method, params) {
         var request;
         try {
@@ -530,6 +555,7 @@ CheckmarxOneUtilBase.prototype = {
                 "include_first_detection_date": gr.getValue("include_first_detection_date") === "1",
                 "import_sca": gr.getValue("import_dast") === "1",
                 "import_sast": gr.getValue("import_sast") === "1",
+                "triaging_in_snow": gr.getValue("triaging_in_snow") === "1",
             };
             new sn_sec_int.Implementation().setConfiguration(instance, newconfig);
             return true;
@@ -547,6 +573,24 @@ CheckmarxOneUtilBase.prototype = {
         return this._getConfig(configId).import_sast;
     },
 
+    //validate XML
+    validateXML: function(body, errorNodeName) {
+        if (!body) return;
+        var doc = new XMLDocument2();
+        doc.parseXML(body);
+        var err = null;
+        try {
+            var root = doc.getFirstNode('/' + doc.getDocumentElement().getNodeName());
+            if (errorNodeName && root.getNodeName() == errorNodeName)
+                err = root.getTextContent();
+            else
+                doc.getNextNode(root);
+        } catch (e) {
+            throw 'XML document syntax invalid';
+        }
+        if (err)
+            throw this.MSG + 'Error: ' + err;
+    },
 
     type: 'CheckmarxOneUtilBase'
 };]]></script>
@@ -554,13 +598,11 @@ CheckmarxOneUtilBase.prototype = {
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-21 19:26:28</sys_created_on>
 <sys_id>1980bcb147935110328ca368436d435a</sys_id>
-<sys_mod_count>159</sys_mod_count>
 <sys_name>CheckmarxOneUtilBase</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_1980bcb147935110328ca368436d435a</sys_update_name>
 <sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2023-06-26 13:49:13</sys_updated_on>
 </sys_script_include>
 </unload>

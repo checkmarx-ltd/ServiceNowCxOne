@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-06-26 14:27:58">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>package_private</access>
 <active>true</active>
@@ -22,7 +21,7 @@ CheckmarxOneConfigUtilBase.prototype = {
                     "result": "false",
                     "errorMessage": gs.getMessage("CheckmarxOne configuration not found.")
                 };
-            var response = new x_chec3_chexone.CheckmarxOneUtil().getProjectList(config.getValue("integration_instance"));
+            var response = new x_chec3_chexone.CheckmarxOneUtil().getProject(config.getValue("integration_instance"));
 
         } catch (ex) {
             result = false;
@@ -88,6 +87,5 @@ CheckmarxOneConfigUtilBase.prototype = {
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_508f0d54471f1110328ca368436d43f8</sys_update_name>
 <sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2023-06-21 04:25:00</sys_updated_on>
 </sys_script_include>
 </unload>
