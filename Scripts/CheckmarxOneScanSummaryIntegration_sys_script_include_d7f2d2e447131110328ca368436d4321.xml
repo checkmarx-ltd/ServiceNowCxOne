@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-06-26 06:32:54">
+<unload unload_date="2023-06-26 17:42:49">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -52,7 +52,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
             var scaScanSummaryAll = '';
             var sastScanSummaryAll = '';
             var includescanSummaryAll = '';
-            var newoffset = offsetId -1;
+            var newoffset = offsetId - 1;
             var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
             var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
             var responseLastScanSummary = this.UTIL.getScanInfo(this.IMPLEMENTATION, appId, newoffset, this._getCurrentDeltaStartTime());
@@ -226,13 +226,13 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-18 05:18:19</sys_created_on>
 <sys_id>d7f2d2e447131110328ca368436d4321</sys_id>
-<sys_mod_count>155</sys_mod_count>
+<sys_mod_count>148</sys_mod_count>
 <sys_name>CheckmarxOneScanSummaryIntegration</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_d7f2d2e447131110328ca368436d4321</sys_update_name>
-<sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2023-06-26 05:45:23</sys_updated_on>
+<sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
+<sys_updated_on>2023-06-26 17:01:21</sys_updated_on>
 </sys_script_include>
 </unload>
