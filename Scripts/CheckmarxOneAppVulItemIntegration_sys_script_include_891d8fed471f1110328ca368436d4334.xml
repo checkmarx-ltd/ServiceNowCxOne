@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-06-26 17:43:24">
+<unload unload_date="2023-06-26 18:06:49">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -90,7 +90,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             gs.debug(this.MSG + " getDetailedReport : scanInfoResponse " + responseLastScanReport);
             var jsonLastScanReportResp = JSON.parse(responseLastScanReport.getBody());
             var scan_type = "static";
-            var vulnerabilityCountThresholdLevel = config.vulnerability_count_threshold_level;
+            var vulnerabilityCountThresholdLevel = config.vulnerability_threshold_level;
             for (var item in jsonLastScanReportResp.results) {
                 if (jsonLastScanReportResp.results[item].type == "sast") {
                     for (var j in jsonLastScanReportResp.results[item].data.nodes) {
@@ -337,13 +337,13 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-21 12:06:20</sys_created_on>
 <sys_id>891d8fed471f1110328ca368436d4334</sys_id>
-<sys_mod_count>158</sys_mod_count>
+<sys_mod_count>159</sys_mod_count>
 <sys_name>CheckmarxOneAppVulItemIntegration</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_891d8fed471f1110328ca368436d4334</sys_update_name>
 <sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
-<sys_updated_on>2023-06-26 16:59:50</sys_updated_on>
+<sys_updated_on>2023-06-26 18:03:51</sys_updated_on>
 </sys_script_include>
 </unload>
