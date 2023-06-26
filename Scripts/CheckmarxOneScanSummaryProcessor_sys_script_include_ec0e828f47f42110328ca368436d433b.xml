@@ -47,10 +47,9 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         sastdata['scan_summary_name'] = Sastattributes.app_name + ' ' + sastdata['last_scan_date'];
                         this._upsert(sastdata);
                     } catch (ex) {
-                        errorMessage = gs.getMessage("Error in retriving data for scan list integration!");
-                        gs.error(this.MSG + "errorMessage " + ex);
-                        errorProcess += " | " + ex.getMessage();
-                        //throw ex;
+                      errorMessage = gs.getMessage("Error in retriving data for CxOneSast scan list integration!");
+                        gs.error(this.MSG + " " + errorMessage + " " + ex.message);
+                        errorProcess += " | " + ex.message;
                     }
                 }
             }
@@ -75,10 +74,9 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         data['scan_summary_name'] = attributes.app_name + ' ' + data['last_scan_date'];
                         this._upsert(data);
                     } catch (ex) {
-                        errorMessage = gs.getMessage("Error in retriving data for scan list integration!");
-                        gs.error(this.MSG + "errorMessage " + ex);
-                        errorProcess += " | " + ex.getMessage();
-                        //throw ex;
+                    errorMessage = gs.getMessage("Error in retriving data for CxOneSca scan list integration!");
+                        gs.error(this.MSG + " " + errorMessage + " " + ex.message);
+                        errorProcess += " | " + ex.message;
                     }
                 }
             }

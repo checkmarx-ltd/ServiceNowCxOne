@@ -141,10 +141,10 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
 
 
                     } catch (ex) {
-                        errorMessage = gs.getMessage("Error in retriving data for app list integration!");
-						gs.error(this.MSG + "errorMessage " + ex);
-                        errorProcess += " | " + ex.getMessage();
-                       // throw ex;
+              errorMessage = gs.getMessage("Error in retriving data for app vulnerability item integration!");
+                        gs.error(this.MSG + " " + errorMessage + " " + ex.message);
+                        errorProcess += " | " + ex.message;
+
                     }
 
                 }

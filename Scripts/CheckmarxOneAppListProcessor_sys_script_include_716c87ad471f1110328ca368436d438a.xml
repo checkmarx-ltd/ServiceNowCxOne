@@ -59,8 +59,8 @@ CheckmarxOneAppListProcessor.prototype = Object.extendsObject(sn_vul.Application
 
         } catch (ex) {
             errorMessage = gs.getMessage("Error in retriving data for app list integration!");
-            gs.error(this.MSG + "errorMessage " + ex);
-            errorProcess += " | " + ex.getMessage();
+                gs.error(this.MSG + " " + errorMessage + " " + ex.message);
+            errorProcess += " | " + ex.message;
         }
 		}
 
