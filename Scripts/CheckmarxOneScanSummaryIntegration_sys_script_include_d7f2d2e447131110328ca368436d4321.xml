@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-06-16 10:53:19">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -22,6 +21,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
             //  appId,  offset
             response = this.getSummaryReport(Object.keys(params.run)[0], params.run[Object.keys(params.run)[0]]);
             this.validateXML(response, 'error');
+
         }
         params = this._serializeParameters(this._nextParameters(params));
         this.setNextRunParameters(params);
@@ -34,6 +34,9 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
             this.hasMoreData(false);
         } else
             this.hasMoreData(true);
+        if (response == "<null/>") {
+            response = '<scanData><scaScanData><scans></scans></scaScanData><sastScanData><scans></scans></sastScanData></scanData>';
+        }
 
         return {
             contents: new GlideSysAttachment().write(this.PROCESS, this.FILENAME, "xml", response),
@@ -51,7 +54,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
             var scaScanSummaryAll = '';
             var sastScanSummaryAll = '';
             var includescanSummaryAll = '';
-            var newoffset = offsetId - 50;
+            var newoffset = offsetId - 1;
             var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
             var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
             var responseLastScanSummary = this.UTIL.getScanInfo(this.IMPLEMENTATION, appId, newoffset, this._getCurrentDeltaStartTime());
@@ -89,7 +92,8 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                 includescanSummaryAll += "<sastScanData><scans>" + sastScanSummaryAll + "</scans></sastScanData>";
             }
 
-            var reportContent = scanSummaryRootNodeStart + includescanSummaryAll + scanSummaryRootNodeEnd;
+            reportContent = scanSummaryRootNodeStart + includescanSummaryAll + scanSummaryRootNodeEnd;
+
         } catch (err) {
             gs.info(this.MSG + " getSummaryReport : Error while getting the summary report." + err);
             throw err;
@@ -169,22 +173,17 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
         return delta;
     },
 
-    //to get offset(50 result at a time)
+
+    //to get offset(to get offset value as 1 , to get details of last scan)
     _getoffsets: function(appId) {
         var offsets = [];
-        var offset = 0;
-        var responseLastScan = this.UTIL.getScanList(this.IMPLEMENTATION, appId, this._getCurrentDeltaStartTime());
-        var jsonLastScanReportResp = JSON.parse(responseLastScan.getBody());
-        var loopLength = jsonLastScanReportResp.scans.length / 50;
-
-        for (var i = 0; i <= parseInt(loopLength); i++) {
-            offset += 50;
-            var offsetId = this._getoffset(appId, offset);
-            if (offsetId) {
-                offsets.push(offsetId);
-                var date = new GlideDateTime();
-            }
-        }
+        var offset = 1;
+        var loopLength = 1;
+        var offsetId = this._getoffset(appId, offset);
+        if (offsetId) {
+            offsets.push(offsetId);
+            var date = new GlideDateTime();
+      }
         return offsets;
     },
 
@@ -231,13 +230,10 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-18 05:18:19</sys_created_on>
 <sys_id>d7f2d2e447131110328ca368436d4321</sys_id>
-<sys_mod_count>147</sys_mod_count>
 <sys_name>CheckmarxOneScanSummaryIntegration</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_d7f2d2e447131110328ca368436d4321</sys_update_name>
-<sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2023-06-16 10:35:52</sys_updated_on>
 </sys_script_include>
 </unload>
