@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-06-26 18:17:11">
+<unload unload_date="2023-06-27 13:53:01">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -8,603 +8,602 @@
 <client_callable>false</client_callable>
 <description>Wrapper class to assemble the components for Checkmarx One integration calls.</description>
 <name>CheckmarxOneUtilBase</name>
-<script>
-	<![CDATA[var CheckmarxOneUtilBase = Class.create();
+<script><![CDATA[var CheckmarxOneUtilBase = Class.create();
 
 CheckmarxOneUtilBase.prototype = {
-        MSG: 'CheckmarxOneUtilBase:',
-        initialize: function() {},
+    MSG: 'CheckmarxOneUtilBase:',
+    initialize: function() {},
 
-        //get all project list
-        getProjectList: function(configId) {
-            try {
-                var request = new sn_ws.RESTMessageV2();
-                var config = this._getConfig(configId);
-                var baseUrl = config.checkmarxone_server_url;
-                var apiurl = config.checkmarxone_api_base_url + '/api/';
-                var method = "post";
-                var token = this.getAccessToken(baseUrl, config, method, request);
-            } catch (err) {
-                gs.error(this.MSG + " getProjectList : Error while getting the project list." + err);
-                throw err;
+    //get all project list
+    getProjectList: function(configId) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var baseUrl = config.checkmarxone_server_url;
+            var apiurl = config.checkmarxone_api_base_url + '/api/';
+            var method = "post";
+            var token = this.getAccessToken(baseUrl, config, method, request);
+        } catch (err) {
+            gs.error(this.MSG + " getProjectList : Error while getting the project list." + err);
+            throw err;
+        }
+        return this._makeRestCall(apiurl, configId, token, 'projects', "get");
+    },
+    //get one project from project list
+    getProject: function(configId) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "post";
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
+            var query = '/api/projects/?offset=0&limit=1';
+        } catch (err) {
+            gs.error(this.MSG + " getProject: Error while getting project." + err);
+            throw err;
+        }
+        return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+    },
+    //get new project list
+    getNewProjectList: function(configId) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "post";
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
+            var query = '/api/projects/?offset=0&limit=0';
+            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+            var body = resp.getBody();
+            var projectJSON = JSON.parse(body);
+        } catch (err) {
+            gs.error(this.MSG + " getProjectInfo: Error while getting the project info." + err);
+            throw err;
+        }
+        return projectJSON;
+    },
+    //get 50 project list at a time
+    getNextProjectList: function(configId, offsetno) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var limit_val = config.limit;
+            var method = "post";
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
+            var query = '/api/projects/?offset=' + offsetno + '&limit=' + limit_val;
+            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+            var body = resp.getBody();
+            var projectJSON = JSON.parse(body);
+
+        } catch (err) {
+            gs.error(this.MSG + " getProjectInfo: Error while getting the project info." + err);
+            throw err;
+        }
+        return projectJSON;
+    },
+
+    //List of scanIds for a given app/project
+    getScanList: function(configId, projectId, last_run_date) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "post";
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
+            var query = '/api/scans/?offset=0&limit=1&statuses=Completed&project-id=' + projectId + '&from-date=' + last_run_date + '&sort=%2Bcreated_at&sort=%2Bstatus&field=scan-ids';
+
+        } catch (err) {
+            gs.error(this.MSG + " :getScanList :Error in getting status of the report." + err);
+            throw err;
+        }
+        return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+    },
+
+    // last  scan details of a given appId 
+    getScanInfo: function(configId, appId, offset, last_run_date) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var limit_val = config.limit;
+            var method = "post";
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
+            var query = '/api/scans/?offset=0&limit=1&statuses=Completed&project-id=' + appId + '&from-date=' + last_run_date + '&sort=%2Bcreated_at&sort=%2Bstatus&field=scan-ids';
+        } catch (err) {
+            gs.error(this.MSG + " getScanInfo: Error while getting the scan Ids." + err);
+            throw err;
+        }
+        return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+
+    },
+    // to fetch scan details of particular scanId
+    getScanDetails: function(configId, scanId) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "post";
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
+            var query = '/api/scans/?offset=0&limit=2000&scan-ids=' + scanId + '&sort=%2Bcreated_at&sort=%2Bstatus&field=scan-ids';
+
+
+        } catch (err) {
+            gs.error(this.MSG + " getScanDetails: Error while getting the scan Ids." + err);
+            throw err;
+        }
+        return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+
+    },
+
+    //to get total  vul item 
+    getTotalVulcount: function(configId, scanId) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "post";
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
+
+            var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=true';
+            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+            var body = resp.getBody();
+            var ScanSummaryJson = JSON.parse(body);
+
+            for (var item in ScanSummaryJson.scansSummaries) {
+                var count = ScanSummaryJson.scansSummaries[item].scaCounters.totalCounter + ScanSummaryJson.scansSummaries[item].sastCounters.totalCounter;
             }
-            return this._makeRestCall(apiurl, configId, token, 'projects', "get");
-        },
-        //get one project from project list
-        getProject: function(configId) {
-            try {
-                var request = new sn_ws.RESTMessageV2();
-                var config = this._getConfig(configId);
-                var accesscontrolbaseUrl = config.checkmarxone_server_url;
-                var apibaseurl = config.checkmarxone_api_base_url;
-                var method = "post";
-                var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
-                var query = '/api/projects/?offset=0&limit=1';
-            } catch (err) {
-                gs.error(this.MSG + " getProject: Error while getting project." + err);
-                throw err;
-            }
-            return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
-        },
-        //get new project list
-        getNewProjectList: function(configId) {
-            try {
-                var request = new sn_ws.RESTMessageV2();
-                var config = this._getConfig(configId);
-                var accesscontrolbaseUrl = config.checkmarxone_server_url;
-                var apibaseurl = config.checkmarxone_api_base_url;
-                var method = "post";
-                var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
-                var query = '/api/projects/?offset=0&limit=0';
-                var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
-                var body = resp.getBody();
-                var projectJSON = JSON.parse(body);
-            } catch (err) {
-                gs.error(this.MSG + " getProjectInfo: Error while getting the project info." + err);
-                throw err;
-            }
-            return projectJSON;
-        },
-        //get 50 project list at a time
-        getNextProjectList: function(configId, offsetno) {
-            try {
-                var request = new sn_ws.RESTMessageV2();
-                var config = this._getConfig(configId);
-                var accesscontrolbaseUrl = config.checkmarxone_server_url;
-                var apibaseurl = config.checkmarxone_api_base_url;
-                var limit_val = config.limit;
-                var method = "post";
-                var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
-                var query = '/api/projects/?offset=' + offsetno + '&limit=' + limit_val;
-                var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
-                var body = resp.getBody();
-                var projectJSON = JSON.parse(body);
+        } catch (err) {
+            gs.error(this.MSG + " getTotalVulcount: Error while getting the total vul count." + err + scanId);
+            return -1;
+        }
 
-            } catch (err) {
-                gs.error(this.MSG + " getProjectInfo: Error while getting the project info." + err);
-                throw err;
-            }
-            return projectJSON;
-        },
+        return count;
 
-        //List of scanIds for a given app/project
-        getScanList: function(configId, projectId, last_run_date) {
-            try {
-                var request = new sn_ws.RESTMessageV2();
-                var config = this._getConfig(configId);
-                var accesscontrolbaseUrl = config.checkmarxone_server_url;
-                var apibaseurl = config.checkmarxone_api_base_url;
-                var method = "post";
-                var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
-                var query = '/api/scans/?offset=0&limit=1&statuses=Completed&project-id=' + projectId + '&from-date=' + last_run_date + '&sort=%2Bcreated_at&sort=%2Bstatus&field=scan-ids';
+    },
+    // to get vulnerabilities information of scanId
+    getVulInfo: function(configId, scanId, offsetId) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var includesca = this.importScaFlaw(configId);
+            var includesast = this.importSastFlaw(configId);
+            var limit_val = config.limit;
+            //var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val; 
+            var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val + '&sort=%2Bstatus&sort=%2Bseverity';
+            //var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=20' +'&sort=%2Bstatus&sort=%2Bseverity' ;      
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "post";
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
 
-            } catch (err) {
-                gs.error(this.MSG + " :getScanList :Error in getting status of the report." + err);
-                throw err;
-            }
-            return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
-        },
+        } catch (err) {
+            gs.error(this.MSG + " getVulInfo: Error while getting the vul Info." + err);
+            throw err;
+        }
+        return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
 
-        // last  scan details of a given appId 
-        getScanInfo: function(configId, appId, offset, last_run_date) {
-            try {
-                var request = new sn_ws.RESTMessageV2();
-                var config = this._getConfig(configId);
-                var accesscontrolbaseUrl = config.checkmarxone_server_url;
-                var apibaseurl = config.checkmarxone_api_base_url;
-                var limit_val = config.limit;
-                var method = "post";
-                var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
-                var query = '/api/scans/?offset=0&limit=1&statuses=Completed&project-id=' + appId + '&from-date=' + last_run_date + '&sort=%2Bcreated_at&sort=%2Bstatus&field=scan-ids';
-            } catch (err) {
-                gs.error(this.MSG + " getScanInfo: Error while getting the scan Ids." + err);
-                throw err;
-            }
-            return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+    },
 
-        },
-        // to fetch scan details of particular scanId
-        getScanDetails: function(configId, scanId) {
-            try {
-                var request = new sn_ws.RESTMessageV2();
-                var config = this._getConfig(configId);
-                var accesscontrolbaseUrl = config.checkmarxone_server_url;
-                var apibaseurl = config.checkmarxone_api_base_url;
-                var method = "post";
-                var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
-                var query = '/api/scans/?offset=0&limit=2000&scan-ids=' + scanId + '&sort=%2Bcreated_at&sort=%2Bstatus&field=scan-ids';
+    //Sca scan details of a given scanId
+    getScanSummaryInfo: function(configId, scanId) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "post";
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
 
+            var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=true';
+            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+            var body = resp.getBody();
+            var ScanSummaryJson = JSON.parse(body);
+            var flaws = 0;
+            var vulnerabilityCountThresholdLevel = config.vulnerability_threshold_level;
+            for (var item in ScanSummaryJson.scansSummaries) {
+                for (var value in ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters) {
+                    var severity = ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters[value].severity;
 
-            } catch (err) {
-                gs.error(this.MSG + " getScanDetails: Error while getting the scan Ids." + err);
-                throw err;
-            }
-            return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
-
-        },
-
-        //to get total  vul item 
-        getTotalVulcount: function(configId, scanId) {
-            try {
-                var request = new sn_ws.RESTMessageV2();
-                var config = this._getConfig(configId);
-                var accesscontrolbaseUrl = config.checkmarxone_server_url;
-                var apibaseurl = config.checkmarxone_api_base_url;
-                var method = "post";
-                var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
-
-                var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=true';
-                var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
-                var body = resp.getBody();
-                var ScanSummaryJson = JSON.parse(body);
-
-                for (var item in ScanSummaryJson.scansSummaries) {
-                    var count = ScanSummaryJson.scansSummaries[item].scaCounters.totalCounter + ScanSummaryJson.scansSummaries[item].sastCounters.totalCounter;
+                    if ((vulnerabilityCountThresholdLevel == 'LOW') ||
+                        (severity.toUpperCase() == 'HIGH') ||
+                        (severity.toUpperCase() == vulnerabilityCountThresholdLevel)) {
+                        var counts = ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters[value].counter;
+                        flaws += counts;
+                    }
                 }
-            } catch (err) {
-                gs.error(this.MSG + " getTotalVulcount: Error while getting the total vul count." + err + scanId);
-                return -1;
             }
+        } catch (err) {
+            gs.error(this.MSG + " getScanSummaryInfo: Error while getting the scan summary Ids." + err + scanId);
+            return -1;
 
-            return count;
+        }
+        return flaws;
 
-        },
-        // to get vulnerabilities information of scanId
-        getVulInfo: function(configId, scanId, offsetId) {
-            try {
-                var request = new sn_ws.RESTMessageV2();
-                var config = this._getConfig(configId);
-                var includesca = this.importScaFlaw(configId);
-                var includesast = this.importSastFlaw(configId);
-                var limit_val = config.limit;
-                //var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val; 
-                var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val + '&sort=%2Bstatus&sort=%2Bseverity';
-                //var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=20' +'&sort=%2Bstatus&sort=%2Bseverity' ;      
-                var accesscontrolbaseUrl = config.checkmarxone_server_url;
-                var apibaseurl = config.checkmarxone_api_base_url;
-                var method = "post";
-                var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
+    },
+    //Sast scan details of a given scanId
+    getSastScanSummaryInfo: function(configId, scanId) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "post";
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
 
-            } catch (err) {
-                gs.error(this.MSG + " getVulInfo: Error while getting the vul Info." + err);
-                throw err;
-            }
-            return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
-
-        },
-
-        //Sca scan details of a given scanId
-        getScanSummaryInfo: function(configId, scanId) {
-            try {
-                var request = new sn_ws.RESTMessageV2();
-                var config = this._getConfig(configId);
-                var accesscontrolbaseUrl = config.checkmarxone_server_url;
-                var apibaseurl = config.checkmarxone_api_base_url;
-                var method = "post";
-                var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
-
-                var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=true';
-                var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
-                var body = resp.getBody();
-                var ScanSummaryJson = JSON.parse(body);
-                var flaws = 0;
-                var vulnerabilityCountThresholdLevel = config.vulnerability_threshold_level;
-                for (var item in ScanSummaryJson.scansSummaries) {
-                    for (var value in ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters) {
-                        var severity = ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters[value].severity;
-
-                        if ((vulnerabilityCountThresholdLevel == 'LOW') ||
-                            (severity.toUpperCase() == 'HIGH') ||
-                            (severity.toUpperCase() == vulnerabilityCountThresholdLevel)) {
-                            var counts = ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters[value].counter;
-                            flaws += counts;
-                        }
+            var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=true';
+            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+            var body = resp.getBody();
+            var ScanSummaryJson = JSON.parse(body);
+            var flaws = 0;
+            var vulnerabilityCountThresholdLevel = config.vulnerability_threshold_level;
+            for (var item in ScanSummaryJson.scansSummaries) {
+                for (var value in ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters) {
+                    var severity = ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters[value].severity;
+                    if ((vulnerabilityCountThresholdLevel == 'LOW') ||
+                        (severity.toUpperCase() == 'HIGH') ||
+                        (severity.toUpperCase() == vulnerabilityCountThresholdLevel)) {
+                        var counts = ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters[value].counter;
+                        flaws += counts;
                     }
                 }
-            } catch (err) {
-                gs.error(this.MSG + " getScanSummaryInfo: Error while getting the scan summary Ids." + err + scanId);
-                return -1;
-
             }
-            return flaws;
+        } catch (err) {
+            gs.error(this.MSG + " getScanSummaryInfo: Error while getting the scan summary Ids." + err + scanId);
+            return -1;
+        }
+        return flaws;
 
-        },
-        //Sast scan details of a given scanId
-        getSastScanSummaryInfo: function(configId, scanId) {
-            try {
-                var request = new sn_ws.RESTMessageV2();
-                var config = this._getConfig(configId);
-                var accesscontrolbaseUrl = config.checkmarxone_server_url;
-                var apibaseurl = config.checkmarxone_api_base_url;
-                var method = "post";
-                var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
+    },
+    //To get remediation status for state mapping
+    getSASTRemediationStatus: function(status, state) {
+        try {
 
-                var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=true';
-                var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
-                var body = resp.getBody();
-                var ScanSummaryJson = JSON.parse(body);
-                var flaws = 0;
-                var vulnerabilityCountThresholdLevel = config.vulnerability_threshold_level;
-                for (var item in ScanSummaryJson.scansSummaries) {
-                    for (var value in ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters) {
-                        var severity = ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters[value].severity;
-                        if ((vulnerabilityCountThresholdLevel == 'LOW') ||
-                            (severity.toUpperCase() == 'HIGH') ||
-                            (severity.toUpperCase() == vulnerabilityCountThresholdLevel)) {
-                            var counts = ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters[value].counter;
-                            flaws += counts;
-                        }
-                    }
-				}
-                } catch (err) {
-                    gs.error(this.MSG + " getScanSummaryInfo: Error while getting the scan summary Ids." + err + scanId);
-                    return -1;
-                }
-                return flaws;
+            if (state == 'TO_VERIFY' || status == 'FIXED' || status == 'RESOLVED') {
+                var remediation_status = status;
+            } else {
+                remediation_status = state;
+            }
+        } catch (err) {
+            gs.error(this.MSG + " getRemediationStatus: Error while getting the status." + err);
 
-            },
-            //To get remediation status for state mapping
-            getSASTRemediationStatus: function(status, state) {
-                    try {
+        }
+        return remediation_status;
 
-                        if (state == 'TO_VERIFY' || status == 'FIXED' || status == 'RESOLVED') {
-                            var remediation_status = status;
-                        } else {
-                            remediation_status = state;
-                        }
-                    } catch (err) {
-                        gs.error(this.MSG + " getRemediationStatus: Error while getting the status." + err);
+    },
+    //To get remediation status for state mapping
+    getSCARemediationStatus: function(status, state) {
+        try {
 
-                    }
-                    return remediation_status;
+            if (state == 'NOT_IGNORED' || status == 'FIXED' || status == 'RESOLVED') {
+                var remediation_status = status;
+            } else {
+                remediation_status = state;
+            }
+        } catch (err) {
+            gs.error(this.MSG + " getRemediationStatus: Error while getting the status." + err);
 
-                },
-                //To get remediation status for state mapping
-                getSCARemediationStatus: function(status, state) {
-                    try {
+        }
+        return remediation_status;
 
-                        if (state == 'NOT_IGNORED' || status == 'FIXED' || status == 'RESOLVED') {
-                            var remediation_status = status;
-                        } else {
-                            remediation_status = state;
-                        }
-                    } catch (err) {
-                        gs.error(this.MSG + " getRemediationStatus: Error while getting the status." + err);
+    },
 
-                    }
-                    return remediation_status;
+    getFirstDetectionDate: function() {
+        try {
+            var configId = 'getconfig';
+            var config = this._getConfig(configId);
+            var include_first_found = config.include_first_detection_date;
+        } catch (err) {
+            gs.error(this.MSG + " getFirstDetectionDate: Error while getting the status of getFirstDetectionDate." + err);
 
-                },
+        }
+        return include_first_found;
+    },
 
-                getFirstDetectionDate: function() {
-                    try {
-                        var configId = 'getconfig';
-                        var config = this._getConfig(configId);
-                        var include_first_found = config.include_first_detection_date;
-                    } catch (err) {
-                        gs.error(this.MSG + " getFirstDetectionDate: Error while getting the status of getFirstDetectionDate." + err);
+    _getConfig: function(configId) {
+        try {
+            var gr = new GlideRecord("x_chec3_chexone_checkmarxone_configuration");
+            gr.query();
+            gr.next();
+            var newconfig = {
+                "client_secret": gr.client_secret.getDecryptedValue(),
+                "client_id": gr.getValue("client_id"),
+                "tenant": gr.getValue("tenant"),
+                "checkmarxone_api_base_url": gr.getValue("checkmarxone_api_base_url"),
+                "checkmarxone_server_url": gr.getValue("checkmarxone_server_url"),
+                "limit": gr.getValue("limit"),
+                "include_first_detection_date": gr.getValue("include_first_detection_date") === "1",
+                "import_sca": gr.getValue("import_sca") === "1",
+                "import_sast": gr.getValue("import_sast") === "1",
+                "triaging_in_snow": gr.getValue("triaging_in_snow") === "1",
+                "access_token": gr.getValue("access_token"),
+                "vulnerability_threshold_level": gr.getValue("vulnerability_threshold_level"),
+            };
+        } catch (err) {
+            gs.error(this.MSG + " :_getConfig :Error in getting the configuration." + err);
+            throw err;
+        }
+        return newconfig;
+    },
 
-                    }
-                    return include_first_found;
-                },
+    getAccessToken: function(baseUrl, config, method, request) {
+        return this._getToken(baseUrl, config, method, request, config.client_id, config.client_secret, config.ast_client_id, config.tenant, config.access_token);
+    },
 
-                _getConfig: function(configId) {
-                    try {
-                        var gr = new GlideRecord("x_chec3_chexone_checkmarxone_configuration");
-                        gr.query();
-                        gr.next();
-                        var newconfig = {
-                            "client_secret": gr.client_secret.getDecryptedValue(),
-                            "client_id": gr.getValue("client_id"),
-                            "tenant": gr.getValue("tenant"),
-                            "checkmarxone_api_base_url": gr.getValue("checkmarxone_api_base_url"),
-                            "checkmarxone_server_url": gr.getValue("checkmarxone_server_url"),
-                            "limit": gr.getValue("limit"),
-                            "include_first_detection_date": gr.getValue("include_first_detection_date") === "1",
-                            "import_sca": gr.getValue("import_sca") === "1",
-                            "import_sast": gr.getValue("import_sast") === "1",
-                            "triaging_in_snow": gr.getValue("triaging_in_snow") === "1",
-                            "access_token": gr.getValue("access_token"),
-                            "vulnerability_threshold_level": gr.getValue("vulnerability_threshold_level"),
-                        };
-                    } catch (err) {
-                        gs.error(this.MSG + " :_getConfig :Error in getting the configuration." + err);
-                        throw err;
-                    }
-                    return newconfig;
-                },
+    _getToken: function(baseUrl, config, method, request, username, password, ast_client_id, tenant, currentToken) {
+        try {
+            var accessToken = currentToken;
+            if (accessToken == null || accessToken == "" || this._isTokenExpired(this._getExpTimeFromAccessToken(accessToken)) || !this._checkClientId(username, accessToken)) {
+                var fullUrl = baseUrl + '/auth/realms/' + tenant + '/protocol/openid-connect/token';
+                var query = "client_id=" + username + "&grant_type=" + "client_credentials" + "&client_secret=" + password;
+                request.setEndpoint(fullUrl);
+                request.setHttpMethod(method);
+                request.setLogLevel('all');
+                request.setRequestBody(query);
+                request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+                request.setRequestHeader("Accept", "application/json");
+                //Convert the object to string and set it to Request Body-
+                request.setRequestBody(query);
+                var response = this._checkResponseStatus(request);
+                var responseBody = response.getBody();
+                var tokenResponse = JSON.parse(responseBody);
+                accessToken = tokenResponse.access_token;
+                this.saveInstanceTokens(config, accessToken);
+            }
 
-                getAccessToken: function(baseUrl, config, method, request) {
-                    return this._getToken(baseUrl, config, method, request, config.client_id, config.client_secret, config.ast_client_id, config.tenant, config.access_token);
-                },
+        } catch (err) {
+            gs.error(this.MSG + " :_getToken : Error while getting the token." + err);
+            throw err;
+        }
+        return accessToken;
+    },
 
-                _getToken: function(baseUrl, config, method, request, username, password, ast_client_id, tenant, currentToken) {
-                    try {
-                        var accessToken = currentToken;
-                        if (accessToken == null || accessToken == "" || this._isTokenExpired(this._getExpTimeFromAccessToken(accessToken)) || !this._checkClientId(username, accessToken)) {
-                            var fullUrl = baseUrl + '/auth/realms/' + tenant + '/protocol/openid-connect/token';
-                            var query = "client_id=" + username + "&grant_type=" + "client_credentials" + "&client_secret=" + password;
-                            request.setEndpoint(fullUrl);
-                            request.setHttpMethod(method);
-                            request.setLogLevel('all');
-                            request.setRequestBody(query);
-                            request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-                            request.setRequestHeader("Accept", "application/json");
-                            //Convert the object to string and set it to Request Body-
-                            request.setRequestBody(query);
-                            var response = this._checkResponseStatus(request);
-                            var responseBody = response.getBody();
-                            var tokenResponse = JSON.parse(responseBody);
-                            accessToken = tokenResponse.access_token;
-                            this.saveInstanceTokens(config, accessToken);
-                        }
+    //Compare current clientId with accessToken's clientId
+    _checkClientId: function(clientId, accessToken) {
+        try {
+            var tokenPayload = accessToken.split(".")[1];
+            var tokenPayloadJson = JSON.parse(gs.base64Decode(tokenPayload));
+            var clientIdToken = tokenPayloadJson.azp;
+            if (clientId == clientIdToken)
+                return true;
+            return false;
+        } catch (err) {
+            gs.error(this.MSG + " :checkClientId :Error in checkClientId." + err);
+            throw err;
+        }
 
-                    } catch (err) {
-                        gs.error(this.MSG + " :_getToken : Error while getting the token." + err);
-                        throw err;
-                    }
-                    return accessToken;
-                },
+    },
+    // Get expiry token from JWT access token
+    _getExpTimeFromAccessToken: function(accessToken) {
+        try {
+            var splittedStr = accessToken.split(".");
+            var decodedToken = JSON.parse(gs.base64Decode(splittedStr[1]));
+            var expTime = decodedToken.exp;
+        } catch (err) {
+            gs.error(this.MSG + " :getExpTimeFromAccessToken :Error in getExpTimeFromAccessToken.");
+            throw err;
+        }
+        return expTime;
+    },
+    // This method checks  if access token is expired or not.
+    _isTokenExpired: function(tokenExpTime) {
+        try {
+            var dateTime = new GlideDateTime();
+            var currentTime = dateTime.getNumericValue() / 1000;
+            currentTime = parseInt(currentTime);
+            if (currentTime > tokenExpTime)
+                return true;
+            else
+                return false;
+        } catch (err) {
+            gs.error(this.MSG + " :isTokenExpired :Error in isTokenExpired()." + err);
+            throw err;
+        }
+    },
 
-                //Compare current clientId with accessToken's clientId
-                _checkClientId: function(clientId, accessToken) {
-                    try {
-                        var tokenPayload = accessToken.split(".")[1];
-                        var tokenPayloadJson = JSON.parse(gs.base64Decode(tokenPayload));
-                        var clientIdToken = tokenPayloadJson.azp;
-                        if (clientId == clientIdToken)
-                            return true;
-                        return false;
-                    } catch (err) {
-                        gs.error(this.MSG + " :checkClientId :Error in checkClientId." + err);
-                        throw err;
-                    }
+    _makeRestCall: function(apiurl, configId, token, apiPath, method, params) {
+        var request;
+        try {
+            request = this.setRequestParams(apiurl, configId, token, apiPath, method, params);
+        } catch (err) {
+            gs.error(this.MSG + " :_makeRestCall :Error in making the REST call");
+            throw err;
+        }
+        return this._checkResponseStatus(request);
+    },
 
-                },
-                // Get expiry token from JWT access token
-                _getExpTimeFromAccessToken: function(accessToken) {
-                    try {
-                        var splittedStr = accessToken.split(".");
-                        var decodedToken = JSON.parse(gs.base64Decode(splittedStr[1]));
-                        var expTime = decodedToken.exp;
-                    } catch (err) {
-                        gs.error(this.MSG + " :getExpTimeFromAccessToken :Error in getExpTimeFromAccessToken.");
-                        throw err;
-                    }
-                    return expTime;
-                },
-                // This method checks  if access token is expired or not.
-                _isTokenExpired: function(tokenExpTime) {
-                    try {
-                        var dateTime = new GlideDateTime();
-                        var currentTime = dateTime.getNumericValue() / 1000;
-                        currentTime = parseInt(currentTime);
-                        if (currentTime > tokenExpTime)
-                            return true;
-                        else
-                            return false;
-                    } catch (err) {
-                        gs.error(this.MSG + " :isTokenExpired :Error in isTokenExpired()." + err);
-                        throw err;
-                    }
-                },
+    setRequestParams: function(baseUrl, configId, token, apiPath, method, params) {
+        try {
+            var fullUrl = baseUrl + apiPath;
+            var r = new sn_ws.RESTMessageV2();
+            r.setEndpoint(fullUrl);
+            r.setHttpMethod(method);
 
-                _makeRestCall: function(apiurl, configId, token, apiPath, method, params) {
-                    var request;
-                    try {
-                        request = this.setRequestParams(apiurl, configId, token, apiPath, method, params);
-                    } catch (err) {
-                        gs.error(this.MSG + " :_makeRestCall :Error in making the REST call");
-                        throw err;
-                    }
-                    return this._checkResponseStatus(request);
-                },
+            if (params) {
+                fullUrl += '/?';
+                Object.keys(params).forEach(function(key) {
+                    r.setQueryParameter(key, params[key]);
+                    fullUrl += key + '=' + gs.urlEncode(params[key]) + '&';
+                });
+                fullUrl = fullUrl.slice(0, fullUrl.length - 1);
+            }
+            var newHeader = "Bearer " + token;
+            r.setRequestHeader('Authorization', newHeader);
+            r.setHttpTimeout(30000);
+            r.setLogLevel('all');
+        } catch (err) {
+            gs.error(this.MSG + " :setRequestParams :Error in setting the reuest params for REST API call");
+            throw err;
+        }
+        return r;
+    },
 
-                setRequestParams: function(baseUrl, configId, token, apiPath, method, params) {
-                    try {
-                        var fullUrl = baseUrl + apiPath;
-                        var r = new sn_ws.RESTMessageV2();
-                        r.setEndpoint(fullUrl);
-                        r.setHttpMethod(method);
+    _checkResponseStatus: function(request) {
+        try {
+            var endpoint = request.getEndpoint();
+            var response = request.execute();
+            var status = response.getStatusCode();
+            if (status == 200 || status == 202)
+                return response;
 
-                        if (params) {
-                            fullUrl += '/?';
-                            Object.keys(params).forEach(function(key) {
-                                r.setQueryParameter(key, params[key]);
-                                fullUrl += key + '=' + gs.urlEncode(params[key]) + '&';
-                            });
-                            fullUrl = fullUrl.slice(0, fullUrl.length - 1);
-                        }
-                        var newHeader = "Bearer " + token;
-                        r.setRequestHeader('Authorization', newHeader);
-                        r.setHttpTimeout(30000);
-                        r.setLogLevel('all');
-                    } catch (err) {
-                        gs.error(this.MSG + " :setRequestParams :Error in setting the reuest params for REST API call");
-                        throw err;
-                    }
-                    return r;
-                },
+            if (status <= 0)
+                throw gs.getMessage("Request could not be completed: {0} Reason : {1}", [endpoint, response.getErrorMessage()]);
+            if (status == 400)
+                throw gs.getMessage("Bad request: {0} Reason : {1}", [endpoint, response.getErrorMessage()]);
+            if (status == 401)
+                throw gs.getMessage("Request not authorized: {0}", [endpoint, response.getErrorMessage()]);
+            if (status == 403)
+                throw gs.getMessage("Request forbidden: {0}", [endpoint, response.getErrorMessage()]);
+            if (status == 404)
+                throw gs.getMessage("Request not found: {0}", [endpoint, response.getErrorMessage()]);
 
-                _checkResponseStatus: function(request) {
-                    try {
-                        var endpoint = request.getEndpoint();
-                        var response = request.execute();
-                        var status = response.getStatusCode();
-                        if (status == 200 || status == 202)
-                            return response;
+            throw gs.getMessage('Checkmarx responded with error code {0} on: {1}', [status, endpoint]);
+        } catch (err) {
+            gs.error(this.MSG + " :_checkResponseStatus :Error in checking the response of the API call.");
+            throw err;
+        }
+    },
 
-                        if (status <= 0)
-                            throw gs.getMessage("Request could not be completed: {0} Reason : {1}", [endpoint, response.getErrorMessage()]);
-                        if (status == 400)
-                            throw gs.getMessage("Bad request: {0} Reason : {1}", [endpoint, response.getErrorMessage()]);
-                        if (status == 401)
-                            throw gs.getMessage("Request not authorized: {0}", [endpoint, response.getErrorMessage()]);
-                        if (status == 403)
-                            throw gs.getMessage("Request forbidden: {0}", [endpoint, response.getErrorMessage()]);
-                        if (status == 404)
-                            throw gs.getMessage("Request not found: {0}", [endpoint, response.getErrorMessage()]);
+    _makeRestApiCall: function(baseUrl, configId, token, name, method, params) {
+        try {
+            var fullUrl = baseUrl + name;
+            var r = new sn_ws.RESTMessageV2();
+            r.setEndpoint(fullUrl);
+            r.setHttpMethod(method);
 
-                        throw gs.getMessage('Checkmarx responded with error code {0} on: {1}', [status, endpoint]);
-                    } catch (err) {
-                        gs.error(this.MSG + " :_checkResponseStatus :Error in checking the response of the API call.");
-                        throw err;
-                    }
-                },
+            var newHeader = "Bearer " + token;
+            r.setRequestHeader("Accept", "application/json");
+            r.setRequestHeader("Authorization", newHeader);
+            r.setHttpTimeout(30000);
+            r.setLogLevel('all');
+        } catch (err) {
+            gs.error(this.MSG + " :_makeRestApiCall :Error in making API call.");
+            throw err;
+        }
+        return this._checkResponseStatus(r);
+    },
+     // 2022-12-08T09:33:00.028555Z to 2022-12-08 09:33:00
+    parseDate: function(str) {
+        var a = str.replace('T', ' ');
+        var b = a.replace('T', ' ');
+        var c = b.split('.')[0];
+        var date = new GlideDateTime(c);
+        return date;
+    },
 
-                _makeRestApiCall: function(baseUrl, configId, token, name, method, params) {
-                    try {
-                        var fullUrl = baseUrl + name;
-                        var r = new sn_ws.RESTMessageV2();
-                        r.setEndpoint(fullUrl);
-                        r.setHttpMethod(method);
+    //2022-12-08 09:33:00 to 2022-12-08T09:33:00.028555Z
+    parseTZDate: function(str) {
+        str1 = str.slice(0, str.length - 9) + 'T';
+        str2 = str.slice(-8) + '.028555Z';
+        if (str == "" || str == null) {
+            str3 = str;
+        } else {
+            str3 = str1 + str2;
+        }
+        return str3;
 
-                        var newHeader = "Bearer " + token;
-                        r.setRequestHeader("Accept", "application/json");
-                        r.setRequestHeader("Authorization", newHeader);
-                        r.setHttpTimeout(30000);
-                        r.setLogLevel('all');
-                    } catch (err) {
-                        gs.error(this.MSG + " :_makeRestApiCall :Error in making API call.");
-                        throw err;
-                    }
-                    return this._checkResponseStatus(r);
-                },
+    },
+    // Saves the access tokens to Service Now configuration DB
+    saveInstanceTokens: function(config, accessToken) {
+        try {
+            var gr = new GlideRecord("x_chec3_chexone_checkmarxone_configuration");
+            gr.query();
+            gr.next();
+            var instance = gr.getValue("integration_instance");
+            if (accessToken == 'undefined') {
+                tempAccessToken = gr.getValue("access_token"); //config.access_token;				
+            } else {
+                tempAccessToken = accessToken;
+            }
 
-                parseDate: function(str) {
-                  var a = str.replace('T', ' ');
-                  var b = a.replace('T', ' ');
-                  var c = b.split('.')[0];
-                  var date = new GlideDateTime(c);
-                  return date;
-                 },
+            gr.setValue("access_token", tempAccessToken);
+            gr.update();
 
-                //2022-12-08 09:33:00 to 2022-12-08T09:33:00.028555Z
-                parseTZDate: function(str) {
-                    str1 = str.slice(0, str.length - 9) + 'T';
-                    str2 = str.slice(-8) + '.028555Z';
-                    if (str == "" || str == null) {
-                        str3 = str;
-                    } else {
-                        str3 = str1 + str2;
-                    }
-                    return str3;
+            var implConfig = new GlideRecord("sn_sec_int_impl_config");
+            implConfig.addQuery("implementation", instance);
+            implConfig.query();
+            while (implConfig.next()) {
 
-                },
-                // Saves the access tokens to Service Now configuration DB
-                saveInstanceTokens: function(config, accessToken) {
-                    try {
-                        var gr = new GlideRecord("x_chec3_chexone_checkmarxone_configuration");
-                        gr.query();
-                        gr.next();
-                        var instance = gr.getValue("integration_instance");
-                        if (accessToken == 'undefined') {
-                            tempAccessToken = gr.getValue("access_token"); //config.access_token;				
-                        } else {
-                            tempAccessToken = accessToken;
-                        }
+                var configName = implConfig.getDisplayValue("configuration");
+                var configVal = gr.getValue(configName);
 
-                        gr.setValue("access_token", tempAccessToken);
-                        gr.update();
+                if (configName == 'access_token')
+                    configVal = tempAccessToken;
+                if (implConfig.configuration.elem_type == "boolean")
+                    implConfig.setValue("value", configVal === "1");
+                else
+                    implConfig.setValue("value", configVal);
+                implConfig.update();
+            }
 
-                        var implConfig = new GlideRecord("sn_sec_int_impl_config");
-                        implConfig.addQuery("implementation", instance);
-                        implConfig.query();
-                        while (implConfig.next()) {
+            var newconfig = {
+                "client_secret": gr.client_secret.getDecryptedValue(),
+                "client_id": gr.getValue("client_id"),
+                "ast_client_id": gr.getValue("ast_client_id"),
+                "tenant": gr.getValue("tenant"),
+                "checkmarxone_api_base_url": gr.getValue("checkmarxone_api_base_url"),
+                "checkmarxone_server_url": gr.getValue("checkmarxone_server_url"),
+                "include_first_detection_date": gr.getValue("include_first_detection_date") === "1",
+                "import_sca": gr.getValue("import_dast") === "1",
+                "import_sast": gr.getValue("import_sast") === "1",
+                "triaging_in_snow": gr.getValue("triaging_in_snow") === "1",
+                "vulnerability_threshold_level": gr.getValue("vulnerability_threshold_level"),
+            };
+            new sn_sec_int.Implementation().setConfiguration(instance, newconfig);
+            return true;
+        } catch (err) {
+            gs.error(this.MSG + " :saveInstanceTokens : Error while saving the access tokens to database.");
+            throw err;
+        }
+    },
+    //value of sca checkbox
+    importScaFlaw: function(configId) {
+        return this._getConfig(configId).import_sca;
+    },
+    //value of sast checkbox
+    importSastFlaw: function(configId) {
+        return this._getConfig(configId).import_sast;
+    },
 
-                            var configName = implConfig.getDisplayValue("configuration");
-                            var configVal = gr.getValue(configName);
+    //validate XML
+    validateXML: function(body, errorNodeName) {
+        if (!body) return;
+        var doc = new XMLDocument2();
+        doc.parseXML(body);
+        var err = null;
+        try {
+            var root = doc.getFirstNode('/' + doc.getDocumentElement().getNodeName());
+            if (errorNodeName && root.getNodeName() == errorNodeName)
+                err = root.getTextContent();
+            else
+                doc.getNextNode(root);
+        } catch (e) {
+            throw 'XML document syntax invalid';
+        }
+        if (err)
+            throw this.MSG + 'Error: ' + err;
+    },
 
-                            if (configName == 'access_token')
-                                configVal = tempAccessToken;
-                            if (implConfig.configuration.elem_type == "boolean")
-                                implConfig.setValue("value", configVal === "1");
-                            else
-                                implConfig.setValue("value", configVal);
-                            implConfig.update();
-                        }
-
-                        var newconfig = {
-                            "client_secret": gr.client_secret.getDecryptedValue(),
-                            "client_id": gr.getValue("client_id"),
-                            "ast_client_id": gr.getValue("ast_client_id"),
-                            "tenant": gr.getValue("tenant"),
-                            "checkmarxone_api_base_url": gr.getValue("checkmarxone_api_base_url"),
-                            "checkmarxone_server_url": gr.getValue("checkmarxone_server_url"),
-                            "include_first_detection_date": gr.getValue("include_first_detection_date") === "1",
-                            "import_sca": gr.getValue("import_dast") === "1",
-                            "import_sast": gr.getValue("import_sast") === "1",
-                            "triaging_in_snow": gr.getValue("triaging_in_snow") === "1",
-							"vulnerability_threshold_level": gr.getValue("vulnerability_threshold_level"),
-                        };
-                        new sn_sec_int.Implementation().setConfiguration(instance, newconfig);
-                        return true;
-                    } catch (err) {
-                        gs.error(this.MSG + " :saveInstanceTokens : Error while saving the access tokens to database.");
-                        throw err;
-                    }
-                },
-                //value of sca checkbox
-                importScaFlaw: function(configId) {
-                    return this._getConfig(configId).import_sca;
-                },
-                //value of sast checkbox
-                importSastFlaw: function(configId) {
-                    return this._getConfig(configId).import_sast;
-                },
-
-                //validate XML
-                validateXML: function(body, errorNodeName) {
-                    if (!body) return;
-                    var doc = new XMLDocument2();
-                    doc.parseXML(body);
-                    var err = null;
-                    try {
-                        var root = doc.getFirstNode('/' + doc.getDocumentElement().getNodeName());
-                        if (errorNodeName && root.getNodeName() == errorNodeName)
-                            err = root.getTextContent();
-                        else
-                            doc.getNextNode(root);
-                    } catch (e) {
-                        throw 'XML document syntax invalid';
-                    }
-                    if (err)
-                        throw this.MSG + 'Error: ' + err;
-                },
-
-                type: 'CheckmarxOneUtilBase'
-        };]]></script>
+    type: 'CheckmarxOneUtilBase'
+};]]></script>
 <sys_class_name>sys_script_include</sys_class_name>
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-21 19:26:28</sys_created_on>
 <sys_id>1980bcb147935110328ca368436d435a</sys_id>
-<sys_mod_count>151</sys_mod_count>
+<sys_mod_count>152</sys_mod_count>
 <sys_name>CheckmarxOneUtilBase</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_1980bcb147935110328ca368436d435a</sys_update_name>
 <sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
-<sys_updated_on>2023-06-26 18:16:03</sys_updated_on>
+<sys_updated_on>2023-06-27 08:25:18</sys_updated_on>
 </sys_script_include>
 </unload>
