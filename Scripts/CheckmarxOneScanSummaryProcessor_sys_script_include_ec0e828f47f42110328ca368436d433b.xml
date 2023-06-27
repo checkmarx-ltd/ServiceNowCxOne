@@ -46,6 +46,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         sastdata['last_scan_date'] = new GlideDateTime(Sastattributes.last_scan_date);
                         sastdata['scan_summary_name'] = Sastattributes.app_name + ' ' + sastdata['last_scan_date'];
                         this._upsert(sastdata);
+
                     } catch (ex) {
                         errorMessage = gs.getMessage("Error in retriving data for scan list integration!");
                         gs.error(this.MSG + "errorMessage " + ex);
@@ -62,14 +63,13 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                     gs.error(this.MSG + "Error occurred while validating or parsing the XML: " + ex);
                     throw ex;
                 }
-                var data = {};
-                while (iter.hasNext()) {
-                    try {
+             
+                    while (iter.hasNext()) {
                         var appNode = iter.next();
                         var attributes = appNode.getAttributes();
                         //map attributes from Checkmarx into the servicenow scan summary table
                         data['source_app_id'] = attributes.app_id;
-                        data['source_scan_id'] = attributes.id;
+                        data['source_scan_id'] =  attributes.id;
                         data['detected_flaw_count'] = +attributes.total_no_flaws;
                         data['last_scan_date'] = new GlideDateTime(attributes.last_scan_date);
                         data['scan_summary_name'] = attributes.app_name + ' ' + data['last_scan_date'];
@@ -89,8 +89,6 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
         } else
             gs.warn(this.MSG + ':process called with no attachment');
     },
-
-
     _parseStatic: function(node, data) {
         try {
             this._handleScanType(node, data, 'last_static_scan_date');
@@ -128,6 +126,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
             throw err;
         }
     },
+
     type: 'CheckmarxOneScanSummaryProcessor'
 });]]></script>
 <sys_class_name>sys_script_include</sys_class_name>

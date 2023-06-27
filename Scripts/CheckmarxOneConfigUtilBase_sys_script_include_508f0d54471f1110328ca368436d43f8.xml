@@ -22,7 +22,9 @@ CheckmarxOneConfigUtilBase.prototype = {
                     "result": "false",
                     "errorMessage": gs.getMessage("CheckmarxOne configuration not found.")
                 };
+
             var response = new x_chec3_chexone.CheckmarxOneUtil().getProject(config.getValue("integration_instance"));
+
 
         } catch (ex) {
             result = false;
@@ -65,7 +67,8 @@ CheckmarxOneConfigUtilBase.prototype = {
                 "import_sca": gr.getValue("import_sca") === "1",
                 "import_sast": gr.getValue("import_sast") === "1",
                 "triaging_in_snow": gr.getValue("triaging_in_snow") === "1",
-				"vulnerability_threshold_level" : gr.getValue("vulnerability_threshold_level"),
+			   	"vulnerability_threshold_level" : gr.getValue("vulnerability_threshold_level"),
+
 
             };
 
@@ -81,13 +84,11 @@ CheckmarxOneConfigUtilBase.prototype = {
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-17 05:45:19</sys_created_on>
 <sys_id>508f0d54471f1110328ca368436d43f8</sys_id>
-<sys_mod_count>35</sys_mod_count>
+
 <sys_name>CheckmarxOneConfigUtilBase</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_508f0d54471f1110328ca368436d43f8</sys_update_name>
-<sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
-<sys_updated_on>2023-06-26 17:31:38</sys_updated_on>
 </sys_script_include>
 </unload>

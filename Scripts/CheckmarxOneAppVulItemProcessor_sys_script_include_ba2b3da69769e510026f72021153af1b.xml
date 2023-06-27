@@ -64,7 +64,6 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         queryData['cvss_base_score'] = node.getAttribute('cvssScore');
                         queryData['cvss_vector'] = node.getAttribute('cvssVector');
                         queryData['last_detection_date'] = reportData.last_scan_date.getDate();
-
                         // to check if first_detection_date checkbox is selected
                         var include_first_detection_date = this.UTIL.getFirstDetectionDate();
                         if (include_first_detection_date) {
@@ -130,6 +129,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         resultObj['complies_with_policy'] = 'not_applicable';
                         resultObj['source_entry_id'] = queryData['source_entry_id'];
                         resultObj['category_name'] = queryData['category_name'];
+
                         if (scan_type != 'static') {
                             nvdData['cvss_base_score'] = node.getAttribute('cvssScore');
                             nvdData['cvss_vector'] = node.getAttribute('cvssVector');
@@ -154,7 +154,6 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
             this.completeProcess(this.integrationProcessGr, this.import_counts);
         } else
             gs.warn(this.MSG + ':process called with no attachment');
-
     },
 
     //updating data to app vul entry table
@@ -171,7 +170,6 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                 this.import_counts.unchanged++;
         } catch (err) {
             gs.error(this.MSG + " _upsert : Error while inserting data into ServiceNow App Vul Entry Table." + err);
-
         }
     },
     //updating data to app vul item table
@@ -212,6 +210,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
             nvd.setValue("integration_run", this.integrationProcessGr.integration_run + "");
             nvdExist = nvd.insert();
         }
+
     },
     type: 'CheckmarxOneAppVulItemProcessor'
 });]]></script>

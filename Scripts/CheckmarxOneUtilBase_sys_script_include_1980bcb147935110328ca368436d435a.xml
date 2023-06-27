@@ -542,7 +542,6 @@ CheckmarxOneUtilBase.prototype = {
                     implConfig.setValue("value", configVal);
                 implConfig.update();
             }
-
             var newconfig = {
                 "client_secret": gr.client_secret.getDecryptedValue(),
                 "client_id": gr.getValue("client_id"),
@@ -590,6 +589,7 @@ CheckmarxOneUtilBase.prototype = {
         if (err)
             throw this.MSG + 'Error: ' + err;
     },
+
 
     type: 'CheckmarxOneUtilBase'
 };]]></script>
