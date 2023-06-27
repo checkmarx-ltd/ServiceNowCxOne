@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-06-26 17:42:49">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -21,6 +20,8 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
         if (params.run) {
             //  appId,  offset
             response = this.getSummaryReport(Object.keys(params.run)[0], params.run[Object.keys(params.run)[0]]);
+            this.validateXML(response, 'error');
+
         }
         params = this._serializeParameters(this._nextParameters(params));
         this.setNextRunParameters(params);
@@ -36,6 +37,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
         if (response == "<null/>") {
             response = '<scanData><scaScanData><scans></scans></scaScanData><sastScanData><scans></scans></sastScanData></scanData>';
         }
+
         return {
             contents: new GlideSysAttachment().write(this.PROCESS, this.FILENAME, "xml", response),
             contentType: "sys_attachment",
@@ -91,6 +93,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
             }
 
             reportContent = scanSummaryRootNodeStart + includescanSummaryAll + scanSummaryRootNodeEnd;
+
         } catch (err) {
             gs.info(this.MSG + " getSummaryReport : Error while getting the summary report." + err);
             throw err;
@@ -170,6 +173,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
         return delta;
     },
 
+
     //to get offset(to get offset value as 1 , to get details of last scan)
     _getoffsets: function(appId) {
         var offsets = [];
@@ -179,7 +183,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
         if (offsetId) {
             offsets.push(offsetId);
             var date = new GlideDateTime();
-        }
+      }
         return offsets;
     },
 
@@ -226,13 +230,10 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-18 05:18:19</sys_created_on>
 <sys_id>d7f2d2e447131110328ca368436d4321</sys_id>
-<sys_mod_count>148</sys_mod_count>
 <sys_name>CheckmarxOneScanSummaryIntegration</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_d7f2d2e447131110328ca368436d4321</sys_update_name>
-<sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
-<sys_updated_on>2023-06-26 17:01:21</sys_updated_on>
 </sys_script_include>
 </unload>
