@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-07-25 08:06:58">
+<unload unload_date="2023-07-31 05:53:34">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -41,6 +41,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         reportData['last_scan_date'] = new GlideDateTime(node.getAttribute('last_scan_date'));
                         reportData['scan_summary_name'] = reportData['source_scan_id'] + ' ' + reportData['last_scan_date'];
                         reportData['scan_type'] = node.getAttribute('scan_type');
+                        reportData['application_module'] = node.getAttribute('application_ids').toString();
                         var queryData = {};
                         var nvdData = {};
                         var resultObj = {};
@@ -118,6 +119,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         resultObj['source_scan_id'] = reportData['source_scan_id'];
                         resultObj['last_scan_date'] = reportData['last_scan_date'];
                         resultObj['scan_summary_name'] = reportData['scan_summary_name'];
+                        resultObj['application_module'] = reportData['application_module'];
                         resultObj['description'] = node.getLastChild().getTextContent().toString();
                         resultObj['source_references'] = node.getFirstChild().getTextContent().toString();
                         resultObj['source_vulnerability_summary'] = node.getLastChild().getTextContent().toString();
@@ -134,12 +136,11 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         resultObj['source_additional_info'] = JSON.stringify(infObj);
                         resultObj['source_finding_status'] = 'State= ' + node.getAttribute('state');
                         resultObj['last_found'] = reportData.last_scan_date.getDate();
-                        resultObj['application_module'] = this.NOT_AVAILABLE;
+                        //  resultObj['application_module'] = this.NOT_AVAILABLE;
                         resultObj['source_severity'] = source_severity_string;
                         resultObj['complies_with_policy'] = 'not_applicable';
                         resultObj['source_entry_id'] = queryData['source_entry_id'];
                         resultObj['category_name'] = queryData['category_name'];
-
                         if (scan_type != 'static') {
                             nvdData['cvss_base_score'] = node.getAttribute('cvssScore');
                             nvdData['cvss_vector'] = node.getAttribute('cvssVector');
@@ -229,13 +230,13 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
 <sys_created_by>apoorva.singh@checkmarx.com</sys_created_by>
 <sys_created_on>2023-03-16 05:04:10</sys_created_on>
 <sys_id>ba2b3da69769e510026f72021153af1b</sys_id>
-<sys_mod_count>51</sys_mod_count>
+<sys_mod_count>33</sys_mod_count>
 <sys_name>CheckmarxOneAppVulItemProcessor</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_ba2b3da69769e510026f72021153af1b</sys_update_name>
 <sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2023-07-22 10:10:16</sys_updated_on>
+<sys_updated_on>2023-07-31 05:38:19</sys_updated_on>
 </sys_script_include>
 </unload>

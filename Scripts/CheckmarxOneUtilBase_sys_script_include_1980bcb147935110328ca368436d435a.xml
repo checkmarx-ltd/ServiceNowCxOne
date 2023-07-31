@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-06-27 13:53:01">
+<unload unload_date="2023-07-31 05:48:24">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -75,6 +75,27 @@ CheckmarxOneUtilBase.prototype = {
             var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
             var query = '/api/projects/?offset=' + offsetno + '&limit=' + limit_val;
+            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+            var body = resp.getBody();
+            var projectJSON = JSON.parse(body);
+
+        } catch (err) {
+            gs.error(this.MSG + " getProjectInfo: Error while getting the project info." + err);
+            throw err;
+        }
+        return projectJSON;
+    },
+
+    //get Project By Id
+    getProjectById: function(configId, projectId) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url; 
+            var method = "post";
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
+            var query = '/api/projects/'+projectId;
             var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
             var body = resp.getBody();
             var projectJSON = JSON.parse(body);
@@ -489,7 +510,7 @@ CheckmarxOneUtilBase.prototype = {
         }
         return this._checkResponseStatus(r);
     },
-     // 2022-12-08T09:33:00.028555Z to 2022-12-08 09:33:00
+    // 2022-12-08T09:33:00.028555Z to 2022-12-08 09:33:00
     parseDate: function(str) {
         var a = str.replace('T', ' ');
         var b = a.replace('T', ' ');
@@ -542,6 +563,7 @@ CheckmarxOneUtilBase.prototype = {
                     implConfig.setValue("value", configVal);
                 implConfig.update();
             }
+
             var newconfig = {
                 "client_secret": gr.client_secret.getDecryptedValue(),
                 "client_id": gr.getValue("client_id"),
@@ -590,20 +612,19 @@ CheckmarxOneUtilBase.prototype = {
             throw this.MSG + 'Error: ' + err;
     },
 
-
     type: 'CheckmarxOneUtilBase'
 };]]></script>
 <sys_class_name>sys_script_include</sys_class_name>
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-21 19:26:28</sys_created_on>
 <sys_id>1980bcb147935110328ca368436d435a</sys_id>
-<sys_mod_count>152</sys_mod_count>
+<sys_mod_count>154</sys_mod_count>
 <sys_name>CheckmarxOneUtilBase</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_1980bcb147935110328ca368436d435a</sys_update_name>
-<sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
-<sys_updated_on>2023-06-27 08:25:18</sys_updated_on>
+<sys_updated_by>admin</sys_updated_by>
+<sys_updated_on>2023-07-30 13:31:35</sys_updated_on>
 </sys_script_include>
 </unload>
