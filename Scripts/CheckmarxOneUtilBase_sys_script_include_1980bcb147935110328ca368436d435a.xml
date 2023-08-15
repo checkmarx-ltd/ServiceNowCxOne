@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-08-11 14:50:10">
+<unload unload_date="2023-08-15 17:23:36">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -29,6 +29,7 @@ CheckmarxOneUtilBase.prototype = {
         }
         return this._makeRestCall(apiurl, configId, token, 'projects', "get");
     },
+	
     //get one project from project list
     getProject: function(configId) {
         try {
@@ -45,6 +46,7 @@ CheckmarxOneUtilBase.prototype = {
         }
         return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
     },
+	
     //get new project list
     getNewProjectList: function(configId) {
         try {
@@ -64,6 +66,7 @@ CheckmarxOneUtilBase.prototype = {
         }
         return projectJSON;
     },
+	
     //get 50 project list at a time
     getNextProjectList: function(configId, offsetno) {
         try {
@@ -143,6 +146,7 @@ CheckmarxOneUtilBase.prototype = {
         return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
 
     },
+	
     // to fetch scan details of particular scanId
     getScanDetails: function(configId, scanId) {
         try {
@@ -189,6 +193,7 @@ CheckmarxOneUtilBase.prototype = {
         return count;
 
     },
+	
     // to get vulnerabilities information of scanId
     getVulInfo: function(configId, scanId, offsetId) {
         try {
@@ -249,6 +254,7 @@ CheckmarxOneUtilBase.prototype = {
         return flaws;
 
     },
+	
     //Sast scan details of a given scanId
     getSastScanSummaryInfo: function(configId, scanId) {
         try {
@@ -283,6 +289,7 @@ CheckmarxOneUtilBase.prototype = {
         return flaws;
 
     },
+	
     //To get remediation status for state mapping
     getSASTRemediationStatus: function(status, state) {
         try {
@@ -299,6 +306,7 @@ CheckmarxOneUtilBase.prototype = {
         return remediation_status;
 
     },
+	
     //To get remediation status for state mapping
     getSCARemediationStatus: function(status, state) {
         try {
@@ -344,7 +352,7 @@ CheckmarxOneUtilBase.prototype = {
                 "import_sca": gr.getValue("import_sca") === "1",
                 "import_sast": gr.getValue("import_sast") === "1",
                 "triaging_in_snow": gr.getValue("triaging_in_snow") === "1",
-                "access_token": gr.getValue("access_token"),
+                "access_token": gr.access_token.getDecryptedValue(),
                 "vulnerability_threshold_level": gr.getValue("vulnerability_threshold_level"),
             };
         } catch (err) {
@@ -362,6 +370,7 @@ CheckmarxOneUtilBase.prototype = {
         try {
             var accessToken = currentToken;
             if (accessToken == null || accessToken == "" || this._isTokenExpired(this._getExpTimeFromAccessToken(accessToken)) || !this._checkClientId(username, accessToken)) {
+				gs.info("Token is expired or client Id is changed, Recreating token..");
                 var fullUrl = baseUrl + '/auth/realms/' + tenant + '/protocol/openid-connect/token';
                 var query = "client_id=" + username + "&grant_type=" + "client_credentials" + "&client_secret=" + password;
                 request.setEndpoint(fullUrl);
@@ -428,7 +437,7 @@ CheckmarxOneUtilBase.prototype = {
             return false;
         } catch (err) {
             gs.error(this.MSG + " :checkClientId :Error in checkClientId." + err);
-            throw err;
+            return false;
         }
 
     },
@@ -440,13 +449,15 @@ CheckmarxOneUtilBase.prototype = {
             var expTime = decodedToken.exp;
         } catch (err) {
             gs.error(this.MSG + " :getExpTimeFromAccessToken :Error in getExpTimeFromAccessToken.");
-            throw err;
+            return 0;
         }
         return expTime;
     },
     // This method checks  if access token is expired or not.
     _isTokenExpired: function(tokenExpTime) {
         try {
+			if(tokenExpTime == 0)
+				return true;
             var dateTime = new GlideDateTime();
             var currentTime = dateTime.getNumericValue() / 1000;
             currentTime = parseInt(currentTime);
@@ -562,6 +573,7 @@ CheckmarxOneUtilBase.prototype = {
         return str3;
 
     },
+	
     // Saves the access tokens to Service Now configuration DB
     saveInstanceTokens: function(config, accessToken) {
         try {
@@ -570,30 +582,13 @@ CheckmarxOneUtilBase.prototype = {
             gr.next();
             var instance = gr.getValue("integration_instance");
             if (accessToken == 'undefined') {
-                tempAccessToken = gr.getValue("access_token"); //config.access_token;				
+                tempAccessToken = gr.access_token.getDecryptedValue(); //config.access_token;				
             } else {
                 tempAccessToken = accessToken;
             }
 
-            gr.setValue("access_token", tempAccessToken);
+			gr.access_token.setDisplayValue(tempAccessToken);
             gr.update();
-
-            var implConfig = new GlideRecord("sn_sec_int_impl_config");
-            implConfig.addQuery("implementation", instance);
-            implConfig.query();
-            while (implConfig.next()) {
-
-                var configName = implConfig.getDisplayValue("configuration");
-                var configVal = gr.getValue(configName);
-
-                if (configName == 'access_token')
-                    configVal = tempAccessToken;
-                if (implConfig.configuration.elem_type == "boolean")
-                    implConfig.setValue("value", configVal === "1");
-                else
-                    implConfig.setValue("value", configVal);
-                implConfig.update();
-            }
 
             var newconfig = {
                 "client_secret": gr.client_secret.getDecryptedValue(),
@@ -606,6 +601,7 @@ CheckmarxOneUtilBase.prototype = {
                 "import_sca": gr.getValue("import_dast") === "1",
                 "import_sast": gr.getValue("import_sast") === "1",
                 "triaging_in_snow": gr.getValue("triaging_in_snow") === "1",
+				"access_token": gr.access_token.getDecryptedValue(),
                 "vulnerability_threshold_level": gr.getValue("vulnerability_threshold_level"),
             };
             new sn_sec_int.Implementation().setConfiguration(instance, newconfig);
@@ -649,13 +645,13 @@ CheckmarxOneUtilBase.prototype = {
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-21 19:26:28</sys_created_on>
 <sys_id>1980bcb147935110328ca368436d435a</sys_id>
-<sys_mod_count>154</sys_mod_count>
+<sys_mod_count>163</sys_mod_count>
 <sys_name>CheckmarxOneUtilBase</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_1980bcb147935110328ca368436d435a</sys_update_name>
-<sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
-<sys_updated_on>2023-08-08 10:38:48</sys_updated_on>
+<sys_updated_by>admin</sys_updated_by>
+<sys_updated_on>2023-08-15 17:23:18</sys_updated_on>
 </sys_script_include>
 </unload>

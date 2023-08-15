@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-08-11 14:44:08">
+<unload unload_date="2023-08-15 17:26:04">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>package_private</access>
 <active>true</active>
@@ -47,7 +47,6 @@ CheckmarxOneConfigUtilBase.prototype = {
             while (implConfig.next()) {
                 var configName = implConfig.getDisplayValue("configuration");
                 var configVal = gr.getValue(configName);
-
                 if (implConfig.configuration.elem_type == "boolean")
                     implConfig.setValue("value", configVal === "1");
                 else
@@ -55,6 +54,7 @@ CheckmarxOneConfigUtilBase.prototype = {
                 implConfig.update();
             }
 
+			gr.update();
             var newconfig = {
                 "client_secret": gr.client_secret.getDecryptedValue(),
                 "client_id": gr.getValue("client_id"),
@@ -66,7 +66,7 @@ CheckmarxOneConfigUtilBase.prototype = {
                 "import_sast": gr.getValue("import_sast") === "1",
                 "triaging_in_snow": gr.getValue("triaging_in_snow") === "1",
 				"vulnerability_threshold_level" : gr.getValue("vulnerability_threshold_level"),
-
+				"access_token": gr.access_token.getDecryptedValue(),
             };
 
             new sn_sec_int.Implementation().setConfiguration(instance, newconfig);
@@ -81,13 +81,13 @@ CheckmarxOneConfigUtilBase.prototype = {
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-17 05:45:19</sys_created_on>
 <sys_id>508f0d54471f1110328ca368436d43f8</sys_id>
-<sys_mod_count>35</sys_mod_count>
+<sys_mod_count>42</sys_mod_count>
 <sys_name>CheckmarxOneConfigUtilBase</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_508f0d54471f1110328ca368436d43f8</sys_update_name>
-<sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
-<sys_updated_on>2023-06-26 17:31:38</sys_updated_on>
+<sys_updated_by>admin</sys_updated_by>
+<sys_updated_on>2023-08-14 13:51:26</sys_updated_on>
 </sys_script_include>
 </unload>
