@@ -590,6 +590,23 @@ CheckmarxOneUtilBase.prototype = {
 			gr.access_token.setDisplayValue(tempAccessToken);
             gr.update();
 
+            var implConfig = new GlideRecord("sn_sec_int_impl_config");
+            implConfig.addQuery("implementation", instance);
+            implConfig.query();
+            while (implConfig.next()) {
+
+                var configName = implConfig.getDisplayValue("configuration");
+                var configVal = gr.getValue(configName);
+
+                if (configName == 'access_token')
+                    configVal = gr.getValue("access_token");
+                if (implConfig.configuration.elem_type == "boolean")
+                    implConfig.setValue("value", configVal === "1");
+                else
+                    implConfig.setValue("value", configVal);
+                implConfig.update();
+            }
+
             var newconfig = {
                 "client_secret": gr.client_secret.getDecryptedValue(),
                 "client_id": gr.getValue("client_id"),
