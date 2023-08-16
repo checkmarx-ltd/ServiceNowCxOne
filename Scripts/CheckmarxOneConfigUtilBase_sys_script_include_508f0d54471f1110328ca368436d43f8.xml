@@ -54,7 +54,6 @@ CheckmarxOneConfigUtilBase.prototype = {
                 implConfig.update();
             }
 
-			gr.update();
             var newconfig = {
                 "client_secret": gr.client_secret.getDecryptedValue(),
                 "client_id": gr.getValue("client_id"),
