@@ -44,7 +44,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         sastdata['source_scan_id'] = Sastattributes.id;
                         sastdata['detected_flaw_count'] = +Sastattributes.total_no_flaws;
                         sastdata['last_scan_date'] = new GlideDateTime(Sastattributes.last_scan_date);
-                        sastdata['scan_summary_name'] = Sastattributes.app_name + ' ' + sastdata['last_scan_date'];
+                        sastdata['scan_summary_name'] = Sastattributes.id + ' ' + sastdata['last_scan_date'];
                         this._upsert(sastdata);
                     } catch (ex) {
                         errorMessage = gs.getMessage("Error in retriving data for scan list integration!");
@@ -72,7 +72,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         data['source_scan_id'] = attributes.id;
                         data['detected_flaw_count'] = +attributes.total_no_flaws;
                         data['last_scan_date'] = new GlideDateTime(attributes.last_scan_date);
-                        data['scan_summary_name'] = attributes.app_name + ' ' + data['last_scan_date'];
+                        data['scan_summary_name'] = attributes.id + ' ' + data['last_scan_date'];
                         this._upsert(data);
                     } catch (ex) {
                         errorMessage = gs.getMessage("Error in retriving data for scan list integration!");
