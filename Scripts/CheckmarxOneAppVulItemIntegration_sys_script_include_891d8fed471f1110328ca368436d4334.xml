@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-08-11 14:40:37">
+<unload unload_date="2023-08-24 10:21:05">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -150,7 +150,8 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                     if ((vulnerabilityCountThresholdLevel == 'LOW') ||
                         (scaseverity.toUpperCase() == 'HIGH') ||
                         (scaseverity.toUpperCase() == vulnerabilityCountThresholdLevel)) {
-                        SCAscanDetailedAll += '<result id="' + jsonLastScanReportResp.results[item].id + '" scan_type="' + jsonLastScanReportResp.results[item].type +
+                        SCAscanDetailedAll += '<result id="' + jsonLastScanReportResp.results[item].id + 
+							'" scan_type="' + 'sca' +
                             '" cweId="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId +
                             '" cweName="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cveName +
                             '" cvssScore="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cvssScore +
@@ -388,13 +389,13 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-21 12:06:20</sys_created_on>
 <sys_id>891d8fed471f1110328ca368436d4334</sys_id>
-<sys_mod_count>161</sys_mod_count>
+<sys_mod_count>162</sys_mod_count>
 <sys_name>CheckmarxOneAppVulItemIntegration</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_891d8fed471f1110328ca368436d4334</sys_update_name>
-<sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
-<sys_updated_on>2023-08-10 05:58:18</sys_updated_on>
+<sys_updated_by>admin</sys_updated_by>
+<sys_updated_on>2023-08-17 13:16:50</sys_updated_on>
 </sys_script_include>
 </unload>
