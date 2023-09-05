@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-06-27 13:49:35">
+<unload unload_date="2023-09-05 08:40:21">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -17,9 +17,32 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
     retrieveData: function() {
         var params = this._getParameters(this.PROCESS.getValue('parameters'));
         var response = "<null/>";
+        if (Object.keys(params.run)[0]) {
+            var appname = '';
+            var lastscandate = '';
+            var branch = '';
+            var appId = '';
+            var applicationIds = [];
+            var applicationIdsStr = '';
+            var responseLastScanSummary = this.UTIL.getScanDetails(this.IMPLEMENTATION, Object.keys(params.run)[0]);
+            var jsonLastScanSummResp = JSON.parse(responseLastScanSummary.getBody());
+            //to map value of last_scan_date, project name and project Id in XML
+            for (var value in jsonLastScanSummResp.scans) {
+                var projectResponse = this.UTIL.getProjectById(this.IMPLEMENTATION, jsonLastScanSummResp.scans[value].projectId);
+                if (null != projectResponse.applicationIds && projectResponse.applicationIds.length > 0)
+                    applicationIds = applicationIds.concat(projectResponse.applicationIds);
+                lastscandate += this.UTIL.parseDate(jsonLastScanSummResp.scans[value].updatedAt);
+                appname += jsonLastScanSummResp.scans[value].projectName;
+                branch += jsonLastScanSummResp.scans[value].branch;
+                appId += jsonLastScanSummResp.scans[value].projectId;
+            }
+            if (applicationIds.length > 0)
+                applicationIdsStr = applicationIds.toString();
+        }
+
         if (params.run) {
             //   scanId, offset
-            response = this.getDetailedReport(Object.keys(params.run)[0], params.run[Object.keys(params.run)[0]]);
+            response = this.getDetailedReport(Object.keys(params.run)[0], params.run[Object.keys(params.run)[0]], lastscandate, appname, branch, appId, applicationIdsStr);
             gs.debug(this.MSG + ' getDetailedReport response:' + response);
 
         }
@@ -45,7 +68,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         };
     },
 
-    getDetailedReport: function(scanId, offset) {
+    getDetailedReport: function(scanId, offset, lastscandate, appname, branch, appId, applicationIdsStr) {
         try {
             var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
             var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
@@ -56,13 +79,9 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             var SCAscanDetailedAll = '';
             var SASTscanDetailedAll = '';
             var scanDetailedAll = '';
-            var lastscandate = '';
             var sca = 'sca';
             var sast = 'sast';
             var description = '';
-            var appname = '';
-            var branch = '';
-            var appId = '';
             var line = '';
             var ref = '';
             var reference = '';
@@ -76,20 +95,11 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             var cvssScore = " ";
             var cvssVector = " ";
             var newoffset = offset - 1;
-            var responseLastScanSummary = this.UTIL.getScanDetails(this.IMPLEMENTATION, scanId);
-            var jsonLastScanSummResp = JSON.parse(responseLastScanSummary.getBody());
-            gs.debug(this.MSG + " getSummaryReport : parsed scanInfoResponse " + JSON.stringify(jsonLastScanSummResp));
-			//to map value of last_scan_date, project name and project Id in XML
-            for (var value in jsonLastScanSummResp.scans) {
-                lastscandate += this.UTIL.parseDate(jsonLastScanSummResp.scans[value].updatedAt);
-                appId += jsonLastScanSummResp.scans[value].projectId;
-            }
             var responseLastScanReport = this.UTIL.getVulInfo(this.IMPLEMENTATION, scanId, newoffset);
             gs.debug(this.MSG + " getDetailedReport : scanInfoResponse " + responseLastScanReport);
             var jsonLastScanReportResp = JSON.parse(responseLastScanReport.getBody());
             var scan_type = "static";
             var vulnerabilityCountThresholdLevel = config.vulnerability_threshold_level;
-
             for (var item in jsonLastScanReportResp.results) {
                 if (jsonLastScanReportResp.results[item].type == "sast") {
                     for (var j in jsonLastScanReportResp.results[item].data.nodes) {
@@ -100,6 +110,8 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                     if ((vulnerabilityCountThresholdLevel == 'LOW') ||
                         (severity.toUpperCase() == 'HIGH') ||
                         (severity.toUpperCase() == vulnerabilityCountThresholdLevel)) {
+                        var owasp = this._getOWASPTop10(jsonLastScanReportResp.results[item].vulnerabilityDetails.compliances);
+                        var sans = this._getSANSTop25(jsonLastScanReportResp.results[item].vulnerabilityDetails.compliances);
                         SASTscanDetailedAll += '<result id="' + jsonLastScanReportResp.results[item].similarityId + '" scan_type="' + scan_type +
                             '" cweId="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId +
                             '" cweName="' + jsonLastScanReportResp.results[item].data.queryName +
@@ -120,25 +132,28 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             '" app_id="' + appId +
                             '" branch="' + branch +
                             '" last_scan_date="' + lastscandate +
+                            '" OWASPTop10="' + owasp +
+                            '" SANSTop25="' + sans +
+                            '" application_ids="' + applicationIdsStr +
                             '" scan_id="' + 'sast' + scanId + '">' +
                             '<references><' + '![CDATA[' + reference + ']]' + '></references>' +
                             '<description><' + '![CDATA[' + jsonLastScanReportResp.results[item].description + ']]' + '></description></result>';
                     }
 
                 }
-                if (jsonLastScanReportResp.results[item].type == "sca") {
+                if (jsonLastScanReportResp.results[item].type == "sca" || jsonLastScanReportResp.results[item].type == "sca-container") {
 
                     for (var k in jsonLastScanReportResp.results[item].data.packageData) {
                         var url = jsonLastScanReportResp.results[item].data.packageData[k].url;
                         ref += url + ',  ';
                     }
-
                     var scaseverity = jsonLastScanReportResp.results[item].severity;
 
                     if ((vulnerabilityCountThresholdLevel == 'LOW') ||
                         (scaseverity.toUpperCase() == 'HIGH') ||
                         (scaseverity.toUpperCase() == vulnerabilityCountThresholdLevel)) {
-                        SCAscanDetailedAll += '<result id="' + jsonLastScanReportResp.results[item].id + '" scan_type="' + jsonLastScanReportResp.results[item].type +
+                        SCAscanDetailedAll += '<result id="' + jsonLastScanReportResp.results[item].id +
+                            '" scan_type="' + 'sca' +
                             '" cweId="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId +
                             '" cweName="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cveName +
                             '" cvssScore="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cvssScore +
@@ -159,12 +174,13 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             '" app_id="' + appId +
                             '" branch="' + branch +
                             '" last_scan_date="' + lastscandate +
+                            '" application_ids="' + applicationIdsStr +
                             '" scan_id="' + 'sca' + scanId + '">' +
                             '<references><' + '![CDATA[' + ref + ']]' + '></references>' +
                             '<description><' + '![CDATA[' + jsonLastScanReportResp.results[item].description + ']]' + '></description></result>';
                     }
                 }
-
+                //   '" references="' + ref.replace(/</g, " ") +
             }
             if (includesca) {
                 scanDetailedAll += SCAscanDetailedAll;
@@ -179,6 +195,44 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             throw err;
         }
         return reportContent;
+    },
+
+    // Get all the OWASP Top 10 compliances as a concatenated string with comma.
+    _getOWASPTop10: function(compliances) {
+        var owasp = '';
+        if (compliances != null) {
+            for (var value in compliances) {
+                var compliance = compliances[value].toString();
+                var tempStr = compliance.toLowerCase();
+                var containsStr = tempStr.indexOf('owasp top 10');
+                if (containsStr != -1) {
+                    if (owasp == '')
+                        owasp += compliance;
+                    else
+                        owasp += ',' + compliance;
+                }
+            }
+        }
+        return owasp;
+    },
+
+    // Get all the SANS Top 25 compliances as a concatenated string with comma.
+    _getSANSTop25: function(compliances) {
+        var sans = '';
+        if (compliances != null) {
+            for (var value in compliances) {
+                var compliance = compliances[value].toString();
+                var tempStr = compliance.toLowerCase();
+                var containsStr = tempStr.indexOf('sans top 25');
+                if (containsStr != -1) {
+                    if (sans == '')
+                        sans += compliance;
+                    else
+                        sans += ',' + compliance;
+                }
+            }
+        }
+        return sans;
     },
 
     // Gets the integration parameters as a map
@@ -275,6 +329,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         var offsets = [];
         var offset = 0;
         var ReportLength = this.UTIL.getTotalVulcount(this.IMPLEMENTATION, scanId);
+        //gs.info("Report Length" + ReportLength);
         var loopLength = ReportLength / 50;
         //in result api offset value start from 0 and increment by 1, here it acts like page instead of number of item like other api
         for (var i = 0; i <= parseInt(loopLength); i++) {
@@ -336,10 +391,13 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-21 12:06:20</sys_created_on>
 <sys_id>891d8fed471f1110328ca368436d4334</sys_id>
+<sys_mod_count>163</sys_mod_count>
 <sys_name>CheckmarxOneAppVulItemIntegration</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_891d8fed471f1110328ca368436d4334</sys_update_name>
+<sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
+<sys_updated_on>2023-08-29 05:30:33</sys_updated_on>
 </sys_script_include>
 </unload>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-06-27 13:50:10">
+<unload unload_date="2023-09-05 08:42:03">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -41,9 +41,11 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         reportData['last_scan_date'] = new GlideDateTime(node.getAttribute('last_scan_date'));
                         reportData['scan_summary_name'] = reportData['source_scan_id'] + ' ' + reportData['last_scan_date'];
                         reportData['scan_type'] = node.getAttribute('scan_type');
+                        reportData['application_Id'] = node.getAttribute('application_ids').toString();
                         var queryData = {};
                         var nvdData = {};
                         var resultObj = {};
+                        var scan_type = node.getAttribute('scan_type');
                         var source_severity_string = node.getAttribute('source_severity');
                         if (source_severity_string == 'HIGH') {
                             var source_severity = 1;
@@ -64,6 +66,16 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         queryData['cvss_base_score'] = node.getAttribute('cvssScore');
                         queryData['cvss_vector'] = node.getAttribute('cvssVector');
                         queryData['last_detection_date'] = reportData.last_scan_date.getDate();
+
+                        if (scan_type == 'static') {
+                            if (node.getAttribute('OWASPTop10') != '') {
+                                var owaspObj = {};
+                                owaspObj[gs.getMessage("OWASPTop10")] = node.getAttribute('OWASPTop10');
+                                queryData['owasp'] = JSON.stringify(owaspObj);
+                            }
+                            queryData['short_description'] = node.getAttribute('SANSTop25');
+                        }
+
                         // to check if first_detection_date checkbox is selected
                         var include_first_detection_date = this.UTIL.getFirstDetectionDate();
                         if (include_first_detection_date) {
@@ -78,7 +90,6 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                             queryData['source_recommendation'] = 'Recommended version-' + node.getAttribute('recommendation');
                             resultObj['source_recommendation'] = 'Recommended version-' + node.getAttribute('recommendation');
                         }
-                        var scan_type = node.getAttribute('scan_type');
 
                         if (scan_type == 'static') {
                             queryData['source_entry_id'] = 'Checkmarx One' + " CWE-" + queryData['cweId'];
@@ -119,17 +130,16 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
 
                         resultObj['source_remediation_status'] = status;
                         var infObj = {};
+                        infObj[gs.getMessage("Application Id")] = node.getAttribute('application_ids').toString();
                         infObj[gs.getMessage("Branch Name")] = node.getAttribute('branch');
                         infObj[gs.getMessage("Project Id")] = node.getAttribute('app_id');
                         resultObj['source_additional_info'] = JSON.stringify(infObj);
                         resultObj['source_finding_status'] = 'State= ' + node.getAttribute('state');
                         resultObj['last_found'] = reportData.last_scan_date.getDate();
-                        resultObj['application_module'] = this.NOT_AVAILABLE;
                         resultObj['source_severity'] = source_severity_string;
                         resultObj['complies_with_policy'] = 'not_applicable';
                         resultObj['source_entry_id'] = queryData['source_entry_id'];
                         resultObj['category_name'] = queryData['category_name'];
-
                         if (scan_type != 'static') {
                             nvdData['cvss_base_score'] = node.getAttribute('cvssScore');
                             nvdData['cvss_vector'] = node.getAttribute('cvssVector');
@@ -154,6 +164,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
             this.completeProcess(this.integrationProcessGr, this.import_counts);
         } else
             gs.warn(this.MSG + ':process called with no attachment');
+
     },
 
     //updating data to app vul entry table
@@ -170,6 +181,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                 this.import_counts.unchanged++;
         } catch (err) {
             gs.error(this.MSG + " _upsert : Error while inserting data into ServiceNow App Vul Entry Table." + err);
+
         }
     },
     //updating data to app vul item table
@@ -210,7 +222,6 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
             nvd.setValue("integration_run", this.integrationProcessGr.integration_run + "");
             nvdExist = nvd.insert();
         }
-
     },
     type: 'CheckmarxOneAppVulItemProcessor'
 });]]></script>
@@ -218,13 +229,13 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
 <sys_created_by>apoorva.singh@checkmarx.com</sys_created_by>
 <sys_created_on>2023-03-16 05:04:10</sys_created_on>
 <sys_id>ba2b3da69769e510026f72021153af1b</sys_id>
-<sys_mod_count>23</sys_mod_count>
+<sys_mod_count>26</sys_mod_count>
 <sys_name>CheckmarxOneAppVulItemProcessor</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_ba2b3da69769e510026f72021153af1b</sys_update_name>
 <sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
-<sys_updated_on>2023-06-26 16:47:43</sys_updated_on>
+<sys_updated_on>2023-08-29 05:47:30</sys_updated_on>
 </sys_script_include>
 </unload>
