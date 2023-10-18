@@ -17,13 +17,15 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
     retrieveData: function() {
         var params = this._getParameters(this.PROCESS.getValue('parameters'));
         var response = "<null/>";
-        if (Object.keys(params.run)[0]) {
+        if (params.run != null) {
             var appname = '';
             var lastscandate = '';
             var branch = '';
             var appId = '';
             var applicationIds = [];
             var applicationIdsStr = '';
+            var engines = [];
+            var engine = '';
             var responseLastScanSummary = this.UTIL.getScanDetails(this.IMPLEMENTATION, Object.keys(params.run)[0]);
             var jsonLastScanSummResp = JSON.parse(responseLastScanSummary.getBody());
             //to map value of last_scan_date, project name and project Id in XML
@@ -35,14 +37,18 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                 appname += jsonLastScanSummResp.scans[value].projectName;
                 branch += jsonLastScanSummResp.scans[value].branch;
                 appId += jsonLastScanSummResp.scans[value].projectId;
+                engines = jsonLastScanSummResp.scans[value].engines;
+                engine = engines.toString();
             }
-            if (applicationIds.length > 0)
+            if (applicationIds.length > 0) {
                 applicationIdsStr = applicationIds.toString();
+            }
+
         }
 
         if (params.run) {
             //   scanId, offset
-            response = this.getDetailedReport(Object.keys(params.run)[0], params.run[Object.keys(params.run)[0]], lastscandate, appname, branch, appId, applicationIdsStr);
+            response = this.getDetailedReport(Object.keys(params.run)[0], params.run[Object.keys(params.run)[0]], lastscandate, appname, branch, appId, applicationIdsStr, engine);
             gs.debug(this.MSG + ' getDetailedReport response:' + response);
 
         }
@@ -68,19 +74,23 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         };
     },
 
-    getDetailedReport: function(scanId, offset, lastscandate, appname, branch, appId, applicationIdsStr) {
+    getDetailedReport: function(scanId, offset, lastscandate, appname, branch, appId, applicationIdsStr, engine) {
         try {
             var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
             var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
+            var includekics = this.UTIL.importKicsFlaw(this.IMPLEMENTATION);
             var config = this.UTIL._getConfig(this.IMPLEMENTATION);
             var apibaseurl = config.checkmarxone_api_base_url;
             var scanDetailedRootNodeStart = "<detailedreport><xml id=\"checkmarxone\"><results>";
             var scanDetailedRootNodeEnd = "</results></xml></detailedreport>";
             var SCAscanDetailedAll = '';
             var SASTscanDetailedAll = '';
+            var SASTDeltascanDetailedAll = '';
+            var KICSscanDetailedAll = '';
             var scanDetailedAll = '';
             var sca = 'sca';
             var sast = 'sast';
+            var kics = 'kics';
             var description = '';
             var line = '';
             var ref = '';
@@ -95,23 +105,76 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             var cvssScore = " ";
             var cvssVector = " ";
             var newoffset = offset - 1;
+            var scan_type = "static";
+            var vulnerabilityCountThresholdLevel = config.vulnerability_threshold_level;
+
+            if (includesast && engine.includes('sast')) {
+                var secondlastscan = this.UTIL.getSecondLastScan(this.IMPLEMENTATION, appId, scanId);
+                if (secondlastscan != -1) {
+                    var responseDeltaScanReport = this.UTIL.getDeltaScan(this.IMPLEMENTATION, appId, scanId, secondlastscan, newoffset);
+                    if (responseDeltaScanReport != -1) {
+                        var jsonDeltaScanReportResp = JSON.parse(responseDeltaScanReport.getBody());
+                        for (var item in jsonDeltaScanReportResp.results) {
+                            for (var j in jsonDeltaScanReportResp.results[item].nodes) {
+                                var nodeId = 'fullName:' + jsonDeltaScanReportResp.results[item].nodes[j].fullName + ', path:' + jsonDeltaScanReportResp.results[item].nodes[j].fileName;
+                                notes += nodeId + '.  ';
+                            }
+                            var severity = jsonDeltaScanReportResp.results[item].severity;
+
+                            if ((vulnerabilityCountThresholdLevel == 'INFO') ||
+                                (vulnerabilityCountThresholdLevel == 'LOW' && severity.toUpperCase() != 'INFO') ||
+                                (vulnerabilityCountThresholdLevel == 'MEDIUM' && severity.toUpperCase() != 'INFO' && severity.toUpperCase() != 'LOW') ||
+                                severity.toUpperCase() == 'HIGH') {
+                                var owasp = this._getOWASPTop10(jsonDeltaScanReportResp.results[item].compliances);
+                                var sans = this._getSANSTop25(jsonDeltaScanReportResp.results[item].compliances);
+                                SASTDeltascanDetailedAll += '<result id="' + jsonDeltaScanReportResp.results[item].similarityID + '" scan_type="' + scan_type +
+                                    '" cweId="' + jsonDeltaScanReportResp.results[item].cweID +
+                                    '" cweName="' + jsonDeltaScanReportResp.results[item].queryName +
+                                    '" category_name="' + jsonDeltaScanReportResp.results[item].queryName +
+                                    '" source_severity="' + jsonDeltaScanReportResp.results[item].severity +
+                                    '" package_unique_id="' + package_unique_id +
+                                    '" package_name="' + package_name +
+                                    '" location="' + jsonDeltaScanReportResp.results[item].nodes[0].fileName +
+                                    '" line_no="' + jsonDeltaScanReportResp.results[item].nodes[0].line +
+                                    '" cvssScore="' + cvssScore +
+                                    '" recommendation="' + recommendedVersion +
+                                    '" sourcefile="' + apibaseurl + '/results/' + scanId + '/' + appId + '/sast' +
+                                    '" cvssVector="' + cvssVector +
+                                    '" first_found_date="' + this.UTIL.parseDate(jsonDeltaScanReportResp.results[item].firstFoundAt) +
+                                    '" state="' + jsonDeltaScanReportResp.results[item].state +
+                                    '" status="' + jsonDeltaScanReportResp.results[item].status +
+                                    '" app_id="' + appId +
+                                    '" branch="' + branch +
+                                    '" last_scan_date="' + lastscandate +
+                                    '" OWASPTop10="' + owasp +
+                                    '" SANSTop25="' + sans +
+                                    '" application_ids="' + applicationIdsStr +
+                                    '" scan_id="' + 'sast' + scanId + '">' +
+                                    '<references><' + '![CDATA[' + notes + ']]' + '></references>' +
+                                    '<description><' + '![CDATA[' + jsonDeltaScanReportResp.results[item].group + ']]' + '></description></result>';
+                            }
+                        }
+                    }
+
+                }
+            }
+
             var responseLastScanReport = this.UTIL.getVulInfo(this.IMPLEMENTATION, scanId, newoffset);
             gs.debug(this.MSG + " getDetailedReport : scanInfoResponse " + responseLastScanReport);
             var jsonLastScanReportResp = JSON.parse(responseLastScanReport.getBody());
-            var scan_type = "static";
-            var vulnerabilityCountThresholdLevel = config.vulnerability_threshold_level;
-            for (var item in jsonLastScanReportResp.results) {
-                if (jsonLastScanReportResp.results[item].type == "sast") {
-                    for (var j in jsonLastScanReportResp.results[item].data.nodes) {
-                        var nodeId = 'nodeId:' + jsonLastScanReportResp.results[item].data.nodes[j].nodeID + ', path:' + jsonLastScanReportResp.results[item].data.nodes[j].fileName;
+            for (item in jsonLastScanReportResp.results) {
+
+                if (SASTDeltascanDetailedAll == '' && jsonLastScanReportResp.results[item].type == "sast") {
+                    for (j in jsonLastScanReportResp.results[item].data.nodes) {
+                        nodeId = 'nodeId:' + jsonLastScanReportResp.results[item].data.nodes[j].nodeID + ', path:' + jsonLastScanReportResp.results[item].data.nodes[j].fileName;
                         notes += nodeId + '.  ';
                     }
-                    var severity = jsonLastScanReportResp.results[item].severity;
-                    if ((vulnerabilityCountThresholdLevel == 'LOW') ||
-                        (severity.toUpperCase() == 'HIGH') ||
-                        (severity.toUpperCase() == vulnerabilityCountThresholdLevel)) {
-                        var owasp = this._getOWASPTop10(jsonLastScanReportResp.results[item].vulnerabilityDetails.compliances);
-                        var sans = this._getSANSTop25(jsonLastScanReportResp.results[item].vulnerabilityDetails.compliances);
+                    var sastseverity = jsonLastScanReportResp.results[item].severity;
+
+                    if ((vulnerabilityCountThresholdLevel == 'INFO') ||
+                        (vulnerabilityCountThresholdLevel == 'LOW' && sastseverity.toUpperCase() != 'INFO') ||
+                        (vulnerabilityCountThresholdLevel == 'MEDIUM' && sastseverity.toUpperCase() != 'INFO' && sastseverity.toUpperCase() != 'LOW') ||
+                        sastseverity.toUpperCase() == 'HIGH') {
                         SASTscanDetailedAll += '<result id="' + jsonLastScanReportResp.results[item].similarityId + '" scan_type="' + scan_type +
                             '" cweId="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId +
                             '" cweName="' + jsonLastScanReportResp.results[item].data.queryName +
@@ -123,7 +186,6 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             '" line_no="' + jsonLastScanReportResp.results[item].data.nodes[0].line +
                             '" cvssScore="' + cvssScore +
                             '" recommendation="' + recommendedVersion +
-                            '" source_notes="' + notes +
                             '" sourcefile="' + apibaseurl + '/results/' + scanId + '/' + appId + '/sast' +
                             '" cvssVector="' + cvssVector +
                             '" first_found_date="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt) +
@@ -132,26 +194,31 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             '" app_id="' + appId +
                             '" branch="' + branch +
                             '" last_scan_date="' + lastscandate +
-                            '" OWASPTop10="' + owasp +
-                            '" SANSTop25="' + sans +
-                            '" application_ids="' + applicationIdsStr +
                             '" scan_id="' + 'sast' + scanId + '">' +
-                            '<references><' + '![CDATA[' + reference + ']]' + '></references>' +
+                            '<references><' + '![CDATA[' + notes + ']]' + '></references>' +
                             '<description><' + '![CDATA[' + jsonLastScanReportResp.results[item].description + ']]' + '></description></result>';
                     }
 
                 }
+
                 if (jsonLastScanReportResp.results[item].type == "sca" || jsonLastScanReportResp.results[item].type == "sca-container") {
 
-                    for (var k in jsonLastScanReportResp.results[item].data.packageData) {
-                        var url = jsonLastScanReportResp.results[item].data.packageData[k].url;
-                        ref += url + ',  ';
+                    if (jsonLastScanReportResp.results[item].type == "sca") {
+                        for (var k in jsonLastScanReportResp.results[item].data.packageData) {
+                            var url = jsonLastScanReportResp.results[item].data.packageData[k].url;
+                            ref += url + ',  ';
+                            var sca_packageID = jsonLastScanReportResp.results[item].data.packageIdentifier;
+                            recommendedVersion = jsonLastScanReportResp.results[item].data.recommendedVersion;
+                        }
+                    } else {
+                        sca_packageID = jsonLastScanReportResp.results[item].data.packageName;
                     }
                     var scaseverity = jsonLastScanReportResp.results[item].severity;
 
-                    if ((vulnerabilityCountThresholdLevel == 'LOW') ||
-                        (scaseverity.toUpperCase() == 'HIGH') ||
-                        (scaseverity.toUpperCase() == vulnerabilityCountThresholdLevel)) {
+                    if ((vulnerabilityCountThresholdLevel == 'INFO') ||
+                        (vulnerabilityCountThresholdLevel == 'LOW' && scaseverity.toUpperCase() != 'INFO') ||
+                        (vulnerabilityCountThresholdLevel == 'MEDIUM' && scaseverity.toUpperCase() != 'INFO' && scaseverity.toUpperCase() != 'LOW') ||
+                        scaseverity.toUpperCase() == 'HIGH') {
                         SCAscanDetailedAll += '<result id="' + jsonLastScanReportResp.results[item].id +
                             '" scan_type="' + 'sca' +
                             '" cweId="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId +
@@ -163,10 +230,9 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             '" first_found_date="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt) +
                             '" state="' + jsonLastScanReportResp.results[item].state +
                             '" status="' + jsonLastScanReportResp.results[item].status +
-                            '" package_unique_id="' + jsonLastScanReportResp.results[item].data.packageIdentifier +
-                            '" recommendation="' + jsonLastScanReportResp.results[item].data.recommendedVersion +
-                            '" package_name="' + jsonLastScanReportResp.results[item].data.packageIdentifier +
-                            '" source_notes="' + notes +
+                            '" package_unique_id="' + sca_packageID +
+                            '" recommendation="' + recommendedVersion +
+                            '" package_name="' + sca_packageID +
                             '" sourcefile="' + apibaseurl + '/sca/#/projects/' + appId + '/reports/' + scanId +
                             '/vulnerabilities/' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId + '%3AMaven-commons-collections%3Acommons-collections-3.2.1/vulnerabilityDetails' +
                             '" line_no="' + line +
@@ -180,13 +246,58 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             '<description><' + '![CDATA[' + jsonLastScanReportResp.results[item].description + ']]' + '></description></result>';
                     }
                 }
-                //   '" references="' + ref.replace(/</g, " ") +
+                if (jsonLastScanReportResp.results[item].type == "kics") {
+                    var kicsseverity = jsonLastScanReportResp.results[item].severity;
+
+                    if ((vulnerabilityCountThresholdLevel == 'INFO') ||
+                        (vulnerabilityCountThresholdLevel == 'LOW' && kicsseverity.toUpperCase() != 'INFO') ||
+                        (vulnerabilityCountThresholdLevel == 'MEDIUM' && kicsseverity.toUpperCase() != 'INFO' && kicsseverity.toUpperCase() != 'LOW') ||
+                        kicsseverity.toUpperCase() == 'HIGH') {
+                        var kicsowasp = this._getOWASPTop10(jsonLastScanReportResp.results[item].vulnerabilityDetails.compliances);
+                        var kicssans = this._getSANSTop25(jsonLastScanReportResp.results[item].vulnerabilityDetails.compliances);
+                        KICSscanDetailedAll += '<result id="' + jsonLastScanReportResp.results[item].similarityId + '" scan_type="' + 'kics' +
+                            '" cweId="' + jsonLastScanReportResp.results[item].data.queryId +
+                            '" cweName="' + jsonLastScanReportResp.results[item].data.queryName +
+                            '" category_name="' + jsonLastScanReportResp.results[item].data.queryName +
+                            '" source_severity="' + jsonLastScanReportResp.results[item].severity +
+                            '" package_unique_id="' + package_unique_id +
+                            '" package_name="' + package_name +
+                            '" location="' + jsonLastScanReportResp.results[item].data.fileName +
+                            '" line_no="' + jsonLastScanReportResp.results[item].data.line +
+                            '" cvssScore="' + cvssScore +
+                            '" recommendation="' + recommendedVersion +
+                            '" sourcefile="' + apibaseurl + '/results/' + scanId + '/' + appId + '/kics' +
+                            '" cvssVector="' + cvssVector +
+                            '" first_found_date="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt) +
+                            '" state="' + jsonLastScanReportResp.results[item].state +
+                            '" status="' + jsonLastScanReportResp.results[item].status +
+                            '" app_id="' + appId +
+                            '" branch="' + branch +
+                            '" last_scan_date="' + lastscandate +
+                            '" OWASPTop10="' + kicsowasp +
+                            '" SANSTop25="' + kicssans +
+                            '" application_ids="' + applicationIdsStr +
+                            '" scan_id="' + 'IaC' + scanId + '">' +
+                            '<references><' + '![CDATA[' + notes + ']]' + '></references>' +
+                            '<description><' + '![CDATA[' + jsonLastScanReportResp.results[item].description + ']]' + '></description></result>';
+                    }
+
+                }
+
             }
             if (includesca) {
                 scanDetailedAll += SCAscanDetailedAll;
             }
             if (includesast) {
-                scanDetailedAll += SASTscanDetailedAll;
+                if (SASTDeltascanDetailedAll == '') {
+                    scanDetailedAll += SASTscanDetailedAll;
+                } else {
+                    scanDetailedAll += SASTDeltascanDetailedAll;
+                }
+
+            }
+            if (includekics) {
+                scanDetailedAll += KICSscanDetailedAll;
             }
             var reportContent = scanDetailedRootNodeStart + scanDetailedAll + scanDetailedRootNodeEnd;
 
@@ -254,17 +365,41 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             } else {
                 this.LATEST = new GlideDateTime(this.DELTA_START_TIME || '1970-01-01T10:16:06.17544Z').getDate();
                 var apps = this.AVR_API.getAppReleases();
+                var app_list = this.UTIL.getConfigProjectList(this.IMPLEMENTATION);
                 var app = '';
-                for (var i in apps) {
-                    var appId = apps[i].source_app_id;
-                    if (appId !== "undefined") {
+                var appId = '';
+                var scanId = '';
+                var offsetId = '';
+                var scans = [];
+                if (app_list && app_list.length > 0) {
+                    for (var id in app_list) {
+                        for (var i in apps) {
+                            if (apps[i].source_app_id == app_list[id]) {
+                                appId = app_list[id];
+                                if (appId !== "undefined") {
+                                    scans = this._getScans(appId);
+                                }
+                                for (var item in scans) {
+                                    scanId = scans[item];
+                                    offsetId = this._getoffsets(appId, scanId);
+                                    params.remaining[scanId] = offsetId;
+                                }
 
-                        var scans = this._getScans(appId);
+                            }
+                        }
                     }
-                    for (var j in scans) {
-                        var scanId = scans[j];
-                        var offsetId = this._getoffsets(appId, scanId);
-                        params.remaining[scanId] = offsetId;
+                } else {
+                    for (var j in apps) {
+                        appId = apps[j].source_app_id;
+                        if (appId !== "undefined") {
+
+                            scans = this._getScans(appId);
+                        }
+                        for (var k in scans) {
+                            scanId = scans[k];
+                            offsetId = this._getoffsets(appId, scanId);
+                            params.remaining[scanId] = offsetId;
+                        }
                     }
                 }
                 params = this._nextParameters(params);
@@ -295,6 +430,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 
         var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
         var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
+        var includekics = this.UTIL.importKicsFlaw(this.IMPLEMENTATION);
         var scans = [];
         var scanId = '';
         try {
@@ -308,6 +444,11 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                 }
                 if (includesast) {
                     if (jsonLastScanResp.scans[item].engines.toString().includes("sast")) {
+                        scanId = this._getScan(appId, jsonLastScanResp.scans[item].id);
+                    }
+                }
+                if (includekics) {
+                    if (jsonLastScanResp.scans[item].engines.toString().includes("kics")) {
                         scanId = this._getScan(appId, jsonLastScanResp.scans[item].id);
                     }
                 }
@@ -329,7 +470,6 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         var offsets = [];
         var offset = 0;
         var ReportLength = this.UTIL.getTotalVulcount(this.IMPLEMENTATION, scanId);
-        //gs.info("Report Length" + ReportLength);
         var loopLength = ReportLength / 50;
         //in result api offset value start from 0 and increment by 1, here it acts like page instead of number of item like other api
         for (var i = 0; i <= parseInt(loopLength); i++) {

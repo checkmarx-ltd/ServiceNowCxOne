@@ -52,8 +52,12 @@
         g_form.addErrorMessage(getMessage("Select Vulnerability Threshold Level to proceed."));
         return false;
     }
-    if (g_form.getValue("import_sast") == "false" && g_form.getValue("import_sca") == "false") {
-        g_form.addWarningMessage(getMessage("Select SCA or SAST to proceed."));
+    if (g_form.getValue("import_sast") == "false" && g_form.getValue("import_sca") == "false" && g_form.getValue("import_kics") == "false") {
+        g_form.addWarningMessage(getMessage("Select SCA, SAST or KICS to proceed."));
+        return false;
+    }
+    if (g_form.getValue("list_of_project_id_s").split(";").length > 10) {
+        g_form.addWarningMessage(getMessage("Project id's list is too long."));
         return false;
     }
     gsftSubmit(null, g_form.getFormElement(), 'Checkmarxone_configuration_save');
@@ -73,7 +77,7 @@ function serverSide() {
     while (implConfig.next()) {
         var configName = implConfig.getDisplayValue("configuration");
         var configVal = implConfig.getDisplayValue("value");
-        if ((configName == "limit")) {
+        if ((configName == "limit" || configName == "log_level")) {
             current.setValue(configName, configVal);
         }
     }
