@@ -26,7 +26,8 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                 doc.parseXML(new GlideSysAttachment().getContent(attachment));
                 var listNode = doc.getNode('/detailedreport/xml/results');
             } catch (ex) {
-                gs.error(this.MSG + "Error occurred while validating or parsing the XML: " + ex);
+				gs.info("error reported" + new GlideSysAttachment().getContent(attachment));
+                gs.error(this.MSG + "Error occurred while validating or parsing the XML: " + ex );
                 throw ex;
             }
             var reportData = {};
@@ -40,7 +41,11 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         reportData['source_scan_id'] = node.getAttribute('scan_id');
                         reportData['last_scan_date'] = new GlideDateTime(node.getAttribute('last_scan_date'));
                         reportData['scan_summary_name'] = reportData['source_scan_id'] + ' ' + reportData['last_scan_date'];
-                        reportData['scan_type'] = node.getAttribute('scan_type');
+                        if (node.getAttribute('scan_type') == 'kics') {
+                            reportData['scan_type'] = 'static';
+                        } else {
+                            reportData['scan_type'] = node.getAttribute('scan_type');
+                        }
                         reportData['application_Id'] = node.getAttribute('application_ids').toString();
                         var queryData = {};
                         var nvdData = {};
@@ -59,21 +64,22 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         var query_id = 'Checkmarx One' + "-" + node.getAttribute('id');
                         var cwe_name = node.getAttribute('cweName');
                         // var url = node.getAttribute('url');
-                        queryData['scan_type'] = node.getAttribute('scan_type');
-                        queryData['source_severity'] = source_severity;
+                        queryData['scan_type'] = reportData['scan_type'];
+                        queryData['source_severity'] = +source_severity;
                         queryData['threat'] = '';
-                        queryData['cweId'] = node.getAttribute('cweId');
+                        reportData['cweId'] = node.getAttribute('cweId');
                         queryData['cvss_base_score'] = node.getAttribute('cvssScore');
                         queryData['cvss_vector'] = node.getAttribute('cvssVector');
                         queryData['last_detection_date'] = reportData.last_scan_date.getDate();
 
-                        if (scan_type == 'static') {
+                        if (reportData['scan_type'] == 'static') {
                             if (node.getAttribute('OWASPTop10') != '') {
                                 var owaspObj = {};
                                 owaspObj[gs.getMessage("OWASPTop10")] = node.getAttribute('OWASPTop10');
                                 queryData['owasp'] = JSON.stringify(owaspObj);
                             }
                             queryData['short_description'] = node.getAttribute('SANSTop25');
+                            resultObj['source_notes'] = node.getFirstChild().getTextContent().toString();
                         }
 
                         // to check if first_detection_date checkbox is selected
@@ -83,34 +89,35 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                             resultObj['first_found'] = new GlideDateTime(node.getAttribute('first_found_date')).getDate();
                         }
 
-                        queryData['package_unique_id'] = node.getAttribute('package_unique_id');
-                        queryData['package_name'] = node.getAttribute('package_name');
                         reportData['cweName'] = node.getAttribute('cweName');
                         if (node.getAttribute('recommendation') != '') {
-                            queryData['source_recommendation'] = 'Recommended version-' + node.getAttribute('recommendation');
                             resultObj['source_recommendation'] = 'Recommended version-' + node.getAttribute('recommendation');
                         }
 
                         if (scan_type == 'static') {
-                            queryData['source_entry_id'] = 'Checkmarx One' + " CWE-" + queryData['cweId'];
+                            queryData['source_entry_id'] = 'Checkmarx One' + " CWE-" + reportData['cweId'];
                             queryData['cwe_list'] = [{
-                                cwe_id: queryData['cweId'],
+                                cwe_id: reportData['cweId'],
                                 name: queryData['category_name']
                             }];
-                        } else {
-                            queryData['source_entry_id'] = 'Checkmarx One' + "-" + node.getAttribute('id');
+                            resultObj['source_avit_id'] = node.getAttribute('id');
                         }
-                        if (scan_type != 'static') {
-                            resultObj['source_avit_id'] = node.getAttribute('id') + node.getAttribute('package_unique_id');
 
-                        } else {
+                        if (scan_type == 'sca') {
+                            queryData['source_entry_id'] = 'Checkmarx One' + "-" + node.getAttribute('id');
+                            resultObj['source_avit_id'] = node.getAttribute('id') + node.getAttribute('package_unique_id');
+                            resultObj['source_references'] = node.getFirstChild().getTextContent().toString();
+
+                        }
+                        if (scan_type == 'kics') {
+
+                            queryData['source_entry_id'] = 'Checkmarx One' + "-" + node.getAttribute('cweId');
                             resultObj['source_avit_id'] = node.getAttribute('id');
                         }
                         resultObj['source_app_id'] = reportData['source_app_id'];
                         resultObj['scan_type'] = reportData['scan_type'];
                         resultObj['package_unique_id'] = node.getAttribute('package_unique_id');
                         resultObj['package_name'] = node.getAttribute('package_name');
-                        resultObj['source_notes'] = node.getAttribute('source_notes');
                         resultObj['location'] = node.getAttribute('location');
                         resultObj['source_link'] = node.getAttribute('sourcefile');
                         if (node.getAttribute('line_no') != '') {
@@ -120,9 +127,9 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         resultObj['last_scan_date'] = reportData['last_scan_date'];
                         resultObj['scan_summary_name'] = reportData['scan_summary_name'];
                         resultObj['description'] = node.getLastChild().getTextContent().toString();
-                        resultObj['source_references'] = node.getFirstChild().getTextContent().toString();
+
                         resultObj['source_vulnerability_summary'] = node.getLastChild().getTextContent().toString();
-                        if (scan_type == 'static') {
+                        if (reportData['scan_type'] == 'static') {
                             var status = this.UTIL.getSASTRemediationStatus(node.getAttribute('status'), node.getAttribute('state'));
                         } else {
                             status = this.UTIL.getSCARemediationStatus(node.getAttribute('status'), node.getAttribute('state'));
@@ -140,7 +147,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         resultObj['complies_with_policy'] = 'not_applicable';
                         resultObj['source_entry_id'] = queryData['source_entry_id'];
                         resultObj['category_name'] = queryData['category_name'];
-                        if (scan_type != 'static') {
+                        if (reportData['scan_type'] != 'static') {
                             nvdData['cvss_base_score'] = node.getAttribute('cvssScore');
                             nvdData['cvss_vector'] = node.getAttribute('cvssVector');
                             this._handleCVE(nvdData, resultObj, cwe_name);

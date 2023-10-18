@@ -82,6 +82,34 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                     }
                 }
             }
+			if (Node.toString().includes("kicsScanData")) {
+                try {
+                    var kicsnodes = doc.getNode('/scanData/kicsScanData/scans');
+                    var kicsiteration = kicsnodes.getChildNodeIterator();
+                } catch (ex) {
+                    gs.error(this.MSG + "Error occurred while parsing the XML: " + ex);
+                    throw ex;
+                }
+                var kicsdata = {};
+                while (kicsiteration.hasNext()) {
+                    try {
+                        var kicsappNode = kicsiteration.next();
+                        var kicsattributes = kicsappNode.getAttributes();
+                        //map attributes from CheckmarxOne into the servicenow scan summary table
+                        kicsdata['source_app_id'] = kicsattributes.app_id;
+                        kicsdata['source_scan_id'] = kicsattributes.id;
+                        kicsdata['detected_flaw_count'] = +kicsattributes.total_no_flaws;
+                        kicsdata['last_scan_date'] = new GlideDateTime(kicsattributes.last_scan_date);
+                        kicsdata['scan_summary_name'] = kicsattributes.id + ' ' + kicsdata['last_scan_date'];
+                        this._upsert(kicsdata);
+                    } catch (ex) {
+                        errorMessage = gs.getMessage("Error in retriving data for scan list integration!");
+                        gs.error(this.MSG + "errorMessage " + ex);
+                        errorProcess += " | " + ex.getMessage();
+                        //throw ex;
+                    }
+                }
+            }
             if (!gs.nil(errorProcess))
                 gs.error(this.MSG + "All errors that occurred while processing scan summary: " + errorProcess);
             this.completeProcess(this.integrationProcessGr, this.import_counts);

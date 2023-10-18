@@ -23,7 +23,8 @@ CheckmarxOneConfigUtilBase.prototype = {
                     "errorMessage": gs.getMessage("CheckmarxOne configuration not found.")
                 };
             var response = new x_chec3_chexone.CheckmarxOneUtil().getProject(config.getValue("integration_instance"));
-
+			var implConfig = new GlideRecord("sn_sec_int_impl_config");
+			
         } catch (ex) {
             result = false;
             errorMessage = gs.getMessage("Credential validation failed!");
@@ -63,9 +64,11 @@ CheckmarxOneConfigUtilBase.prototype = {
                 "include_first_detection_date": gr.getValue("include_first_detection_date") === "1",
                 "import_sca": gr.getValue("import_sca") === "1",
                 "import_sast": gr.getValue("import_sast") === "1",
+				"import_kics": gr.getValue("import_kics") === "1",
                 "triaging_in_snow": gr.getValue("triaging_in_snow") === "1",
                 "vulnerability_threshold_level": gr.getValue("vulnerability_threshold_level"),
                 "access_token": gr.access_token.getDecryptedValue(),
+				"list_projects": gr.getValue("list_of_project_id_s"),
             };
 
             new sn_sec_int.Implementation().setConfiguration(instance, newconfig);
