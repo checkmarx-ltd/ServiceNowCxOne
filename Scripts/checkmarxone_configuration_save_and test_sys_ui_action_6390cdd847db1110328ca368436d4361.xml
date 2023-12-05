@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-08-11 14:35:31">
+<unload unload_date="2023-12-05 10:09:42">
 <sys_ui_action action="INSERT_OR_UPDATE">
 <action_name>checkmarxone_configuration_save</action_name>
 <active>true</active>
@@ -103,15 +103,15 @@ function serverSide() {
 <sys_domain>global</sys_domain>
 <sys_domain_path>/</sys_domain_path>
 <sys_id>6390cdd847db1110328ca368436d4361</sys_id>
-<sys_mod_count>24</sys_mod_count>
+<sys_mod_count>33</sys_mod_count>
 <sys_name>Save and Test Credentials</sys_name>
 <sys_overrides display_value=""/>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_ui_action_6390cdd847db1110328ca368436d4361</sys_update_name>
-<sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
-<sys_updated_on>2023-08-08 12:57:22</sys_updated_on>
+<sys_updated_by>admin</sys_updated_by>
+<sys_updated_on>2023-10-11 05:48:28</sys_updated_on>
 <table>x_chec3_chexone_checkmarxone_configuration</table>
 <ui11_compatible>true</ui11_compatible>
 <ui16_compatible>false</ui16_compatible>
