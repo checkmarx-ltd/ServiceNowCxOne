@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-08-11 14:38:22">
+<unload unload_date="2024-02-05 11:24:12">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -41,18 +41,42 @@ CheckmarxOneAppListProcessor.prototype = Object.extendsObject(sn_vul.Application
                 var attributes = appNode.getAttributes();
                 var applicationId = '';
                 var appId;
+				var projectTags = '';	
+				
+               var childIter = appNode.getChildNodeIterator();
+                while (childIter.hasNext) {
+                    var childNode = childIter.next();
+                    if (childNode.getNodeName() == "projectTags") {
+                        projectTags = childNode.getTextContent();
+                        break;
+                    }
+                }
+               /* if (projectTags != null && projectTags != '') {
+                    var sourceAPMIDObj = {};
+                    var projectTagsArr = projectTags.split(',', -1);
+                    for (var item in projectTagsArr) {
+                        var projectTagArr = projectTagsArr[item].split(':', -1);
+                        sourceAPMIDObj[projectTagArr[0]] = projectTagArr[1];
+                    }
+                    if (sourceAPMIDObj != null)
+                        appObj['apm_app_id'] = sourceAPMIDObj.toString();
+				
+				}	*/			
                 if (appNode.getAttribute('applicationIds') && appNode.getAttribute('applicationIds') != {}) {
 					appId ={};
                     appId[gs.getMessage("Application Id: ")] = appNode.getAttribute('applicationIds').toString();
                 } else
                     appId = '';
+				
                 //map attributes from Checkmarx into the servicenow expected format'
                 var appObj = {
                     source_app_id: attributes.id,
                     app_name: appNode.getLastChild().getTextContent().toString(),
+					apm_app_id: projectTags,
                     source_assigned_teams: attributes.groups,
                     description: 'created at' + attributes.createdAt,
                     source_additional_info: JSON.stringify(appId),
+					
                 };
                 //Updating the project information in ServiceNow table
                 var result = this.AVR_API.createOrUpdateApp(appObj);
@@ -83,13 +107,13 @@ CheckmarxOneAppListProcessor.prototype = Object.extendsObject(sn_vul.Application
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-21 12:03:00</sys_created_on>
 <sys_id>716c87ad471f1110328ca368436d438a</sys_id>
-<sys_mod_count>49</sys_mod_count>
+<sys_mod_count>62</sys_mod_count>
 <sys_name>CheckmarxOneAppListProcessor</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_716c87ad471f1110328ca368436d438a</sys_update_name>
-<sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
-<sys_updated_on>2023-08-08 11:22:07</sys_updated_on>
+<sys_updated_by>admin</sys_updated_by>
+<sys_updated_on>2023-12-21 15:21:18</sys_updated_on>
 </sys_script_include>
 </unload>

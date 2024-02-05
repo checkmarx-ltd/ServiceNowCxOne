@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-12-05 10:11:43">
+<unload unload_date="2024-02-05 11:16:45">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -77,19 +77,7 @@ CheckmarxOneUtilBase.prototype = {
             var query = '';
             var projectid = '';
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
-            var list_projects = config.list_projects;
-            if (list_projects && list_projects.length > 0) {
-                list_projects = list_projects.split(";");
-                for (var id in list_projects) {
-                    if (list_projects[id].length > 0) {
-                        projectid += '&ids=' + list_projects[id];
-                    }
-                }
-                query = '/api/projects/?' + projectid;
-
-            } else {
-                query = '/api/projects/?offset=0&limit=0';
-            }
+            query = '/api/projects/?offset=0&limit=1';
             var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
             var body = resp.getBody();
             var projectJSON = JSON.parse(body);
@@ -104,17 +92,35 @@ CheckmarxOneUtilBase.prototype = {
     getConfigProjectList: function(configId) {
         var config = this._getConfig(configId);
         var project_lists = [];
-        var list_projects = config.list_projects;
+        var projectStatus;
+        var list_projects = config.list_of_project_id_s;
         if (list_projects && list_projects.length > 0) {
             list_projects = list_projects.split(";");
             for (var id in list_projects) {
-                if (list_projects[id].length > 0) {
+                if (list_projects[id].length > 0)
                     project_lists.push(list_projects[id]);
-                }
             }
         }
         return project_lists;
     },
+
+    //get Project By Id
+    getConfigProjectById: function(configId, projectId) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "post";
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
+            var query = '/api/projects/' + projectId;
+            var resp = this._makeConfigRestApiCall(apibaseurl, configId, token, query, "get");
+        } catch (err) {
+            gs.error(this.MSG + " getConfigProjectById: Error while getting the project info." + err);
+        }
+        return resp;
+    },
+
 
     //get 50 project list at a time
     getNextProjectList: function(configId, offsetno) {
@@ -128,12 +134,15 @@ CheckmarxOneUtilBase.prototype = {
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
             var query = '';
             var projectid = '';
-            var list_projects = config.list_projects;
+            var list_projects = this.getConfigProjectList(configId);
             if (list_projects && list_projects.length > 0) {
-                list_projects = list_projects.split(";");
                 for (var id in list_projects) {
                     if (list_projects[id].length > 0) {
-                        projectid += '&ids=' + list_projects[id];
+                        var projectStatus = this.getConfigProjectById(configId, list_projects[id]);
+                        if (projectStatus == 200 || projectJSON == 202)
+                            projectid += '&ids=' + list_projects[id];
+						else 
+							gs.info("Entered project id is wrong"+list_projects[id]);
                     }
                 }
                 query = '/api/projects/?' + projectid;
@@ -150,6 +159,7 @@ CheckmarxOneUtilBase.prototype = {
         }
         return projectJSON;
     },
+
 
     //get Project By Id
     getProjectById: function(configId, projectId) {
@@ -203,12 +213,14 @@ CheckmarxOneUtilBase.prototype = {
             var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
             var query = '/api/scans/?offset=0&limit=1&statuses=Completed&project-id=' + projectId + '&from-date=' + last_run_date + '&sort=%2Bcreated_at&sort=%2Bstatus&field=scan-ids';
-
+            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
         } catch (err) {
             gs.error(this.MSG + " :getScanList :Error in getting status of the report." + err);
-            throw err;
+            return -1;
         }
-        return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+
+        return resp;
+
     },
 
     //Second Last scanId for a given app/project
@@ -381,7 +393,7 @@ CheckmarxOneUtilBase.prototype = {
             var count = 0;
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
 
-            var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=true';
+            var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=false';
             var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
             var body = resp.getBody();
             var ScanSummaryJson = JSON.parse(body);
@@ -390,11 +402,9 @@ CheckmarxOneUtilBase.prototype = {
                     count += ScanSummaryJson.scansSummaries[item].sastCounters.totalCounter;
                 }
                 if (includesca) {
-                    count += ScanSummaryJson.scansSummaries[item].scaCounters.totalCounter + ScanSummaryJson.scansSummaries[item].scaContainersCounters.totalVulnerabilitiesCounter;
+                    count += count += ScanSummaryJson.scansSummaries[item].kicsCounters.totalCounter + ScanSummaryJson.scansSummaries[item].scaCounters.totalCounter + ScanSummaryJson.scansSummaries[item].scaContainersCounters.totalVulnerabilitiesCounter;
                 }
-                if (includekics) {
-                    count += ScanSummaryJson.scansSummaries[item].kicsCounters.totalCounter;
-                }
+
 
             }
         } catch (err) {
@@ -417,7 +427,7 @@ CheckmarxOneUtilBase.prototype = {
             var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
 
-            var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=true';
+            var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=false';
             var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
             var body = resp.getBody();
             var ScanSummaryJson = JSON.parse(body);
@@ -444,7 +454,7 @@ CheckmarxOneUtilBase.prototype = {
             var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
             var flaws = 0;
-            var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=true';
+            var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=false';
             var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
             var body = resp.getBody();
             var ScanSummaryJson = JSON.parse(body);
@@ -472,7 +482,12 @@ CheckmarxOneUtilBase.prototype = {
             var includekics = this.importKicsFlaw(configId);
             var limit_val = config.limit;
             //var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val; 
-            var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val + '&sort=%2Bstatus&sort=%2Bseverity';
+            if ((includesast && includesca) || includesast || (includekics && includesast && includekics)) {
+                var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val + '&sort=-type';
+            } else if (includesca || (includekics && includesca) || includekics) {
+                query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val + '&sort=%2Btype';
+            }
+
             //var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=20' +'&sort=%2Bstatus&sort=%2Bseverity' ;      
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
             var apibaseurl = config.checkmarxone_api_base_url;
@@ -497,7 +512,7 @@ CheckmarxOneUtilBase.prototype = {
             var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
 
-            var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=true';
+            var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=false';
             var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
             var body = resp.getBody();
             var ScanSummaryJson = JSON.parse(body);
@@ -509,7 +524,8 @@ CheckmarxOneUtilBase.prototype = {
                     if ((vulnerabilityCountThresholdLevel == 'INFO') ||
                         (vulnerabilityCountThresholdLevel == 'LOW' && severity.toUpperCase() != 'INFO') ||
                         (vulnerabilityCountThresholdLevel == 'MEDIUM' && severity.toUpperCase() != 'INFO' && severity.toUpperCase() != 'LOW') ||
-                        severity.toUpperCase() == 'HIGH') {
+                        (vulnerabilityCountThresholdLevel == 'HIGH' && severity.toUpperCase() != 'INFO' && severity.toUpperCase() != 'LOW' && severity.toUpperCase() != 'MEDIUM') ||
+                        severity.toUpperCase() == 'CRITICAL') {
                         var counts = ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters[value].counter;
                         flaws += counts;
                     }
@@ -519,7 +535,8 @@ CheckmarxOneUtilBase.prototype = {
                     if ((vulnerabilityCountThresholdLevel == 'INFO') ||
                         (vulnerabilityCountThresholdLevel == 'LOW' && sca_container_severity.toUpperCase() != 'INFO') ||
                         (vulnerabilityCountThresholdLevel == 'MEDIUM' && sca_container_severity.toUpperCase() != 'INFO' && sca_container_severity.toUpperCase() != 'LOW') ||
-                        sca_container_severity.toUpperCase() == 'HIGH') {
+                        (vulnerabilityCountThresholdLevel == 'HIGH' && sca_container_severity.toUpperCase() != 'INFO' && sca_container_severity.toUpperCase() != 'LOW' && sca_container_severity.toUpperCase() != 'MEDIUM') ||
+                        sca_container_severity.toUpperCase() == 'CRITICAL') {
                         var sca_container_counts = ScanSummaryJson.scansSummaries[item].scaContainersCounters.severityVulnerabilitiesCounters[value].counter;
                         flaws += sca_container_counts;
                     }
@@ -545,7 +562,7 @@ CheckmarxOneUtilBase.prototype = {
             var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
 
-            var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=true';
+            var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=false';
             var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
             var body = resp.getBody();
             var ScanSummaryJson = JSON.parse(body);
@@ -557,7 +574,8 @@ CheckmarxOneUtilBase.prototype = {
                     if ((vulnerabilityCountThresholdLevel == 'INFO') ||
                         (vulnerabilityCountThresholdLevel == 'LOW' && severity.toUpperCase() != 'INFO') ||
                         (vulnerabilityCountThresholdLevel == 'MEDIUM' && severity.toUpperCase() != 'INFO' && severity.toUpperCase() != 'LOW') ||
-                        severity.toUpperCase() == 'HIGH') {
+                        (vulnerabilityCountThresholdLevel == 'HIGH' && severity.toUpperCase() != 'INFO' && severity.toUpperCase() != 'LOW' && severity.toUpperCase() != 'MEDIUM') ||
+                        severity.toUpperCase() == 'CRITICAL') {
                         var counts = ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters[value].counter;
                         flaws += counts;
                     }
@@ -581,7 +599,7 @@ CheckmarxOneUtilBase.prototype = {
             var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
 
-            var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=true';
+            var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=false';
             var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
             var body = resp.getBody();
             var ScanSummaryJson = JSON.parse(body);
@@ -594,7 +612,8 @@ CheckmarxOneUtilBase.prototype = {
                     if ((vulnerabilityCountThresholdLevel == 'INFO') ||
                         (vulnerabilityCountThresholdLevel == 'LOW' && severity.toUpperCase() != 'INFO') ||
                         (vulnerabilityCountThresholdLevel == 'MEDIUM' && severity.toUpperCase() != 'INFO' && severity.toUpperCase() != 'LOW') ||
-                        severity.toUpperCase() == 'HIGH') {
+                        (vulnerabilityCountThresholdLevel == 'HIGH' && severity.toUpperCase() != 'INFO' && severity.toUpperCase() != 'LOW' && severity.toUpperCase() != 'MEDIUM') ||
+                        severity.toUpperCase() == 'CRITICAL') {
                         var counts = ScanSummaryJson.scansSummaries[item].kicsCounters.severityCounters[value].counter;
                         flaws += counts;
                     }
@@ -682,7 +701,7 @@ CheckmarxOneUtilBase.prototype = {
 
     getFirstDetectionDate: function() {
         try {
-            var configId = 'getconfig';
+            var configId = '1234';
             var config = this._getConfig(configId);
             var include_first_found = config.include_first_detection_date;
         } catch (err) {
@@ -913,6 +932,28 @@ CheckmarxOneUtilBase.prototype = {
         }
     },
 
+    _makeConfigRestApiCall: function(baseUrl, configId, token, name, method) {
+        try {
+            var fullUrl = baseUrl + name;
+            var r = new sn_ws.RESTMessageV2();
+            r.setEndpoint(fullUrl);
+            r.setHttpMethod(method);
+            var newHeader = "Bearer " + token;
+            r.setRequestHeader("Accept", "application/json");
+            r.setRequestHeader("Authorization", newHeader);
+            r.setHttpTimeout(30000);
+            var config = this._getConfig(configId);
+            var log_level = config.log_level;
+            r.setLogLevel(log_level);
+            var response = r.execute();
+            var status = response.getStatusCode();
+        } catch (err) {
+            gs.error(this.MSG + " :_makeConfigRestApiCall :Error in making API call.");
+            throw err;
+        }
+        return status;
+    },
+
     _makeRestApiCall: function(baseUrl, configId, token, name, method, params) {
         try {
             var fullUrl = baseUrl + name;
@@ -1093,13 +1134,13 @@ CheckmarxOneUtilBase.prototype = {
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-21 19:26:28</sys_created_on>
 <sys_id>1980bcb147935110328ca368436d435a</sys_id>
-<sys_mod_count>240</sys_mod_count>
+<sys_mod_count>271</sys_mod_count>
 <sys_name>CheckmarxOneUtilBase</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_1980bcb147935110328ca368436d435a</sys_update_name>
 <sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2023-11-09 09:54:20</sys_updated_on>
+<sys_updated_on>2024-01-05 14:49:39</sys_updated_on>
 </sys_script_include>
 </unload>
