@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2023-08-11 14:46:58">
+<unload unload_date="2024-02-05 11:25:44">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -15,23 +15,30 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
     MSG: 'CheckmarxOneScanSummaryIntegration:',
 
     retrieveData: function() {
-        var params = this._getParameters(this.PROCESS.getValue('parameters'));
         var response = "<null/>";
-        if (params.run) {
-            //  appId,  offset
-            response = this.getSummaryReport(Object.keys(params.run)[0], params.run[Object.keys(params.run)[0]]);
-        }
-        params = this._serializeParameters(this._nextParameters(params));
-        this.setNextRunParameters(params);
+        try {
+            var params = this._getParameters(this.PROCESS.getValue('parameters'));
+            if (params.run) {
+                //  appId,  offset
+                var appId = Object.keys(params.run)[0];
+                var offsetId = params.run[Object.keys(params.run)[0]];
+                response = this.getSummaryReport(appId, offsetId);
+            }
+            params = this._serializeParameters(this._nextParameters(params));
+            this.setNextRunParameters(params);
 
-        //Saving delta_start_time
-        if (!params.run) {
-            var latest = this.LATEST ? this.LATEST : '';
-            this.INTEGRATION.setValue('delta_start_time', latest);
-            this.INTEGRATION.update();
-            this.hasMoreData(false);
-        } else
-            this.hasMoreData(true);
+            //Saving delta_start_time
+            if (!params.run) {
+                var latest = this.LATEST ? this.LATEST : '';
+                this.INTEGRATION.setValue('delta_start_time', latest);
+                this.INTEGRATION.update();
+                this.hasMoreData(false);
+            } else
+                this.hasMoreData(true);
+        } catch (err) {
+            gs.error(this.MSG + " retrieveData : Error while retrieving the data. Skipping appId: " + appId + ", scanId: " + offsetId + err);
+            response = '<scanData><scaScanData><scans></scans></scaScanData><sastScanData><scans></scans></sastScanData><kicsScanData><scans></scans></kicsScanData></scanData>';
+        }
         if (response == "<null/>") {
             response = '<scanData><scaScanData><scans></scans></scaScanData><sastScanData><scans></scans></sastScanData><kicsScanData><scans></scans></kicsScanData></scanData>';
         }
@@ -148,29 +155,32 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                                 appId = app_list[id];
                                 if (appId !== "undefined") {
                                     responseLastScan = this.UTIL.getScanList(this.IMPLEMENTATION, appId, this._getCurrentDeltaStartTime());
-                                    jsonLastScanResp = JSON.parse(responseLastScan.getBody());
-                                    for (var item in jsonLastScanResp.scans) {
-                                        if (includesca) {
-                                            if (jsonLastScanResp.scans[item].engines.toString().includes("sca")) {
-                                                app = jsonLastScanResp.scans[item].projectId;
-                                            }
+                                    if (responseLastScan != -1) {
+                                        jsonLastScanResp = JSON.parse(responseLastScan.getBody());
+                                        for (var item in jsonLastScanResp.scans) {
+                                            if (includesca) {
+                                                if (jsonLastScanResp.scans[item].engines.toString().includes("sca")) {
+                                                    app = jsonLastScanResp.scans[item].projectId;
+                                                }
 
-                                        }
-                                        if (includesast) {
-                                            if (jsonLastScanResp.scans[item].engines.toString().includes("sast")) {
-                                                app = jsonLastScanResp.scans[item].projectId;
+                                            }
+                                            if (includesast) {
+                                                if (jsonLastScanResp.scans[item].engines.toString().includes("sast")) {
+                                                    app = jsonLastScanResp.scans[item].projectId;
+                                                }
+                                            }
+                                            if (includekics) {
+                                                if (jsonLastScanResp.scans[item].engines.toString().includes("kics")) {
+                                                    app = jsonLastScanResp.scans[item].projectId;
+                                                }
                                             }
                                         }
-                                        if (includekics) {
-                                            if (jsonLastScanResp.scans[item].engines.toString().includes("kics")) {
-                                                app = jsonLastScanResp.scans[item].projectId;
-                                            }
+
+                                        if (app == appId) {
+                                            offsetId = this._getoffsets(appId);
+                                            params.remaining[app] = offsetId;
                                         }
                                     }
-                                }
-                                if (app == appId) {
-                                    offsetId = this._getoffsets(appId);
-                                    params.remaining[app] = offsetId;
                                 }
                             }
                         }
@@ -180,30 +190,31 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                         appId = apps[j].source_app_id;
                         if (appId !== "undefined") {
                             responseLastScan = this.UTIL.getScanList(this.IMPLEMENTATION, appId, this._getCurrentDeltaStartTime());
-                            jsonLastScanResp = JSON.parse(responseLastScan.getBody());
-                            for (var items in jsonLastScanResp.scans) {
-                                if (includesca) {
-                                    if (jsonLastScanResp.scans[items].engines.toString().includes("sca")) {
-                                        app = jsonLastScanResp.scans[items].projectId;
-                                    }
+                            if (responseLastScan != -1) {
+                                jsonLastScanResp = JSON.parse(responseLastScan.getBody());
+                                for (var items in jsonLastScanResp.scans) {
+                                    if (includesca) {
+                                        if (jsonLastScanResp.scans[items].engines.toString().includes("sca")) {
+                                            app = jsonLastScanResp.scans[items].projectId;
+                                        }
 
-                                }
-                                if (includesast) {
-                                    if (jsonLastScanResp.scans[items].engines.toString().includes("sast")) {
-                                        app = jsonLastScanResp.scans[items].projectId;
+                                    }
+                                    if (includesast) {
+                                        if (jsonLastScanResp.scans[items].engines.toString().includes("sast")) {
+                                            app = jsonLastScanResp.scans[items].projectId;
+                                        }
+                                    }
+                                    if (includekics) {
+                                        if (jsonLastScanResp.scans[items].engines.toString().includes("kics")) {
+                                            app = jsonLastScanResp.scans[items].projectId;
+                                        }
                                     }
                                 }
-                                if (includekics) {
-                                    if (jsonLastScanResp.scans[items].engines.toString().includes("kics")) {
-                                        app = jsonLastScanResp.scans[items].projectId;
-                                    }
+                                if (app == appId) {
+                                    offsetId = this._getoffsets(appId);
+                                    params.remaining[app] = offsetId;
                                 }
                             }
-                        }
-
-                        if (app == appId) {
-                            offsetId = this._getoffsets(appId);
-                            params.remaining[app] = offsetId;
                         }
                     }
                 }
@@ -217,7 +228,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
             }
         } catch (err) {
             gs.error(this.MSG + " _getParameters : Error while getting the integration parameters." + err);
-            throw err;
+            // throw err;
         }
         return params;
     },
@@ -288,13 +299,13 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-18 05:18:19</sys_created_on>
 <sys_id>d7f2d2e447131110328ca368436d4321</sys_id>
-<sys_mod_count>148</sys_mod_count>
+<sys_mod_count>175</sys_mod_count>
 <sys_name>CheckmarxOneScanSummaryIntegration</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_d7f2d2e447131110328ca368436d4321</sys_update_name>
-<sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
-<sys_updated_on>2023-06-26 17:01:21</sys_updated_on>
+<sys_updated_by>admin</sys_updated_by>
+<sys_updated_on>2023-12-26 10:05:40</sys_updated_on>
 </sys_script_include>
 </unload>
