@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2024-02-05 11:25:44">
+<unload unload_date="2024-02-14 13:36:54">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -73,6 +73,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                         scaScanSummaryAll += '<scan id="' + 'sca' + jsonLastScanSummResp.scans[item].id + '" app_id="' + appId +
                             '" last_scan_date="' + this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt) +
                             '" total_no_flaws="' + scaresponsevul +
+                            '" branch="' + jsonLastScanSummResp.scans[item].branch +
                             '" app_name="' + appId + '"/>';
                     }
                 }
@@ -81,9 +82,12 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                 if (jsonLastScanSummResp.scans[item].engines.toString().includes("sast")) {
                     var sastresponsevul = this.UTIL.getSastScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
                     if (sastresponsevul != -1) {
+                        var loc = this._getLOCforSAST(jsonLastScanSummResp.scans[item].statusDetails);
                         sastScanSummaryAll += '<scan id="' + 'sast' + jsonLastScanSummResp.scans[item].id + '" app_id="' + appId +
                             '" last_scan_date="' + this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt) +
                             '" total_no_flaws="' + sastresponsevul +
+                            '" loc="' + loc +
+                            '" branch="' + jsonLastScanSummResp.scans[item].branch +
                             '" app_name="' + appId + '"/>';
                     }
                 }
@@ -95,6 +99,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                         kicsScanSummaryAll += '<scan id="' + 'IaC' + jsonLastScanSummResp.scans[item].id + '" app_id="' + appId +
                             '" last_scan_date="' + this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt) +
                             '" total_no_flaws="' + kicsresponsevul +
+                            '" branch="' + jsonLastScanSummResp.scans[item].branch +
                             '" app_name="' + appId + '"/>';
                     }
                 }
@@ -147,40 +152,53 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
             } else {
                 this.LATEST = new GlideDateTime(this.DELTA_START_TIME || '1970-01-01T10:16:06.17544Z').getDate();
                 var apps = this.AVR_API.getAppReleases();
+                var isPrimaryBranchEnabled = this.UTIL._getConfig(this.IMPLEMENTATION).sync_only_primary_branch.toString();
+                var primaryBranch = '';
+                var scanBranch = '';
+                var isScanAllowed = '';
+                var appIds = [];
+                for (var i in apps) {
+                    appIds.push(apps[i].source_app_id);
+                }
                 var app_list = this.UTIL.getConfigProjectList(this.IMPLEMENTATION);
                 if (app_list && app_list.length > 0) {
                     for (var id in app_list) {
-                        for (var i in apps) {
-                            if (apps[i].source_app_id == app_list[id]) {
-                                appId = app_list[id];
-                                if (appId !== "undefined") {
-                                    responseLastScan = this.UTIL.getScanList(this.IMPLEMENTATION, appId, this._getCurrentDeltaStartTime());
-                                    if (responseLastScan != -1) {
-                                        jsonLastScanResp = JSON.parse(responseLastScan.getBody());
-                                        for (var item in jsonLastScanResp.scans) {
-                                            if (includesca) {
-                                                if (jsonLastScanResp.scans[item].engines.toString().includes("sca")) {
-                                                    app = jsonLastScanResp.scans[item].projectId;
-                                                }
+                        if (appIds.indexOf(app_list[id]) != -1 && app_list[id] !== "undefined") {
+                            appId = app_list[id];
+                            if (isPrimaryBranchEnabled == 'true')
+                                primaryBranch = this.UTIL.getProjectById(this.IMPLEMENTATION, appId).mainBranch.toString();
 
-                                            }
-                                            if (includesast) {
-                                                if (jsonLastScanResp.scans[item].engines.toString().includes("sast")) {
-                                                    app = jsonLastScanResp.scans[item].projectId;
-                                                }
-                                            }
-                                            if (includekics) {
-                                                if (jsonLastScanResp.scans[item].engines.toString().includes("kics")) {
-                                                    app = jsonLastScanResp.scans[item].projectId;
-                                                }
-                                            }
+                            responseLastScan = this.UTIL.getScanList(this.IMPLEMENTATION, appId, this._getCurrentDeltaStartTime());
+                            if (responseLastScan != -1) {
+                                jsonLastScanResp = JSON.parse(responseLastScan.getBody());
+                                app = '';
+                                for (var item in jsonLastScanResp.scans) {
+                                    if (null != jsonLastScanResp.scans[item] && null != jsonLastScanResp.scans[item].branch)
+                                        scanBranch = jsonLastScanResp.scans[item].branch.toString();
+                                    isScanAllowed = 'true';
+                                    if (isPrimaryBranchEnabled == 'true' && primaryBranch != scanBranch)
+                                        isScanAllowed = 'false';
+                                    if (includesca && isScanAllowed == 'true') {
+                                        if (jsonLastScanResp.scans[item].engines.toString().includes("sca")) {
+                                            app = jsonLastScanResp.scans[item].projectId;
                                         }
 
-                                        if (app == appId) {
-                                            offsetId = this._getoffsets(appId);
-                                            params.remaining[app] = offsetId;
+                                    }
+                                    if (includesast && isScanAllowed == 'true') {
+                                        if (jsonLastScanResp.scans[item].engines.toString().includes("sast")) {
+                                            app = jsonLastScanResp.scans[item].projectId;
                                         }
                                     }
+                                    if (includekics && isScanAllowed == 'true') {
+                                        if (jsonLastScanResp.scans[item].engines.toString().includes("kics")) {
+                                            app = jsonLastScanResp.scans[item].projectId;
+                                        }
+                                    }
+                                }
+
+                                if (app != '' && app == appId) {
+                                    offsetId = this._getoffsets(appId);
+                                    params.remaining[app] = offsetId;
                                 }
                             }
                         }
@@ -189,28 +207,37 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                     for (var j in apps) {
                         appId = apps[j].source_app_id;
                         if (appId !== "undefined") {
+                            if (isPrimaryBranchEnabled == 'true')
+                                primaryBranch = this.UTIL.getProjectById(this.IMPLEMENTATION, appId).mainBranch.toString();
+
                             responseLastScan = this.UTIL.getScanList(this.IMPLEMENTATION, appId, this._getCurrentDeltaStartTime());
                             if (responseLastScan != -1) {
                                 jsonLastScanResp = JSON.parse(responseLastScan.getBody());
+                                app = '';
                                 for (var items in jsonLastScanResp.scans) {
-                                    if (includesca) {
+                                    if (null != jsonLastScanResp.scans[items] && null != jsonLastScanResp.scans[items].branch)
+                                        scanBranch = jsonLastScanResp.scans[items].branch.toString();
+                                    isScanAllowed = 'true';
+                                    if (isPrimaryBranchEnabled == 'true' && primaryBranch != scanBranch)
+                                        isScanAllowed = 'false';
+                                    if (includesca && isScanAllowed == 'true') {
                                         if (jsonLastScanResp.scans[items].engines.toString().includes("sca")) {
                                             app = jsonLastScanResp.scans[items].projectId;
                                         }
 
                                     }
-                                    if (includesast) {
+                                    if (includesast && isScanAllowed == 'true') {
                                         if (jsonLastScanResp.scans[items].engines.toString().includes("sast")) {
                                             app = jsonLastScanResp.scans[items].projectId;
                                         }
                                     }
-                                    if (includekics) {
+                                    if (includekics && isScanAllowed == 'true') {
                                         if (jsonLastScanResp.scans[items].engines.toString().includes("kics")) {
                                             app = jsonLastScanResp.scans[items].projectId;
                                         }
                                     }
                                 }
-                                if (app == appId) {
+                                if (app != '' && app == appId) {
                                     offsetId = this._getoffsets(appId);
                                     params.remaining[app] = offsetId;
                                 }
@@ -293,19 +320,35 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
         return true;
     },
 
+    _getLOCforSAST: function(statusDetails) {
+        var loc = -1;
+
+        if (null != statusDetails && statusDetails.length > 0) {
+            for (var index in statusDetails) {
+                var statusDetail = statusDetails[index];
+                if (null != statusDetail && null != statusDetail.name && 'sast' == statusDetail.name && null != statusDetail.loc) {
+                    loc = statusDetail.loc;
+                    break;
+                }
+            }
+        }
+
+        return loc;
+    },
+
     type: 'CheckmarxOneScanSummaryIntegration'
 });]]></script>
 <sys_class_name>sys_script_include</sys_class_name>
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-18 05:18:19</sys_created_on>
 <sys_id>d7f2d2e447131110328ca368436d4321</sys_id>
-<sys_mod_count>175</sys_mod_count>
+<sys_mod_count>198</sys_mod_count>
 <sys_name>CheckmarxOneScanSummaryIntegration</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_d7f2d2e447131110328ca368436d4321</sys_update_name>
 <sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2023-12-26 10:05:40</sys_updated_on>
+<sys_updated_on>2024-02-11 10:26:37</sys_updated_on>
 </sys_script_include>
 </unload>

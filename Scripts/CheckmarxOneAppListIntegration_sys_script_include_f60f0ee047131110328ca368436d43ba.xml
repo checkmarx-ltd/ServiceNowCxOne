@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2024-02-05 11:24:07">
+<unload unload_date="2024-02-14 13:27:23">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -65,18 +65,27 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
             var response = this.UTIL.getNextProjectList(this.IMPLEMENTATION, newoffset);
             var groups = '';
             var groupval = ' ';
+            var isPrimaryBranchEnabled = this.UTIL._getConfig(this.IMPLEMENTATION).sync_only_primary_branch.toString();
             for (var item in response.projects) {
                 var projectTags = this._getProjectTags(JSON.stringify(response.projects[item].tags));
                 var applicationIds = '';
+                var primaryBranch = '';
+                var isProjectAllowed = 'true';
                 groups = +response.projects[item].groups.toString();
                 var projectResponse = this.UTIL.getProjectById(this.IMPLEMENTATION, response.projects[item].id);
                 if (null != projectResponse.applicationIds && projectResponse.applicationIds.length > 0)
-                    applicationIds = projectResponse.applicationIds.toString(); {
+                    applicationIds = projectResponse.applicationIds.toString();
+                if (null != projectResponse.mainBranch && projectResponse.mainBranch.length > 0)
+                    primaryBranch = projectResponse.mainBranch.toString();
+                if (isPrimaryBranchEnabled == 'true' && (primaryBranch == null || primaryBranch == ''))
+                    isProjectAllowed = 'false';
+                if (isProjectAllowed == 'true') {
                     if (groups == 0) {
                         appListAll += '<project id="' + response.projects[item].id +
                             '" createdAt="' + response.projects[item].createdAt +
                             '" applicationIds="' + applicationIds +
-                            '" groups="' + groupval + '"><projectTags><' +
+                            '" groups="' + groupval + '"><primaryBranch><' +
+                            '![CDATA[' + primaryBranch + ']]' + '></primaryBranch><projectTags><' +
                             '![CDATA[' + projectTags + ']]' + '></projectTags><name><' +
                             '![CDATA[' + response.projects[item].name + ']]' + '></name></project>';
 
@@ -84,7 +93,8 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
                         appListAll += '<project id="' + response.projects[item].id +
                             '" createdAt="' + response.projects[item].createdAt +
                             '" applicationIds="' + applicationIds +
-                            '" groups="' + response.projects[item].groups.toString() + '"><projectTags><' +
+                            '" groups="' + response.projects[item].groups.toString() + '"><primaryBranch><' +
+                            '![CDATA[' + primaryBranch + ']]' + '></primaryBranch><projectTags><' +
                             '![CDATA[' + projectTags + ']]' + '></projectTags><name><' +
                             '![CDATA[' + response.projects[item].name + ']]' + '></name></project>';
                     }
@@ -123,12 +133,14 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
             } else {
                 this.LATEST = new GlideDateTime();
                 var offsetId;
+                var filteredCount;
                 var list_projects = this.UTIL.getConfigProjectList(this.IMPLEMENTATION);
                 if (list_projects && list_projects.length > 0) {
                     offsetId = '0';
+                    filteredCount = '' + list_projects.length;
                 } else {
                     var projectJSON = this.UTIL.getNewProjectList(this.IMPLEMENTATION);
-                    var filteredCount = projectJSON.filteredTotalCount;
+                    filteredCount = projectJSON.filteredTotalCount;
                     var totalCount = projectJSON.totalCount;
                     if (filteredCount !== "undefined") {
                         offsetId = this._getoffsets(filteredCount, totalCount);
@@ -212,13 +224,13 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-18 05:11:38</sys_created_on>
 <sys_id>f60f0ee047131110328ca368436d43ba</sys_id>
-<sys_mod_count>173</sys_mod_count>
+<sys_mod_count>179</sys_mod_count>
 <sys_name>CheckmarxOneAppListIntegration</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_f60f0ee047131110328ca368436d43ba</sys_update_name>
 <sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2024-01-05 14:48:25</sys_updated_on>
+<sys_updated_on>2024-02-08 16:03:48</sys_updated_on>
 </sys_script_include>
 </unload>
