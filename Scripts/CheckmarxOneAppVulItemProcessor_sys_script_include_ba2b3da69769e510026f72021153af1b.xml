@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2024-02-14 13:38:23">
+<unload unload_date="2024-02-19 07:04:33">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -97,6 +97,16 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         }
 
                         if (scan_type == 'static') {
+                            var resultHash = '';
+                            var childIter = node.getChildNodeIterator();
+                            while (childIter.hasNext) {
+                                var childNode = childIter.next();
+                                if (childNode.getNodeName() == "resultHash") {
+                                    resultHash = childNode.getTextContent();
+                                    break;
+                                }
+                            }
+
                             queryData['source_entry_id'] = 'Checkmarx One' + " CWE-" + reportData['cweId'];
                             queryData['cwe_list'] = [{
                                 cwe_id: reportData['cweId'],
@@ -104,7 +114,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                             }];
                             var similarityId = node.getAttribute('id');
                             var digest = new GlideDigest();
-                            var similarityIdHash = similarityId + '_' + digest.getSHA256Base64(node.getFirstChild().getTextContent().toString());
+                            var similarityIdHash = similarityId + '_' + resultHash;
                             var projectId = node.getAttribute('app_id');
                             this._handleSimilarityId(similarityId, similarityIdHash, projectId);
                             resultObj['source_request'] = similarityId;
@@ -259,13 +269,13 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
 <sys_created_by>apoorva.singh@checkmarx.com</sys_created_by>
 <sys_created_on>2023-03-16 05:04:10</sys_created_on>
 <sys_id>ba2b3da69769e510026f72021153af1b</sys_id>
-<sys_mod_count>50</sys_mod_count>
+<sys_mod_count>51</sys_mod_count>
 <sys_name>CheckmarxOneAppVulItemProcessor</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_ba2b3da69769e510026f72021153af1b</sys_update_name>
 <sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2024-02-14 09:04:41</sys_updated_on>
+<sys_updated_on>2024-02-19 05:57:51</sys_updated_on>
 </sys_script_include>
 </unload>
