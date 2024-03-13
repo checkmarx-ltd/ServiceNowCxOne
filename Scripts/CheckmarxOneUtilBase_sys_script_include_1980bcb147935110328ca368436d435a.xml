@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2024-02-05 11:16:45">
+<unload unload_date="2024-03-08 07:43:10">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -92,13 +92,13 @@ CheckmarxOneUtilBase.prototype = {
     getConfigProjectList: function(configId) {
         var config = this._getConfig(configId);
         var project_lists = [];
-        var projectStatus;
         var list_projects = config.list_of_project_id_s;
         if (list_projects && list_projects.length > 0) {
-            list_projects = list_projects.split(";");
-            for (var id in list_projects) {
-                if (list_projects[id].length > 0)
-                    project_lists.push(list_projects[id]);
+            var list_project_arr = list_projects.split(";");
+            for (var id in list_project_arr) {
+                var projectId = list_project_arr[id].trim();
+                if (projectId && projectId.length > 0 && project_lists.indexOf(projectId) == -1)
+                    project_lists.push(projectId);
             }
         }
         return project_lists;
@@ -139,10 +139,10 @@ CheckmarxOneUtilBase.prototype = {
                 for (var id in list_projects) {
                     if (list_projects[id].length > 0) {
                         var projectStatus = this.getConfigProjectById(configId, list_projects[id]);
-                        if (projectStatus == 200 || projectJSON == 202)
+                        if (projectStatus == 200 || projectStatus == 202)
                             projectid += '&ids=' + list_projects[id];
-						else 
-							gs.info("Entered project id is wrong"+list_projects[id]);
+                        else
+                            gs.info("Entered project id is wrong" + list_projects[id]);
                     }
                 }
                 query = '/api/projects/?' + projectid;
@@ -389,6 +389,7 @@ CheckmarxOneUtilBase.prototype = {
             var includekics = this.importKicsFlaw(configId);
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
             var apibaseurl = config.checkmarxone_api_base_url;
+            var vulnerabilityCountThresholdLevel = config.vulnerability_threshold_level;
             var method = "post";
             var count = 0;
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
@@ -398,14 +399,53 @@ CheckmarxOneUtilBase.prototype = {
             var body = resp.getBody();
             var ScanSummaryJson = JSON.parse(body);
             for (var item in ScanSummaryJson.scansSummaries) {
-                if (includesast) {
-                    count += ScanSummaryJson.scansSummaries[item].sastCounters.totalCounter;
-                }
-                if (includesca) {
-                    count += count += ScanSummaryJson.scansSummaries[item].kicsCounters.totalCounter + ScanSummaryJson.scansSummaries[item].scaCounters.totalCounter + ScanSummaryJson.scansSummaries[item].scaContainersCounters.totalVulnerabilitiesCounter;
-                }
+               
+                    for (var value in ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters) {
+                        var severity = ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters[value].severity;
+                        if ((vulnerabilityCountThresholdLevel == 'INFO') ||
+                            (vulnerabilityCountThresholdLevel == 'LOW' && severity.toUpperCase() != 'INFO') ||
+                            (vulnerabilityCountThresholdLevel == 'MEDIUM' && severity.toUpperCase() != 'INFO' && severity.toUpperCase() != 'LOW') ||
+                            (vulnerabilityCountThresholdLevel == 'HIGH' && severity.toUpperCase() != 'INFO' && severity.toUpperCase() != 'LOW' && severity.toUpperCase() != 'MEDIUM') ||
+                            severity.toUpperCase() == 'CRITICAL') {
+                            var counts = ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters[value].counter;
+                            count += counts;
+                        }
+                    }
 
+                    for (var sca_value in ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters) {
+                        var sca_severity = ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters[sca_value].severity;
+                        if ((vulnerabilityCountThresholdLevel == 'INFO') ||
+                            (vulnerabilityCountThresholdLevel == 'LOW' && sca_severity.toUpperCase() != 'INFO') ||
+                            (vulnerabilityCountThresholdLevel == 'MEDIUM' && sca_severity.toUpperCase() != 'INFO' && sca_severity.toUpperCase() != 'LOW') ||
+                            (vulnerabilityCountThresholdLevel == 'HIGH' && sca_severity.toUpperCase() != 'INFO' && sca_severity.toUpperCase() != 'LOW' && sca_severity.toUpperCase() != 'MEDIUM') ||
+                            sca_severity.toUpperCase() == 'CRITICAL') {
+                            var sca_counts = ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters[sca_value].counter;
+                            count += sca_counts;
+                        }
+                    }
+                    for (var sca_container_value in ScanSummaryJson.scansSummaries[item].scaContainersCounters.severityVulnerabilitiesCounters) {
+                        var sca_container_severity = ScanSummaryJson.scansSummaries[item].scaContainersCounters.severityVulnerabilitiesCounters[sca_container_value].severity;
+                        if ((vulnerabilityCountThresholdLevel == 'INFO') ||
+                            (vulnerabilityCountThresholdLevel == 'LOW' && sca_container_severity.toUpperCase() != 'INFO') ||
+                            (vulnerabilityCountThresholdLevel == 'MEDIUM' && sca_container_severity.toUpperCase() != 'INFO' && sca_container_severity.toUpperCase() != 'LOW') ||
+                            (vulnerabilityCountThresholdLevel == 'HIGH' && sca_container_severity.toUpperCase() != 'INFO' && sca_container_severity.toUpperCase() != 'LOW' && sca_container_severity.toUpperCase() != 'MEDIUM') ||
+                            sca_container_severity.toUpperCase() == 'CRITICAL') {
+                            var sca_container_counts = ScanSummaryJson.scansSummaries[item].scaContainersCounters.severityVulnerabilitiesCounters[sca_container_value].counter;
+                            count += sca_container_counts;
+                        }
+                    }
+                    for (var kics_value in ScanSummaryJson.scansSummaries[item].kicsCounters.severityCounters) {
+                        var kics_severity = ScanSummaryJson.scansSummaries[item].kicsCounters.severityCounters[kics_value].severity;
 
+                        if ((vulnerabilityCountThresholdLevel == 'INFO') ||
+                            (vulnerabilityCountThresholdLevel == 'LOW' && kics_severity.toUpperCase() != 'INFO') ||
+                            (vulnerabilityCountThresholdLevel == 'MEDIUM' && kics_severity.toUpperCase() != 'INFO' && kics_severity.toUpperCase() != 'LOW') ||
+                            (vulnerabilityCountThresholdLevel == 'HIGH' && kics_severity.toUpperCase() != 'INFO' && kics_severity.toUpperCase() != 'LOW' && kics_severity.toUpperCase() != 'MEDIUM') ||
+                            kics_severity.toUpperCase() == 'CRITICAL') {
+                            var kics_counts = ScanSummaryJson.scansSummaries[item].kicsCounters.severityCounters[kics_value].counter;
+                            count += kics_counts;
+                        }
+                }
             }
         } catch (err) {
             gs.error(this.MSG + " getTotalVulcount: Error while getting the total vul count." + err + scanId);
@@ -473,22 +513,16 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     // to get vulnerabilities information of scanId
-    getVulInfo: function(configId, scanId, offsetId) {
+    getVulInfo: function(configId, scanId, offsetId, delta) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
             var includesca = this.importScaFlaw(configId);
             var includesast = this.importSastFlaw(configId);
             var includekics = this.importKicsFlaw(configId);
-            var limit_val = config.limit;
-            //var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val; 
-            if ((includesast && includesca) || includesast || (includekics && includesast && includekics)) {
-                var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val + '&sort=-type';
-            } else if (includesca || (includekics && includesca) || includekics) {
-                query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val + '&sort=%2Btype';
-            }
 
-            //var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=20' +'&sort=%2Bstatus&sort=%2Bseverity' ;      
+            var limit_val = config.limit;
+            var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val + '&sort=-severity'; 
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
             var apibaseurl = config.checkmarxone_api_base_url;
             var method = "post";
@@ -767,6 +801,7 @@ CheckmarxOneUtilBase.prototype = {
                 request.setRequestBody(query);
                 request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
                 request.setRequestHeader("Accept", "application/json");
+                request.setRequestHeader('User-Agent', this.getUserAgentHeaderDetails());
                 //Convert the object to string and set it to Request Body-
                 request.setRequestBody(query);
                 var response = this._checkResponseStatus(request);
@@ -795,6 +830,7 @@ CheckmarxOneUtilBase.prototype = {
             request.setRequestBody(query);
             request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
             request.setRequestHeader("Accept", "application/json");
+            request.setRequestHeader('User-Agent', this.getUserAgentHeaderDetails());
             //Convert the object to string and set it to Request Body-
             request.setRequestBody(query);
             var response = request.execute();
@@ -812,13 +848,26 @@ CheckmarxOneUtilBase.prototype = {
 
         } catch (err) {
 
-            gs.error(this.MSG + " :_getToken : Error while getting the token." + err);
+            gs.error(this.MSG + " :getNewToken : Error while getting the token." + err);
             throw err;
 
         }
 
         return accessToken;
 
+    },
+
+    getUserAgentHeaderDetails: function() {
+        try {
+            var plugin = new GlideRecord("sys_store_app");
+            plugin.get("scope", "x_chec3_chexone");
+            var pluginname_version = "plugin_name=" + plugin.getValue("name") + ";plugin_version=" + plugin.getValue("version");
+            return pluginname_version.toString();
+        } catch (err) {
+            gs.error(this.MSG + " :_getUserAgentHeaderDetailsn : Error while getting the plugin name and version." + err);
+            throw err;
+
+        }
     },
 
     //Compare current clientId with accessToken's clientId
@@ -895,6 +944,7 @@ CheckmarxOneUtilBase.prototype = {
             }
             var newHeader = "Bearer " + token;
             r.setRequestHeader('Authorization', newHeader);
+            r.setRequestHeader('User-Agent', this.getUserAgentHeaderDetails());
             r.setHttpTimeout(30000);
             var config = this._getConfig(configId);
             var log_level = config.log_level;
@@ -941,6 +991,7 @@ CheckmarxOneUtilBase.prototype = {
             var newHeader = "Bearer " + token;
             r.setRequestHeader("Accept", "application/json");
             r.setRequestHeader("Authorization", newHeader);
+            r.setRequestHeader('User-Agent', this.getUserAgentHeaderDetails());
             r.setHttpTimeout(30000);
             var config = this._getConfig(configId);
             var log_level = config.log_level;
@@ -964,6 +1015,7 @@ CheckmarxOneUtilBase.prototype = {
             var newHeader = "Bearer " + token;
             r.setRequestHeader("Accept", "application/json");
             r.setRequestHeader("Authorization", newHeader);
+            r.setRequestHeader('User-Agent', this.getUserAgentHeaderDetails());
             r.setHttpTimeout(30000);
             var config = this._getConfig(configId);
             var log_level = config.log_level;
@@ -1003,6 +1055,7 @@ CheckmarxOneUtilBase.prototype = {
         var newHeader = "Bearer " + token;
         r.setRequestHeader("Accept", "application/json");
         r.setRequestHeader("Authorization", newHeader);
+        r.setRequestHeader('User-Agent', this.getUserAgentHeaderDetails());
         r.setHttpTimeout(30000);
         return this._checkResponseStatus(r);
     },
@@ -1134,13 +1187,13 @@ CheckmarxOneUtilBase.prototype = {
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-21 19:26:28</sys_created_on>
 <sys_id>1980bcb147935110328ca368436d435a</sys_id>
-<sys_mod_count>271</sys_mod_count>
+<sys_mod_count>282</sys_mod_count>
 <sys_name>CheckmarxOneUtilBase</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_1980bcb147935110328ca368436d435a</sys_update_name>
-<sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2024-01-05 14:49:39</sys_updated_on>
+<sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
+<sys_updated_on>2024-03-05 11:34:56</sys_updated_on>
 </sys_script_include>
 </unload>

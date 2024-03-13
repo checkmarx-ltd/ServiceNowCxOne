@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2024-02-05 11:27:08">
+<unload unload_date="2024-02-19 07:04:33">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -97,12 +97,28 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         }
 
                         if (scan_type == 'static') {
+                            var resultHash = '';
+                            var childIter = node.getChildNodeIterator();
+                            while (childIter.hasNext) {
+                                var childNode = childIter.next();
+                                if (childNode.getNodeName() == "resultHash") {
+                                    resultHash = childNode.getTextContent();
+                                    break;
+                                }
+                            }
+
                             queryData['source_entry_id'] = 'Checkmarx One' + " CWE-" + reportData['cweId'];
                             queryData['cwe_list'] = [{
                                 cwe_id: reportData['cweId'],
                                 name: queryData['category_name']
                             }];
-                            resultObj['source_avit_id'] = node.getAttribute('id');
+                            var similarityId = node.getAttribute('id');
+                            var digest = new GlideDigest();
+                            var similarityIdHash = similarityId + '_' + resultHash;
+                            var projectId = node.getAttribute('app_id');
+                            this._handleSimilarityId(similarityId, similarityIdHash, projectId);
+                            resultObj['source_request'] = similarityId;
+                            resultObj['source_avit_id'] = similarityIdHash;
                         }
 
                         if (scan_type == 'sca') {
@@ -149,6 +165,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         resultObj['complies_with_policy'] = 'not_applicable';
                         resultObj['source_entry_id'] = queryData['source_entry_id'];
                         resultObj['category_name'] = queryData['category_name'];
+                        resultObj['project_branch'] = node.getAttribute('branch');
                         if (reportData['scan_type'] != 'static') {
                             nvdData['cvss_base_score'] = node.getAttribute('cvssScore');
                             nvdData['cvss_vector'] = node.getAttribute('cvssVector');
@@ -212,6 +229,20 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
         }
     },
 
+    _handleSimilarityId: function(similarityId, similarityIdHash, projectId) {
+        var avit = new sn_vul.PagedGlideRecord('sn_vul_app_vulnerable_item');
+        avit.addQuery('source_avit_id', similarityId);
+        avit.setSortField("sys_id");
+        while (avit.next()) {
+            var appId = avit.gr.application_release.source_app_id;
+            if (appId == projectId) {
+                avit.gr.setValue('source_avit_id', similarityIdHash);
+                avit.gr.setValue('source_request', similarityId);
+                avit.gr.update();
+            }
+        }
+    },
+
     _handleCVE: function(nvdData, resultObj, cve) {
         var name = cve;
         var url = resultObj.source_references;
@@ -238,13 +269,13 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
 <sys_created_by>apoorva.singh@checkmarx.com</sys_created_by>
 <sys_created_on>2023-03-16 05:04:10</sys_created_on>
 <sys_id>ba2b3da69769e510026f72021153af1b</sys_id>
-<sys_mod_count>41</sys_mod_count>
+<sys_mod_count>51</sys_mod_count>
 <sys_name>CheckmarxOneAppVulItemProcessor</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_ba2b3da69769e510026f72021153af1b</sys_update_name>
 <sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2023-12-20 14:25:21</sys_updated_on>
+<sys_updated_on>2024-02-19 05:57:51</sys_updated_on>
 </sys_script_include>
 </unload>
