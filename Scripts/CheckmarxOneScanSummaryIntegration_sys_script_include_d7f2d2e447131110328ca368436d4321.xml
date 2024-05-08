@@ -69,7 +69,6 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                 //sca scan summary
                 if (includesca && jsonLastScanSummResp.scans[item].engines.toString().includes("sca")) {
                     var scaresponsevul = this.UTIL.getScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
-                    var scaScanType = "Full Scan" ;
                     if (scaresponsevul != -1) {
                         scaScanSummaryAll += '<scan id="' + 'sca' + jsonLastScanSummResp.scans[item].id + '" app_id="' + appId +
                             '" last_scan_date="' + this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt) +
@@ -77,7 +76,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                             '" branch="' + jsonLastScanSummResp.scans[item].branch +
                             '" scan_origin="' + jsonLastScanSummResp.scans[item].sourceOrigin +
                             '" scan_source="' + jsonLastScanSummResp.scans[item].sourceType +
-                            '" scan_type="' +  scaScanType +
+                            '" scan_type="' +  'Full Scan' +
                             '" app_name="' + appId + '"/>';
                     }
                 }
@@ -103,7 +102,6 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                 //kics scan summary
                 if (includekics && jsonLastScanSummResp.scans[item].engines.toString().includes("kics")) {
                     var kicsresponsevul = this.UTIL.getKicsScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
-                    var scanType = "Full Scan";
                     if (kicsresponsevul != -1) {
                         kicsScanSummaryAll += '<scan id="' + 'IaC' + jsonLastScanSummResp.scans[item].id + '" app_id="' + appId +
                             '" last_scan_date="' + this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt) +
@@ -111,7 +109,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                             '" branch="' + jsonLastScanSummResp.scans[item].branch +
                             '" scan_origin="' + jsonLastScanSummResp.scans[item].sourceOrigin +
                             '" scan_source="' + jsonLastScanSummResp.scans[item].sourceType +
-                            '" scan_type="' +  scanType +
+                            '" scan_type="' +  'Full Scan' +
                             '" app_name="' + appId + '"/>';
                     }
                 }
