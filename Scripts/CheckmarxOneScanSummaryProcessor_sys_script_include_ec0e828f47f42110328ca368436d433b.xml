@@ -47,6 +47,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         sastdata['scan_summary_name'] = Sastattributes.id + ' ' + sastdata['last_scan_date'];
 						sastdata['scan_analysis_size'] = +Sastattributes.loc;
 						sastdata['tags'] = Sastattributes.branch;
+                        sastdata['scan_submitted_by'] = 'Scan Origin: ' + Sastattributes.scan_origin + '\n' + 'Scan Source: ' + Sastattributes.scan_source + '\n' + 'Scan Type: ' + Sastattributes.scan_type + '\n';
                         this._upsert(sastdata);
                     } catch (ex) {
                         errorMessage = gs.getMessage("Error in retriving data for scan list integration!");
@@ -76,6 +77,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         data['last_scan_date'] = new GlideDateTime(attributes.last_scan_date);
                         data['scan_summary_name'] = attributes.id + ' ' + data['last_scan_date'];
 						data['tags'] = attributes.branch;
+                        data['scan_submitted_by'] = 'Scan Origin: ' + attributes.scan_origin + '\n' + 'Scan Source: ' + attributes.scan_source + '\n' + 'Scan Type: ' + attributes.scan_type + '\n';
                         this._upsert(data);
                     } catch (ex) {
                         errorMessage = gs.getMessage("Error in retriving data for scan list integration!");
@@ -105,6 +107,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         kicsdata['last_scan_date'] = new GlideDateTime(kicsattributes.last_scan_date);
                         kicsdata['scan_summary_name'] = kicsattributes.id + ' ' + kicsdata['last_scan_date'];
 						kicsdata['tags'] = kicsattributes.branch;
+                        kicsdata['scan_submitted_by'] = 'Scan Origin: ' + kicsattributes.scan_origin + '\n' + 'Scan Source: ' + kicsattributes.scan_source + '\n' + 'Scan Type: ' + kicsattributes.scan_type + '\n';
                         this._upsert(kicsdata);
                     } catch (ex) {
                         errorMessage = gs.getMessage("Error in retriving data for scan list integration!");

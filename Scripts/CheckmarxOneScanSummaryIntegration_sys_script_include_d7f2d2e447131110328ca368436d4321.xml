@@ -74,6 +74,9 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                             '" last_scan_date="' + this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt) +
                             '" total_no_flaws="' + scaresponsevul +
                             '" branch="' + jsonLastScanSummResp.scans[item].branch +
+                            '" scan_origin="' + jsonLastScanSummResp.scans[item].sourceOrigin +
+                            '" scan_source="' + jsonLastScanSummResp.scans[item].sourceType +
+                            '" scan_type="' +  'Full Scan' +
                             '" app_name="' + appId + '"/>';
                     }
                 }
@@ -81,6 +84,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                 //sast scan summary
                 if (includesast && jsonLastScanSummResp.scans[item].engines.toString().includes("sast")) {
                     var sastresponsevul = this.UTIL.getSastScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
+                     var sastScanType = jsonLastScanSummResp.scans[item].metadata.configs[0].value.incremental == "false" ? "Full Scan" :"Incremental Scan";
                     if (sastresponsevul != -1) {
                         var loc = this._getLOCforSAST(jsonLastScanSummResp.scans[item].statusDetails);
                         sastScanSummaryAll += '<scan id="' + 'sast' + jsonLastScanSummResp.scans[item].id + '" app_id="' + appId +
@@ -88,6 +92,9 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                             '" total_no_flaws="' + sastresponsevul +
                             '" loc="' + loc +
                             '" branch="' + jsonLastScanSummResp.scans[item].branch +
+                            '" scan_origin="' + jsonLastScanSummResp.scans[item].sourceOrigin +
+                            '" scan_source="' + jsonLastScanSummResp.scans[item].sourceType +
+                            '" scan_type="' +  sastScanType +
                             '" app_name="' + appId + '"/>';
                     }
                 }
@@ -100,6 +107,9 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                             '" last_scan_date="' + this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt) +
                             '" total_no_flaws="' + kicsresponsevul +
                             '" branch="' + jsonLastScanSummResp.scans[item].branch +
+                            '" scan_origin="' + jsonLastScanSummResp.scans[item].sourceOrigin +
+                            '" scan_source="' + jsonLastScanSummResp.scans[item].sourceType +
+                            '" scan_type="' +  'Full Scan' +
                             '" app_name="' + appId + '"/>';
                     }
                 }
