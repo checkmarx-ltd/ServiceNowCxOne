@@ -150,7 +150,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                                     '" line_no="' + jsonDeltaScanReportResp.results[item].nodes[0].line +
                                     '" cvssScore="' + cvssScore +
                                     '" recommendation="' + recommendedVersion +
-                                    '" sourcefile="' + apibaseurl + '/results/' + scanId + '/' + appId + '/sast' +
+                                    '" sourcefile="' + apibaseurl + '/results/' + scanId + '/' + appId + '/sast?result-id=' + jsonDeltaScanReportResp.results[item].id + '&redirect=true' +
                                     '" cvssVector="' + cvssVector +
                                     '" first_found_date="' + this.UTIL.parseDate(jsonDeltaScanReportResp.results[item].firstFoundAt) +
                                     '" state="' + jsonDeltaScanReportResp.results[item].state +
@@ -205,7 +205,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             '" line_no="' + jsonLastScanReportResp.results[item].data.nodes[0].line +
                             '" cvssScore="' + cvssScore +
                             '" recommendation="' + recommendedVersion +
-                            '" sourcefile="' + apibaseurl + '/results/' + scanId + '/' + appId + '/sast' +
+                            '" sourcefile="' + apibaseurl + '/results/' + scanId + '/' + appId + '/sast?result-id=' + jsonDeltaScanReportResp.results[item].id + '&redirect=true' +
                             '" cvssVector="' + cvssVector +
                             '" first_found_date="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt) +
                             '" state="' + jsonLastScanReportResp.results[item].state +
@@ -256,7 +256,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             '" recommendation="' + recommendedVersion +
                             '" package_name="' + sca_packageID +
                             '" sourcefile="' + apibaseurl + '/sca/#/projects/' + appId + '/reports/' + scanId +
-                            '/vulnerabilities/' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId + '%3AMaven-commons-collections%3Acommons-collections-3.2.1/vulnerabilityDetails' +
+                            '/vulnerabilities/' + jsonLastScanReportResp.results[item].id + ':' + sca_packageID +'/vulnerabilityDetailsGql' +
                             '" line_no="' + line +
                             '" location="' + location +
                             '" app_id="' + appId +
@@ -289,7 +289,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             '" line_no="' + jsonLastScanReportResp.results[item].data.line +
                             '" cvssScore="' + cvssScore +
                             '" recommendation="' + recommendedVersion +
-                            '" sourcefile="' + apibaseurl + '/results/' + scanId + '/' + appId + '/kics' +
+                            '" sourcefile="' + apibaseurl + '/results/' + scanId + '/' + appId + '/kics?result-id='+ jsonLastScanReportResp.results[item].resultHash + '&redirect=true' +
                             '" cvssVector="' + cvssVector +
                             '" first_found_date="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt) +
                             '" state="' + jsonLastScanReportResp.results[item].state +
