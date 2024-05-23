@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2024-03-08 07:43:10">
+<unload unload_date="2024-05-23 09:39:15">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -11,6 +11,7 @@
 <script><![CDATA[var CheckmarxOneUtilBase = Class.create();
 
 CheckmarxOneUtilBase.prototype = {
+    SEC_UTIL: new sn_sec_cmn.SecCommonUtil(),
     MSG: 'CheckmarxOneUtilBase:',
     initialize: function() {},
 
@@ -30,6 +31,7 @@ CheckmarxOneUtilBase.prototype = {
         }
         return this._makeRestApiCall(apiurl, configId, token, query, "get");
     },
+
     //get one project from project list for pre Validation
     getProjectListForValidation: function(config) {
         try {
@@ -42,7 +44,7 @@ CheckmarxOneUtilBase.prototype = {
             var token = this.getNewToken(accesscontrolbaseUrl, config, method, request, config.client_id, config.client_secret, config.tenant, save_token_flag, configId);
             var query = '/api/projects/?offset=0&limit=1';
         } catch (err) {
-            gs.error(this.MSG + " getProject: Error while getting project." + err);
+            gs.error(this.MSG + " getProjectListForValidation: Error while getting project for validation." + err);
             throw err;
         }
         return this._makeRestCall(apibaseurl, configId, token, query, "get");
@@ -75,14 +77,13 @@ CheckmarxOneUtilBase.prototype = {
             var apibaseurl = config.checkmarxone_api_base_url;
             var method = "post";
             var query = '';
-            var projectid = '';
-            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
             query = '/api/projects/?offset=0&limit=1';
             var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
             var body = resp.getBody();
             var projectJSON = JSON.parse(body);
         } catch (err) {
-            gs.error(this.MSG + " getProjectInfo: Error while getting the project info." + err);
+            gs.error(this.MSG + " getNewProjectList: Error while getting the project list: " + err);
             throw err;
         }
         return projectJSON;
@@ -90,18 +91,43 @@ CheckmarxOneUtilBase.prototype = {
 
     //To get Lists of project from Configuration Page
     getConfigProjectList: function(configId) {
-        var config = this._getConfig(configId);
-        var project_lists = [];
-        var list_projects = config.list_of_project_id_s;
-        if (list_projects && list_projects.length > 0) {
-            var list_project_arr = list_projects.split(";");
-            for (var id in list_project_arr) {
-                var projectId = list_project_arr[id].trim();
-                if (projectId && projectId.length > 0 && project_lists.indexOf(projectId) == -1)
-                    project_lists.push(projectId);
+        try {
+            var config = this._getConfig(configId);
+            var project_lists = [];
+            var list_projects = config.list_of_project_id_s;
+            if (list_projects && list_projects.length > 0) {
+                var list_project_arr = list_projects.replace("=", ";").split(";");
+                for (var id in list_project_arr) {
+                    var projectId = list_project_arr[id].trim();
+                    if (projectId && projectId.length > 0 && project_lists.indexOf(projectId) == -1)
+                        project_lists.push(projectId);
+                }
             }
+        } catch (err) {
+            gs.error(this.MSG + " getConfigProjectList: Error while getting project IDs from config." + err);
+            throw err;
         }
         return project_lists;
+    },
+    //To get the list of project name from Configuration Page
+    getConfigProjectNameList: function(configId) {
+        try {
+            var config = this._getConfig(configId);
+            var project_name_lists = [];
+            var list_project_name = config.project_filter_by_name;
+            if (list_project_name && list_project_name.length > 0) {
+                var list_project_name_arr = list_project_name.replace("=", ";").split(";");
+                for (var id in list_project_name_arr) {
+                    var projectName = list_project_name_arr[id].trim();
+                    if (projectName && projectName.length > 0 && project_name_lists.indexOf(projectName) == -1)
+                        project_name_lists.push(projectName);
+                }
+            }
+        } catch (err) {
+            gs.error(this.MSG + " getConfigProjectNameList: Error while getting project name from config." + err);
+            throw err;
+        }
+        return project_name_lists;
     },
 
     //get Project By Id
@@ -116,7 +142,7 @@ CheckmarxOneUtilBase.prototype = {
             var query = '/api/projects/' + projectId;
             var resp = this._makeConfigRestApiCall(apibaseurl, configId, token, query, "get");
         } catch (err) {
-            gs.error(this.MSG + " getConfigProjectById: Error while getting the project info." + err);
+            gs.error(this.MSG + " getConfigProjectById: Error while getting the details of project present in config." + err);
         }
         return resp;
     },
@@ -124,6 +150,7 @@ CheckmarxOneUtilBase.prototype = {
 
     //get 50 project list at a time
     getNextProjectList: function(configId, offsetno) {
+        var projects = [];
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -134,18 +161,27 @@ CheckmarxOneUtilBase.prototype = {
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
             var query = '';
             var projectid = '';
+            var filter_project = config.filter_project;
             var list_projects = this.getConfigProjectList(configId);
-            if (list_projects && list_projects.length > 0) {
-                for (var id in list_projects) {
+            var list_projects_name = this.getConfigProjectNameList(configId);
+
+            if (list_projects && list_projects.length > 0 && list_projects.indexOf('exclude') == -1 && filter_project == 'by_Id') {
+                var index = parseInt(offsetno);
+                var offsetLength = index + 50;
+                if (offsetLength > list_projects.length) {
+                    offsetLength = list_projects.length;
+                }
+                for (var id = index; id < offsetLength; id++) {
                     if (list_projects[id].length > 0) {
                         var projectStatus = this.getConfigProjectById(configId, list_projects[id]);
                         if (projectStatus == 200 || projectStatus == 202)
                             projectid += '&ids=' + list_projects[id];
                         else
-                            gs.info("Entered project id is wrong" + list_projects[id]);
+                            gs.warn(this.MSG + "Entered project id is not valid: " + list_projects[id]);
                     }
                 }
-                query = '/api/projects/?' + projectid;
+                query = '/api/projects/?limit=' + limit_val + projectid;
+
             } else {
                 query = '/api/projects/?offset=' + offsetno + '&limit=' + limit_val;
             }
@@ -153,13 +189,116 @@ CheckmarxOneUtilBase.prototype = {
             var body = resp.getBody();
             var projectJSON = JSON.parse(body);
 
+
+            if (list_projects_name && list_projects_name.length > 0 && filter_project == 'by_name') {
+                var projectIdsByNames = this.getProjectIdsFromProjectNames(configId, list_projects_name);
+            }
+            for (var item in projectJSON.projects) {
+                if (filter_project == 'by_Id' && list_projects && list_projects.length > 0 && list_projects.indexOf('exclude') != -1 && !list_projects.includes(projectJSON.projects[item].id.toString())) {
+                    try {
+                        var not_exclude_project = this.getProjectById(configId, projectJSON.projects[item].id);
+                        projects.push(not_exclude_project);
+                    } catch (error) {
+                        gs.error(this.MSG + " getProjectById: Failed to get detail about project Id: " + projectJSON.projects[item].id + " with error: " + error);
+                        continue;
+                    }
+                } else if (filter_project == 'by_Id' && list_projects && list_projects.length > 0 && list_projects.indexOf('exclude') == -1 && list_projects.includes(projectJSON.projects[item].id.toString())) {
+                    try {
+                        var include_project = this.getProjectById(configId, projectJSON.projects[item].id);
+                        projects.push(include_project);
+                    } catch (error) {
+                        gs.error(this.MSG + " getProjectById: Failed to get detail about project Id: " + projectJSON.projects[item].id + " with error: " + error);
+                        continue;
+                    }
+                } else if (filter_project == 'by_name' && list_projects_name && list_projects_name.length > 0 && list_projects_name.indexOf('exclude') != -1 && !projectIdsByNames.includes(projectJSON.projects[item].id.toString())) {
+                    try {
+                        var not_exclude_project_name = this.getProjectById(configId, projectJSON.projects[item].id);
+                        projects.push(not_exclude_project_name);
+                    } catch (error) {
+                        gs.error(this.MSG + " getProjectById: Failed to get detail about project Id: " + projectJSON.projects[item].id + " with error: " + error);
+                        continue;
+                    }
+                } else if (filter_project == 'by_name' && list_projects_name && list_projects_name.length > 0 && list_projects_name.indexOf('exclude') == -1 && projectIdsByNames.includes(projectJSON.projects[item].id)) {
+                    try {
+                        var include_project_name = this.getProjectById(configId, projectJSON.projects[item].id);
+                        projects.push(include_project_name);
+                    } catch (error) {
+                        gs.error(this.MSG + " getProjectById: Failed to get detail about project Id: " + projectJSON.projects[item].id + " with error: " + error);
+                        continue;
+                    }
+                } else if (filter_project == '' || filter_project == null || filter_project == 'none') {
+                    try {
+                        var project = this.getProjectById(configId, projectJSON.projects[item].id);
+                        projects.push(project);
+                    } catch (error) {
+                        gs.error(this.MSG + " getProjectById: Failed to get detail about project Id: " + projectJSON.projects[item].id + " with error: " + error);
+                        continue;
+                    }
+                }
+            }
         } catch (err) {
-            gs.error(this.MSG + " getProjectInfo: Error while getting the project info." + err);
+            gs.error(this.MSG + " getNextProjectList: Error while getting the Project details: " + err);
             throw err;
         }
-        return projectJSON;
+        return projects;
     },
 
+    //get project Ids from the Config Project Name List
+    getProjectIdsFromProjectNames: function(configId, list_projects_name) {
+        var projectIds = [];
+        try {
+            var config = this._getConfig(configId);
+            var request = new sn_ws.RESTMessageV2();
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "post";
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
+            var query = '/api/projects/?offset=0&limit=1000&name-regex=';
+
+            var regex = '^.*(';
+            for (var id in list_projects_name) {
+                if (list_projects_name[id] && null != list_projects_name[id] && '' != list_projects_name[id] && 'undefined' != list_projects_name[id] && list_projects_name[id].indexOf('exclude') == -1) {
+                    if ((id == 0 && !list_projects_name.includes('exclude')) || (id == 1 && list_projects_name.includes('exclude')))
+                        regex += list_projects_name[id];
+                    else
+                        regex += '|' + list_projects_name[id];
+                }
+            }
+            regex += ').*$';
+            var regex_encode = gs.urlEncode(regex);
+            query += regex_encode;
+            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+            var projectJSON = JSON.parse(resp.getBody());
+            if (null != projectJSON.projects) {
+                for (var item in projectJSON.projects) {
+                    var projectId = projectJSON.projects[item].id;
+                    projectIds.push(projectId);
+                }
+            }
+        } catch (err) {
+            gs.error(this.MSG + " getProjectIdsFromProjectNames: Error while getting the project Ids from project name." + err);
+            throw err;
+        }
+        return projectIds;
+    },
+
+    //check if project needs to be included or not
+    isProjectIncluded: function(configId, filter_project, list_projects, list_projects_name, projectIdsByNames, projectId) {
+        var includeProjectFlag = 'true';
+
+        if (filter_project == 'by_Id' && list_projects && list_projects.length > 0 && list_projects.indexOf('exclude') != -1 && list_projects.includes(projectId)) {
+            includeProjectFlag = 'false';
+        } else if (filter_project == 'by_Id' && list_projects && list_projects.length > 0 && list_projects.indexOf('exclude') == -1 && !list_projects.includes(projectId)) {
+            includeProjectFlag = 'false';
+        } else if (filter_project == 'by_name' && list_projects_name && list_projects_name.length > 0 && list_projects_name.indexOf('exclude') != -1 && projectIdsByNames.includes(projectId)) {
+            includeProjectFlag = 'false';
+        } else if (filter_project == 'by_name' && list_projects_name && list_projects_name.length > 0 && list_projects_name.indexOf('exclude') == -1 && !projectIdsByNames.includes(projectId)) {
+            includeProjectFlag = 'false';
+        } else if (filter_project == '' || filter_project == null || filter_project == 'none') {
+            includeProjectFlag = 'true';
+        }
+        return includeProjectFlag;
+    },
 
     //get Project By Id
     getProjectById: function(configId, projectId) {
@@ -176,7 +315,7 @@ CheckmarxOneUtilBase.prototype = {
             var projectJSON = JSON.parse(body);
 
         } catch (err) {
-            gs.error(this.MSG + " getProjectInfo: Error while getting the project info." + err);
+            gs.error(this.MSG + " getProjectById: Error while getting the project info: " + err);
             throw err;
         }
         return projectJSON;
@@ -197,14 +336,62 @@ CheckmarxOneUtilBase.prototype = {
             var projectJSON = JSON.parse(body);
 
         } catch (err) {
-            gs.error(this.MSG + " getProjectInfo: Error while getting the project info." + err);
+            gs.error(this.MSG + " getProjectByName: Error while getting the project info by project name." + err);
             throw err;
         }
         return projectJSON;
     },
 
-    //List of scanIds for a given app/project
-    getScanList: function(configId, projectId, last_run_date) {
+    //List of project IDs from last_run_date
+    getprojectScanList: function(configId, last_run_date) {
+        var projectIdsByLastScanDate = [];
+        try {
+            var includesca = this.importScaFlaw(this.IMPLEMENTATION);
+            var includesast = this.importSastFlaw(this.IMPLEMENTATION);
+            var includekics = this.importKicsFlaw(this.IMPLEMENTATION);
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "post";
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
+            var query = '/api/scans/?offset=0&limit=20000&statuses=Completed&from-date=' + last_run_date + '&sort=%2Bcreated_at&sort=%2Bstatus&field=scan-ids';
+            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+            var scanJson = JSON.parse(resp.getBody());
+
+            for (var item in scanJson.scans) {
+                var projectId = scanJson.scans[item].projectId;
+                var includeProject = 'false';
+                if (projectId && projectId != '' && projectId != 'undefined' && projectIdsByLastScanDate.indexOf(projectId) == -1) {
+                    if (includesca) {
+                        if (scanJson.scans[item].engines.toString().includes("sca")) {
+                            includeProject = 'true';
+                        }
+                    }
+                    if (includesast) {
+                        if (scanJson.scans[item].engines.toString().includes("sast")) {
+                            includeProject = 'true';
+                        }
+                    }
+                    if (includekics) {
+                        if (scanJson.scans[item].engines.toString().includes("kics")) {
+                            includeProject = 'true';
+                        }
+                    }
+                }
+                if (includeProject == 'true')
+                    projectIdsByLastScanDate.push(projectId);
+            }
+        } catch (err) {
+            gs.error(this.MSG + " :getprojectScanList :Error while getting Project list from last scan run date: " + err);
+        }
+
+        return projectIdsByLastScanDate;
+
+    },
+
+    //List of scans from last_run_date
+    getAllScanList: function(configId, last_run_date) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -212,10 +399,32 @@ CheckmarxOneUtilBase.prototype = {
             var apibaseurl = config.checkmarxone_api_base_url;
             var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
-            var query = '/api/scans/?offset=0&limit=1&statuses=Completed&project-id=' + projectId + '&from-date=' + last_run_date + '&sort=%2Bcreated_at&sort=%2Bstatus&field=scan-ids';
+            var query = '/api/scans/?offset=0&limit=20000&statuses=Completed&from-date=' + last_run_date + '&sort=%2Bcreated_at&sort=%2Bstatus&field=scan-ids';
+            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+            var scanJson = JSON.parse(resp.getBody());
+
+        } catch (err) {
+            gs.error(this.MSG + " :getAllScanList :Error while getting scans from last run date." + err);
+        }
+
+        return scanJson;
+
+    },
+
+
+    //List of scanIds for a given app/project filter by branch name
+    getScanListFilterByBranch: function(configId, projectId, last_run_date, branch) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "post";
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
+            var query = '/api/scans/?offset=0&limit=1&statuses=Completed&project-id=' + projectId + '&from-date=' + last_run_date + '&sort=%2Bcreated_at&sort=%2Bstatus&field=scan-ids&branch=' + branch;
             var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
         } catch (err) {
-            gs.error(this.MSG + " :getScanList :Error in getting status of the report." + err);
+            gs.error(this.MSG + " :getScanListFilterByBranch :Error in getting the scan details with branch filter: " + err);
             return -1;
         }
 
@@ -224,15 +433,20 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //Second Last scanId for a given app/project
-    getSecondLastScan: function(configId, projectId, scanId) {
+    getSecondLastScan: function(configId, projectId, scanId, primaryBranch) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
             var apibaseurl = config.checkmarxone_api_base_url;
             var method = "post";
-            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
-            var query = '/api/scans/?offset=0&limit=1000&statuses=Completed&project-id=' + projectId + '&sort=%2Bcreated_at&sort=%2Bstatus&field=scan-ids';
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId)
+            var isPrimaryBranchEnabled = config.sync_only_primary_branch.toString();
+            var query = '';
+            if(isPrimaryBranchEnabled == 'true' && null != primaryBranch && '' != primaryBranch)
+                query = '/api/scans/?offset=0&limit=1000&statuses=Completed&project-id=' + projectId + '&sort=%2Bcreated_at&sort=%2Bstatus&field=scan-ids&branch=' + primaryBranch;
+            else
+             query = '/api/scans/?offset=0&limit=1000&statuses=Completed&project-id=' + projectId + '&sort=%2Bcreated_at&sort=%2Bstatus&field=scan-ids';
             var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
             var body = resp.getBody();
             var secondscan = -1;
@@ -245,7 +459,7 @@ CheckmarxOneUtilBase.prototype = {
                 }
             }
         } catch (err) {
-            gs.error(this.MSG + " :getSecondLastScan :Error in getting status of the report." + err);
+            gs.error(this.MSG + " :getSecondLastScan :Error in getting the second last scan ID: " + err);
             throw err;
         }
         return secondscan;
@@ -263,7 +477,7 @@ CheckmarxOneUtilBase.prototype = {
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
             var query = '/api/scans/?offset=0&limit=1&statuses=Completed&project-id=' + appId + '&from-date=' + last_run_date + '&sort=%2Bcreated_at&sort=%2Bstatus&field=scan-ids';
         } catch (err) {
-            gs.error(this.MSG + " getScanInfo: Error while getting the scan Ids." + err);
+            gs.error(this.MSG + " getScanInfo: Error while getting the scan info: " + err);
             throw err;
         }
         return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
@@ -282,7 +496,7 @@ CheckmarxOneUtilBase.prototype = {
             var query = '/api/scans/?offset=0&amp;limit=1&amp;statuses=Completed&amp;project-id=' + projectId + '&amp;sort=%2Bcreated_at&amp;sort=%2Bstatus&amp;field=scan-ids';
 
         } catch (err) {
-            gs.error(this.MSG + " :getScanList :Error in getting status of the report." + err);
+            gs.error(this.MSG + " :getLastScan :Error in getting last scan details." + err);
             throw err;
         }
         return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
@@ -299,7 +513,7 @@ CheckmarxOneUtilBase.prototype = {
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
             var query = '/api/scans/' + scanId;
         } catch (err) {
-            gs.error(this.MSG + " getScanInfo: Error while getting the scan Ids." + err);
+            gs.error(this.MSG + " getScanInfo: Error while getting the last scan info: " + err);
             throw err;
         }
         return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
@@ -322,7 +536,7 @@ CheckmarxOneUtilBase.prototype = {
             var body = resp.getBody();
             queryJSON = JSON.parse(body);
         } catch (err) {
-            gs.error(this.MSG + " getQueryInfo: Error while getting the Query Info.");
+            gs.error(this.MSG + " getQueryInfo: Error while getting the Query Info: "+err);
             throw err;
         }
         return queryJSON;
@@ -369,10 +583,8 @@ CheckmarxOneUtilBase.prototype = {
             var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
             var query = '/api/scans/?offset=0&limit=2000&scan-ids=' + scanId + '&sort=%2Bcreated_at&sort=%2Bstatus&field=scan-ids';
-
-
         } catch (err) {
-            gs.error(this.MSG + " getScanDetails: Error while getting the scan Ids." + err);
+            gs.error(this.MSG + " getScanDetails: Error while getting the scan details: " + err);
             throw err;
         }
         return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
@@ -399,56 +611,56 @@ CheckmarxOneUtilBase.prototype = {
             var body = resp.getBody();
             var ScanSummaryJson = JSON.parse(body);
             for (var item in ScanSummaryJson.scansSummaries) {
-               
-                    for (var value in ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters) {
-                        var severity = ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters[value].severity;
-                        if ((vulnerabilityCountThresholdLevel == 'INFO') ||
-                            (vulnerabilityCountThresholdLevel == 'LOW' && severity.toUpperCase() != 'INFO') ||
-                            (vulnerabilityCountThresholdLevel == 'MEDIUM' && severity.toUpperCase() != 'INFO' && severity.toUpperCase() != 'LOW') ||
-                            (vulnerabilityCountThresholdLevel == 'HIGH' && severity.toUpperCase() != 'INFO' && severity.toUpperCase() != 'LOW' && severity.toUpperCase() != 'MEDIUM') ||
-                            severity.toUpperCase() == 'CRITICAL') {
-                            var counts = ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters[value].counter;
-                            count += counts;
-                        }
-                    }
 
-                    for (var sca_value in ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters) {
-                        var sca_severity = ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters[sca_value].severity;
-                        if ((vulnerabilityCountThresholdLevel == 'INFO') ||
-                            (vulnerabilityCountThresholdLevel == 'LOW' && sca_severity.toUpperCase() != 'INFO') ||
-                            (vulnerabilityCountThresholdLevel == 'MEDIUM' && sca_severity.toUpperCase() != 'INFO' && sca_severity.toUpperCase() != 'LOW') ||
-                            (vulnerabilityCountThresholdLevel == 'HIGH' && sca_severity.toUpperCase() != 'INFO' && sca_severity.toUpperCase() != 'LOW' && sca_severity.toUpperCase() != 'MEDIUM') ||
-                            sca_severity.toUpperCase() == 'CRITICAL') {
-                            var sca_counts = ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters[sca_value].counter;
-                            count += sca_counts;
-                        }
+                for (var value in ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters) {
+                    var severity = ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters[value].severity;
+                    if ((vulnerabilityCountThresholdLevel == 'INFO') ||
+                        (vulnerabilityCountThresholdLevel == 'LOW' && severity.toUpperCase() != 'INFO') ||
+                        (vulnerabilityCountThresholdLevel == 'MEDIUM' && severity.toUpperCase() != 'INFO' && severity.toUpperCase() != 'LOW') ||
+                        (vulnerabilityCountThresholdLevel == 'HIGH' && severity.toUpperCase() != 'INFO' && severity.toUpperCase() != 'LOW' && severity.toUpperCase() != 'MEDIUM') ||
+                        severity.toUpperCase() == 'CRITICAL') {
+                        var counts = ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters[value].counter;
+                        count += counts;
                     }
-                    for (var sca_container_value in ScanSummaryJson.scansSummaries[item].scaContainersCounters.severityVulnerabilitiesCounters) {
-                        var sca_container_severity = ScanSummaryJson.scansSummaries[item].scaContainersCounters.severityVulnerabilitiesCounters[sca_container_value].severity;
-                        if ((vulnerabilityCountThresholdLevel == 'INFO') ||
-                            (vulnerabilityCountThresholdLevel == 'LOW' && sca_container_severity.toUpperCase() != 'INFO') ||
-                            (vulnerabilityCountThresholdLevel == 'MEDIUM' && sca_container_severity.toUpperCase() != 'INFO' && sca_container_severity.toUpperCase() != 'LOW') ||
-                            (vulnerabilityCountThresholdLevel == 'HIGH' && sca_container_severity.toUpperCase() != 'INFO' && sca_container_severity.toUpperCase() != 'LOW' && sca_container_severity.toUpperCase() != 'MEDIUM') ||
-                            sca_container_severity.toUpperCase() == 'CRITICAL') {
-                            var sca_container_counts = ScanSummaryJson.scansSummaries[item].scaContainersCounters.severityVulnerabilitiesCounters[sca_container_value].counter;
-                            count += sca_container_counts;
-                        }
-                    }
-                    for (var kics_value in ScanSummaryJson.scansSummaries[item].kicsCounters.severityCounters) {
-                        var kics_severity = ScanSummaryJson.scansSummaries[item].kicsCounters.severityCounters[kics_value].severity;
+                }
 
-                        if ((vulnerabilityCountThresholdLevel == 'INFO') ||
-                            (vulnerabilityCountThresholdLevel == 'LOW' && kics_severity.toUpperCase() != 'INFO') ||
-                            (vulnerabilityCountThresholdLevel == 'MEDIUM' && kics_severity.toUpperCase() != 'INFO' && kics_severity.toUpperCase() != 'LOW') ||
-                            (vulnerabilityCountThresholdLevel == 'HIGH' && kics_severity.toUpperCase() != 'INFO' && kics_severity.toUpperCase() != 'LOW' && kics_severity.toUpperCase() != 'MEDIUM') ||
-                            kics_severity.toUpperCase() == 'CRITICAL') {
-                            var kics_counts = ScanSummaryJson.scansSummaries[item].kicsCounters.severityCounters[kics_value].counter;
-                            count += kics_counts;
-                        }
+                for (var sca_value in ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters) {
+                    var sca_severity = ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters[sca_value].severity;
+                    if ((vulnerabilityCountThresholdLevel == 'INFO') ||
+                        (vulnerabilityCountThresholdLevel == 'LOW' && sca_severity.toUpperCase() != 'INFO') ||
+                        (vulnerabilityCountThresholdLevel == 'MEDIUM' && sca_severity.toUpperCase() != 'INFO' && sca_severity.toUpperCase() != 'LOW') ||
+                        (vulnerabilityCountThresholdLevel == 'HIGH' && sca_severity.toUpperCase() != 'INFO' && sca_severity.toUpperCase() != 'LOW' && sca_severity.toUpperCase() != 'MEDIUM') ||
+                        sca_severity.toUpperCase() == 'CRITICAL') {
+                        var sca_counts = ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters[sca_value].counter;
+                        count += sca_counts;
+                    }
+                }
+                for (var sca_container_value in ScanSummaryJson.scansSummaries[item].scaContainersCounters.severityVulnerabilitiesCounters) {
+                    var sca_container_severity = ScanSummaryJson.scansSummaries[item].scaContainersCounters.severityVulnerabilitiesCounters[sca_container_value].severity;
+                    if ((vulnerabilityCountThresholdLevel == 'INFO') ||
+                        (vulnerabilityCountThresholdLevel == 'LOW' && sca_container_severity.toUpperCase() != 'INFO') ||
+                        (vulnerabilityCountThresholdLevel == 'MEDIUM' && sca_container_severity.toUpperCase() != 'INFO' && sca_container_severity.toUpperCase() != 'LOW') ||
+                        (vulnerabilityCountThresholdLevel == 'HIGH' && sca_container_severity.toUpperCase() != 'INFO' && sca_container_severity.toUpperCase() != 'LOW' && sca_container_severity.toUpperCase() != 'MEDIUM') ||
+                        sca_container_severity.toUpperCase() == 'CRITICAL') {
+                        var sca_container_counts = ScanSummaryJson.scansSummaries[item].scaContainersCounters.severityVulnerabilitiesCounters[sca_container_value].counter;
+                        count += sca_container_counts;
+                    }
+                }
+                for (var kics_value in ScanSummaryJson.scansSummaries[item].kicsCounters.severityCounters) {
+                    var kics_severity = ScanSummaryJson.scansSummaries[item].kicsCounters.severityCounters[kics_value].severity;
+
+                    if ((vulnerabilityCountThresholdLevel == 'INFO') ||
+                        (vulnerabilityCountThresholdLevel == 'LOW' && kics_severity.toUpperCase() != 'INFO') ||
+                        (vulnerabilityCountThresholdLevel == 'MEDIUM' && kics_severity.toUpperCase() != 'INFO' && kics_severity.toUpperCase() != 'LOW') ||
+                        (vulnerabilityCountThresholdLevel == 'HIGH' && kics_severity.toUpperCase() != 'INFO' && kics_severity.toUpperCase() != 'LOW' && kics_severity.toUpperCase() != 'MEDIUM') ||
+                        kics_severity.toUpperCase() == 'CRITICAL') {
+                        var kics_counts = ScanSummaryJson.scansSummaries[item].kicsCounters.severityCounters[kics_value].counter;
+                        count += kics_counts;
+                    }
                 }
             }
         } catch (err) {
-            gs.error(this.MSG + " getTotalVulcount: Error while getting the total vul count." + err + scanId);
+            gs.error(this.MSG + " getTotalVulcount: Error while getting the total vul count for scanId: " + scanId+" with error: "+err);
             return -1;
         }
 
@@ -476,7 +688,7 @@ CheckmarxOneUtilBase.prototype = {
                 var count = ScanSummaryJson.scansSummaries[item].sastCounters.totalCounter;
             }
         } catch (err) {
-            gs.error(this.MSG + " getSASTVulcount: Error while getting the SAST vul count." + err + scanId);
+            gs.error(this.MSG + " getSASTVulcount: Error while getting the SAST vul count for scanId: "+ scanId +" with error: "+err);
             return -1;
         }
 
@@ -504,7 +716,7 @@ CheckmarxOneUtilBase.prototype = {
                 flaws += counts;
             }
         } catch (err) {
-            gs.error(this.MSG + " getTotalVulcount: Error while getting the total vul count." + err + scanId);
+            gs.error(this.MSG + " getTotal_SAST_KICS_Vulcount: Error while getting the total sast and kics vul count" + err + scanId);
             return 0;
         }
 
@@ -522,15 +734,15 @@ CheckmarxOneUtilBase.prototype = {
             var includekics = this.importKicsFlaw(configId);
 
             var limit_val = config.limit;
-            var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val + '&sort=-severity'; 
+            var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val + '&sort=-severity';
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
             var apibaseurl = config.checkmarxone_api_base_url;
             var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
 
         } catch (err) {
-            gs.error(this.MSG + " getVulInfo: Error while getting the vul Info." + err);
-            throw err;
+            gs.error(this.MSG + " getVulInfo: Error while getting the vul Info: " + err);
+            return -1;
         }
         return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
 
@@ -578,7 +790,7 @@ CheckmarxOneUtilBase.prototype = {
             }
 
         } catch (err) {
-            gs.error(this.MSG + " getScanSummaryInfo: Error while getting the scan summary Ids." + err + scanId);
+            gs.error(this.MSG + " getScanSummaryInfo: Error while getting the scan summary Ids for scanId: " + scanId + "with error: "+ err);
             return -1;
 
         }
@@ -616,7 +828,7 @@ CheckmarxOneUtilBase.prototype = {
                 }
             }
         } catch (err) {
-            gs.error(this.MSG + " getScanSummaryInfo: Error while getting the scan summary Ids." + err + scanId);
+            gs.error(this.MSG + " getSastScanSummaryInfo: Error while getting the sast scan summary Ids for scanId: " + scanId + "with error: "+ err);
             return -1;
         }
         return flaws;
@@ -631,7 +843,7 @@ CheckmarxOneUtilBase.prototype = {
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
             var apibaseurl = config.checkmarxone_api_base_url;
             var method = "post";
-            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
 
             var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=false';
             var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
@@ -654,7 +866,7 @@ CheckmarxOneUtilBase.prototype = {
                 }
             }
         } catch (err) {
-            gs.error(this.MSG + " getScanSummaryInfo: Error while getting the scan summary Ids." + err + scanId);
+            gs.error(this.MSG + " getKicsScanSummaryInfo: Error while getting the kics scan summary Ids for scanId: " + scanId + "with error: "+ err);
             return -1;
 
         }
@@ -670,12 +882,31 @@ CheckmarxOneUtilBase.prototype = {
             var apibaseurl = config.checkmarxone_api_base_url;
             var method = "post";
             var limit_val = config.limit;
-            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request);
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
             var offset = offsetId * 50;
             var query = '/api/sast-results/compare?scan-id=' + scanId + '&base-scan-id=' + secondlastscan + '&offset=' + offset + '&limit=' + limit_val;
             var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
         } catch (err) {
-            gs.error(this.MSG + " getDeltaScan: Error while getting the delta state." + err + scanId);
+            gs.error(this.MSG + " getDeltaScan: Error while getting the delta state for scanId: " + scanId + "with error: "+ err);
+            return -1;
+        }
+        return resp;
+
+    },
+
+    getSCADeltaVul: function(configId, appId, scanId, secondlastscan) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "post";
+            var limit_val = config.limit;
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
+            var query = '/api/sca/scan-results/scans/' + scanId + '/compare-risks?previousScanId=' + secondlastscan;
+            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+        } catch (err) {
+            gs.error(this.MSG + " getSCADeltaVul: Error while getting the SCA delta state for scanId: " + scanId + "with error: "+ err);
             return -1;
         }
         return resp;
@@ -692,7 +923,7 @@ CheckmarxOneUtilBase.prototype = {
                 remediation_status = state;
             }
         } catch (err) {
-            gs.error(this.MSG + " getRemediationStatus: Error while getting the status." + err);
+            gs.error(this.MSG + " getRemediationStatus: Error while getting the sast remediation status." + err);
 
         }
         return remediation_status;
@@ -709,7 +940,7 @@ CheckmarxOneUtilBase.prototype = {
                 remediation_status = state;
             }
         } catch (err) {
-            gs.error(this.MSG + " getRemediationStatus: Error while getting the status." + err);
+            gs.error(this.MSG + " getSCARemediationStatus: Error while getting the SCA remediation status." + err);
 
         }
         return remediation_status;
@@ -726,7 +957,7 @@ CheckmarxOneUtilBase.prototype = {
                 remediation_status = state;
             }
         } catch (err) {
-            gs.error(this.MSG + " getRemediationStatus: Error while getting the status." + err);
+            gs.error(this.MSG + " getKICSRemediationStatus: Error while getting the kics remediation status." + err);
 
         }
         return remediation_status;
@@ -773,7 +1004,10 @@ CheckmarxOneUtilBase.prototype = {
                     "triaging_in_snow": gr.getValue("triaging_in_snow") === "1",
                     "access_token": gr.access_token.getDecryptedValue(),
                     "vulnerability_threshold_level": gr.getValue("vulnerability_threshold_level"),
+                    "sync_only_primary_branch": gr.getValue("sync_only_primary_branch") === "1",
                     "list_projects": gr.getValue("list_of_project_id_s"),
+                    "project_filter_by_name": gr.getValue("project_filter_by_name"),
+                    "filter_project": gr.getValue("filter_project"),
                 };
             }
         } catch (err) {
@@ -784,7 +1018,10 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     getAccessToken: function(baseUrl, config, method, request, configId) {
-        return this._getToken(baseUrl, config, method, request, config.client_id, config.client_secret, config.ast_client_id, config.tenant, config.access_token, configId);
+        //to get access token from sn_sec_cmn_int_auth_config table
+        var getConfig = this.SEC_UTIL.getConfig(configId);
+        var auth_config = getConfig.auth_config;
+        return this._getToken(baseUrl, config, method, request, config.client_id, config.client_secret, config.ast_client_id, config.tenant, auth_config, configId);
     },
 
     _getToken: function(baseUrl, config, method, request, username, password, ast_client_id, tenant, currentToken, configId) {
@@ -808,7 +1045,13 @@ CheckmarxOneUtilBase.prototype = {
                 var responseBody = response.getBody();
                 var tokenResponse = JSON.parse(responseBody);
                 accessToken = tokenResponse.access_token;
-                this.saveInstanceTokens(config, accessToken, configId);
+                var tokenexpiretime = this._getTokenExpiredTime(this._getExpTimeFromAccessToken(accessToken));
+                var obj = {
+                    "expires_on": tokenexpiretime.toString(),
+                    "auth_config": accessToken
+                };
+                //to set access token in sn_sec_cmn_int_auth_config table
+                this.SEC_UTIL.setConfig(configId, obj);
             }
 
         } catch (err) {
@@ -841,14 +1084,20 @@ CheckmarxOneUtilBase.prototype = {
                 var tokenResponse = JSON.parse(responseBody);
                 accessToken = tokenResponse.access_token;
                 if (saveinstanceflag == "true") {
-                    this.saveInstanceTokens(config, accessToken, configId);
+                    var tokenexpiretime = this._getTokenExpiredTime(this._getExpTimeFromAccessToken(accessToken));
+                    var obj = {
+                        "expires_on": tokenexpiretime.toString(),
+                        "auth_config": accessToken
+                    };
+                    //to set access token in sn_sec_cmn_int_auth_config table
+                    this.SEC_UTIL.setConfig(configId, obj);
                 }
 
             }
 
         } catch (err) {
 
-            gs.error(this.MSG + " :getNewToken : Error while getting the token." + err);
+            gs.error(this.MSG + " :getNewToken : Error while getting the new token." + err);
             throw err;
 
         }
@@ -864,7 +1113,7 @@ CheckmarxOneUtilBase.prototype = {
             var pluginname_version = "plugin_name=" + plugin.getValue("name") + ";plugin_version=" + plugin.getValue("version");
             return pluginname_version.toString();
         } catch (err) {
-            gs.error(this.MSG + " :_getUserAgentHeaderDetailsn : Error while getting the plugin name and version." + err);
+            gs.error(this.MSG + " :_getUserAgentHeaderDetails : Error while getting the plugin name and version." + err);
             throw err;
 
         }
@@ -911,6 +1160,18 @@ CheckmarxOneUtilBase.prototype = {
                 return false;
         } catch (err) {
             gs.error(this.MSG + " :isTokenExpired :Error in isTokenExpired()." + err);
+            throw err;
+        }
+    },
+    // This method is to return token expiry time.
+    _getTokenExpiredTime: function(tokenExpTime) {
+        try {
+            var token_time = tokenExpTime * 1000;
+            var dateTime = new GlideDateTime();
+            dateTime.setNumericValue(parseInt(token_time));
+            return dateTime.getDisplayValue();
+        } catch (err) {
+            gs.error(this.MSG + " :_getTokenExpiredTime :Error in _getTokenExpiredTime()." + err);
             throw err;
         }
     },
@@ -1081,74 +1342,6 @@ CheckmarxOneUtilBase.prototype = {
 
     },
 
-    // Saves the access tokens to Service Now configuration DB
-    saveInstanceTokens: function(config, accessToken, configId) {
-        try {
-            var gr = new GlideRecord("x_chec3_chexone_checkmarxone_configuration");
-            if (!gs.nil(configId) && configId + '' != '1234') {
-                gr.addEncodedQuery("integration_instance=" + configId);
-
-            }
-            gr.query();
-
-            var instance = configId;
-            var newconfig;
-            if (gr.next()) { // In case of default configs
-                instance = gr.getValue("integration_instance");
-                if (accessToken == 'undefined') {
-                    tempAccessToken = gr.access_token.getDecryptedValue(); //config.access_token;				
-                } else {
-                    tempAccessToken = accessToken;
-                }
-
-                gr.access_token.setDisplayValue(tempAccessToken);
-                gr.update();
-
-                var implConfig = new GlideRecord("sn_sec_int_impl_config");
-                implConfig.addQuery("implementation", instance);
-                implConfig.query();
-                while (implConfig.next()) {
-
-                    var configName = implConfig.getDisplayValue("configuration");
-                    var configVal = gr.getValue(configName);
-
-                    if (configName == 'access_token')
-                        configVal = gr.getValue("access_token");
-                    if (implConfig.configuration.elem_type == "boolean")
-                        implConfig.setValue("value", configVal === "1");
-                    else
-                        implConfig.setValue("value", configVal);
-                    implConfig.update();
-                }
-
-                newconfig = {
-                    "client_secret": gr.client_secret.getDecryptedValue(),
-                    "client_id": gr.getValue("client_id"),
-                    "ast_client_id": gr.getValue("ast_client_id"),
-                    "tenant": gr.getValue("tenant"),
-                    "checkmarxone_api_base_url": gr.getValue("checkmarxone_api_base_url"),
-                    "checkmarxone_server_url": gr.getValue("checkmarxone_server_url"),
-                    "include_first_detection_date": gr.getValue("include_first_detection_date") === "1",
-                    "import_sca": gr.getValue("import_sca") === "1",
-                    "import_sast": gr.getValue("import_sast") === "1",
-                    "import_kics": gr.getValue("import_kics") === "1",
-                    "triaging_in_snow": gr.getValue("triaging_in_snow") === "1",
-                    "access_token": gr.access_token.getDecryptedValue(),
-                    "vulnerability_threshold_level": gr.getValue("vulnerability_threshold_level"),
-                    "list_projects": gr.getValue("list_of_project_id_s"),
-                    "log_level": gr.getValue("log_level"),
-                };
-            } else if (!gs.nil(configId) && configId + '' != '1234' && !gs.nil(accessToken)) { // for other configs
-                newconfig = new sn_sec_int.Implementation().getConfiguration(configId);
-                newconfig.access_token = accessToken;
-            }
-            new sn_sec_int.Implementation().setConfiguration(instance, newconfig);
-            return true;
-        } catch (err) {
-            gs.error(this.MSG + " :saveInstanceTokens : Error while saving the access tokens to database." + err);
-            throw err;
-        }
-    },
     //value of sca checkbox
     importScaFlaw: function(configId) {
         return this._getConfig(configId).import_sca;
@@ -1187,13 +1380,13 @@ CheckmarxOneUtilBase.prototype = {
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-21 19:26:28</sys_created_on>
 <sys_id>1980bcb147935110328ca368436d435a</sys_id>
-<sys_mod_count>282</sys_mod_count>
+<sys_mod_count>353</sys_mod_count>
 <sys_name>CheckmarxOneUtilBase</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_1980bcb147935110328ca368436d435a</sys_update_name>
-<sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
-<sys_updated_on>2024-03-05 11:34:56</sys_updated_on>
+<sys_updated_by>admin</sys_updated_by>
+<sys_updated_on>2024-05-23 05:38:05</sys_updated_on>
 </sys_script_include>
 </unload>

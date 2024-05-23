@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2024-03-08 07:49:17">
+<unload unload_date="2024-05-23 09:42:19">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -24,17 +24,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                 var offsetId = params.run[Object.keys(params.run)[0]];
                 response = this.getSummaryReport(appId, offsetId);
             }
-            params = this._serializeParameters(this._nextParameters(params));
-            this.setNextRunParameters(params);
 
-            //Saving delta_start_time
-            if (!params.run) {
-                var latest = this.LATEST ? this.LATEST : '';
-                this.INTEGRATION.setValue('delta_start_time', latest);
-                this.INTEGRATION.update();
-                this.hasMoreData(false);
-            } else
-                this.hasMoreData(true);
         } catch (err) {
             gs.error(this.MSG + " retrieveData : Error while retrieving the data. Skipping appId: " + appId + ", scanId: " + offsetId + err);
             response = '<scanData><scaScanData><scans></scans></scaScanData><sastScanData><scans></scans></sastScanData><kicsScanData><scans></scans></kicsScanData></scanData>';
@@ -42,6 +32,17 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
         if (response == "<null/>") {
             response = '<scanData><scaScanData><scans></scans></scaScanData><sastScanData><scans></scans></sastScanData><kicsScanData><scans></scans></kicsScanData></scanData>';
         }
+        params = this._serializeParameters(this._nextParameters(params));
+        this.setNextRunParameters(params);
+
+        //Saving delta_start_time
+        if (!params.run) {
+            var latest = this.LATEST ? this.LATEST : '';
+            this.INTEGRATION.setValue('delta_start_time', latest);
+            this.INTEGRATION.update();
+            this.hasMoreData(false);
+        } else
+            this.hasMoreData(true);
         return {
             contents: new GlideSysAttachment().write(this.PROCESS, this.FILENAME, "xml", response),
             contentType: "sys_attachment",
@@ -63,17 +64,29 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
             var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
             var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
             var includekics = this.UTIL.importKicsFlaw(this.IMPLEMENTATION);
-            var responseLastScanSummary = this.UTIL.getScanInfo(this.IMPLEMENTATION, appId, newoffset, this._getCurrentDeltaStartTime());
+            var isPrimaryBranchEnabled = this.UTIL._getConfig(this.IMPLEMENTATION).sync_only_primary_branch.toString();
+            var primaryBranch = '';
+            var responseLastScanSummary = '';
+            if (isPrimaryBranchEnabled == 'true')
+                primaryBranch = this.UTIL.getProjectById(this.IMPLEMENTATION, appId).mainBranch.toString();
+            if (isPrimaryBranchEnabled == 'true' && null != primaryBranch && '' != primaryBranch) {
+                responseLastScanSummary = this.UTIL.getScanListFilterByBranch(this.IMPLEMENTATION, appId, this._getCurrentDeltaStartTime(), primaryBranch);
+            } else
+                responseLastScanSummary = this.UTIL.getScanInfo(this.IMPLEMENTATION, appId, newoffset, this._getCurrentDeltaStartTime());
             var jsonLastScanSummResp = JSON.parse(responseLastScanSummary.getBody());
             for (var item in jsonLastScanSummResp.scans) {
                 //sca scan summary
                 if (includesca && jsonLastScanSummResp.scans[item].engines.toString().includes("sca")) {
                     var scaresponsevul = this.UTIL.getScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
+                    var scaScanType = "Full Scan";
                     if (scaresponsevul != -1) {
                         scaScanSummaryAll += '<scan id="' + 'sca' + jsonLastScanSummResp.scans[item].id + '" app_id="' + appId +
                             '" last_scan_date="' + this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt) +
                             '" total_no_flaws="' + scaresponsevul +
                             '" branch="' + jsonLastScanSummResp.scans[item].branch +
+                            '" scan_origin="' + jsonLastScanSummResp.scans[item].sourceOrigin +
+                            '" scan_source="' + jsonLastScanSummResp.scans[item].sourceType +
+                            '" scan_type="' + scaScanType +
                             '" app_name="' + appId + '"/>';
                     }
                 }
@@ -81,6 +94,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                 //sast scan summary
                 if (includesast && jsonLastScanSummResp.scans[item].engines.toString().includes("sast")) {
                     var sastresponsevul = this.UTIL.getSastScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
+                    var sastScanType = jsonLastScanSummResp.scans[item].metadata.configs[0].value.incremental == "false" ? "Full Scan" : "Incremental Scan";
                     if (sastresponsevul != -1) {
                         var loc = this._getLOCforSAST(jsonLastScanSummResp.scans[item].statusDetails);
                         sastScanSummaryAll += '<scan id="' + 'sast' + jsonLastScanSummResp.scans[item].id + '" app_id="' + appId +
@@ -88,6 +102,9 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                             '" total_no_flaws="' + sastresponsevul +
                             '" loc="' + loc +
                             '" branch="' + jsonLastScanSummResp.scans[item].branch +
+                            '" scan_origin="' + jsonLastScanSummResp.scans[item].sourceOrigin +
+                            '" scan_source="' + jsonLastScanSummResp.scans[item].sourceType +
+                            '" scan_type="' + sastScanType +
                             '" app_name="' + appId + '"/>';
                     }
                 }
@@ -95,11 +112,15 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                 //kics scan summary
                 if (includekics && jsonLastScanSummResp.scans[item].engines.toString().includes("kics")) {
                     var kicsresponsevul = this.UTIL.getKicsScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
+                    var scanType = "Full Scan";
                     if (kicsresponsevul != -1) {
                         kicsScanSummaryAll += '<scan id="' + 'IaC' + jsonLastScanSummResp.scans[item].id + '" app_id="' + appId +
                             '" last_scan_date="' + this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt) +
                             '" total_no_flaws="' + kicsresponsevul +
                             '" branch="' + jsonLastScanSummResp.scans[item].branch +
+                            '" scan_origin="' + jsonLastScanSummResp.scans[item].sourceOrigin +
+                            '" scan_source="' + jsonLastScanSummResp.scans[item].sourceType +
+                            '" scan_type="' + scanType +
                             '" app_name="' + appId + '"/>';
                     }
                 }
@@ -119,7 +140,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
 
             reportContent = scanSummaryRootNodeStart + includescanSummaryAll + scanSummaryRootNodeEnd;
         } catch (err) {
-            gs.info(this.MSG + " getSummaryReport : Error while getting the summary report." + err);
+            gs.error(this.MSG + " getSummaryReport : Error while getting the scan summary report: " + err);
             throw err;
         }
         return reportContent;
@@ -131,13 +152,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
             run: null,
             remaining: {}
         };
-        var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
-        var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
-        var includekics = this.UTIL.importKicsFlaw(this.IMPLEMENTATION);
         var appId = '';
-        var app = '';
-        var responseLastScan = '';
-        var jsonLastScanResp = '';
         var offsetId = '';
         try {
             if (parameters) {
@@ -152,96 +167,22 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
             } else {
                 this.LATEST = new GlideDateTime(this.DELTA_START_TIME || '1970-01-01T10:16:06.17544Z').getDate();
                 var apps = this.AVR_API.getAppReleases();
-                var isPrimaryBranchEnabled = this.UTIL._getConfig(this.IMPLEMENTATION).sync_only_primary_branch.toString();
-                var primaryBranch = '';
-                var scanBranch = '';
-                var isScanAllowed = '';
-                var appIds = [];
-                for (var i in apps) {
-                    appIds.push(apps[i].source_app_id);
-                }
-                var app_list = this.UTIL.getConfigProjectList(this.IMPLEMENTATION);
-                if (app_list && app_list.length > 0) {
-                    for (var id in app_list) {
-                        if (appIds.indexOf(app_list[id]) != -1 && app_list[id] !== "undefined") {
-                            appId = app_list[id];
-                            if (isPrimaryBranchEnabled == 'true')
-                                primaryBranch = this.UTIL.getProjectById(this.IMPLEMENTATION, appId).mainBranch.toString();
+                var projectIdsByLastScanDate = this.UTIL.getprojectScanList(this.IMPLEMENTATION, this._getCurrentDeltaStartTime());
 
-                            responseLastScan = this.UTIL.getScanList(this.IMPLEMENTATION, appId, this._getCurrentDeltaStartTime());
-                            if (responseLastScan != -1) {
-                                jsonLastScanResp = JSON.parse(responseLastScan.getBody());
-                                app = '';
-                                for (var item in jsonLastScanResp.scans) {
-                                    if (null != jsonLastScanResp.scans[item] && null != jsonLastScanResp.scans[item].branch)
-                                        scanBranch = jsonLastScanResp.scans[item].branch.toString();
-                                    isScanAllowed = 'true';
-                                    if (isPrimaryBranchEnabled == 'true' && primaryBranch != scanBranch)
-                                        isScanAllowed = 'false';
-                                    if (includesca && isScanAllowed == 'true') {
-                                        if (jsonLastScanResp.scans[item].engines.toString().includes("sca")) {
-                                            app = jsonLastScanResp.scans[item].projectId;
-                                        }
+                var config = this.UTIL._getConfig(this.IMPLEMENTATION);
+                var filter_project = config.filter_project;
+                var list_projects = this.UTIL.getConfigProjectList(this.IMPLEMENTATION);
+                var list_projects_name = this.UTIL.getConfigProjectNameList(this.IMPLEMENTATION);
+                if (list_projects_name && list_projects_name.length > 0 && filter_project == 'by_name')
+                    var projectIdsByNames = this.UTIL.getProjectIdsFromProjectNames(this.IMPLEMENTATION, list_projects_name);
 
-                                    }
-                                    if (includesast && isScanAllowed == 'true') {
-                                        if (jsonLastScanResp.scans[item].engines.toString().includes("sast")) {
-                                            app = jsonLastScanResp.scans[item].projectId;
-                                        }
-                                    }
-                                    if (includekics && isScanAllowed == 'true') {
-                                        if (jsonLastScanResp.scans[item].engines.toString().includes("kics")) {
-                                            app = jsonLastScanResp.scans[item].projectId;
-                                        }
-                                    }
-                                }
-
-                                if (app != '' && app == appId) {
-                                    offsetId = this._getoffsets(appId);
-                                    params.remaining[app] = offsetId;
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    for (var j in apps) {
-                        appId = apps[j].source_app_id;
-                        if (appId !== "undefined") {
-                            if (isPrimaryBranchEnabled == 'true')
-                                primaryBranch = this.UTIL.getProjectById(this.IMPLEMENTATION, appId).mainBranch.toString();
-
-                            responseLastScan = this.UTIL.getScanList(this.IMPLEMENTATION, appId, this._getCurrentDeltaStartTime());
-                            if (responseLastScan != -1) {
-                                jsonLastScanResp = JSON.parse(responseLastScan.getBody());
-                                app = '';
-                                for (var items in jsonLastScanResp.scans) {
-                                    if (null != jsonLastScanResp.scans[items] && null != jsonLastScanResp.scans[items].branch)
-                                        scanBranch = jsonLastScanResp.scans[items].branch.toString();
-                                    isScanAllowed = 'true';
-                                    if (isPrimaryBranchEnabled == 'true' && primaryBranch != scanBranch)
-                                        isScanAllowed = 'false';
-                                    if (includesca && isScanAllowed == 'true') {
-                                        if (jsonLastScanResp.scans[items].engines.toString().includes("sca")) {
-                                            app = jsonLastScanResp.scans[items].projectId;
-                                        }
-
-                                    }
-                                    if (includesast && isScanAllowed == 'true') {
-                                        if (jsonLastScanResp.scans[items].engines.toString().includes("sast")) {
-                                            app = jsonLastScanResp.scans[items].projectId;
-                                        }
-                                    }
-                                    if (includekics && isScanAllowed == 'true') {
-                                        if (jsonLastScanResp.scans[items].engines.toString().includes("kics")) {
-                                            app = jsonLastScanResp.scans[items].projectId;
-                                        }
-                                    }
-                                }
-                                if (app != '' && app == appId) {
-                                    offsetId = this._getoffsets(appId);
-                                    params.remaining[app] = offsetId;
-                                }
-                            }
+                for (var j in apps) {
+                    appId = apps[j].source_app_id;
+                    if (appId !== "undefined") {
+                        var includeProjectFlag = this.UTIL.isProjectIncluded(this.IMPLEMENTATION, filter_project, list_projects, list_projects_name, projectIdsByNames, appId);
+                        if (includeProjectFlag == 'true' && projectIdsByLastScanDate.includes(appId)) {
+                            offsetId = this._getoffsets(appId);
+                            params.remaining[appId] = offsetId;
                         }
                     }
                 }
@@ -252,7 +193,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                 }
             }
         } catch (err) {
-            gs.error(this.MSG + " _getParameters : Error while getting the integration parameters." + err);
+            gs.error(this.MSG + " _getParameters : Error while getting the integration parameters: " + err);
             // throw err;
         }
         return params;
@@ -262,7 +203,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
         try {
             var delta = this.UTIL.parseTZDate(this.DELTA_START_TIME) || '1970-01-01T10:16:06.17544Z';
         } catch (err) {
-            gs.error(this.MSG + " _getCurrentDeltaStartTime : Error while getting the current delta start time." + err);
+            gs.error(this.MSG + " _getCurrentDeltaStartTime : Error while getting the current delta start time: " + err);
             throw err;
         }
         return delta;
@@ -340,13 +281,13 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-18 05:18:19</sys_created_on>
 <sys_id>d7f2d2e447131110328ca368436d4321</sys_id>
-<sys_mod_count>200</sys_mod_count>
+<sys_mod_count>211</sys_mod_count>
 <sys_name>CheckmarxOneScanSummaryIntegration</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_d7f2d2e447131110328ca368436d4321</sys_update_name>
 <sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2024-02-28 10:01:20</sys_updated_on>
+<sys_updated_on>2024-05-22 06:39:00</sys_updated_on>
 </sys_script_include>
 </unload>
