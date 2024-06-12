@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2024-05-23 09:42:19">
+<unload unload_date="2024-06-12 10:11:11">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -76,7 +76,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
             var jsonLastScanSummResp = JSON.parse(responseLastScanSummary.getBody());
             for (var item in jsonLastScanSummResp.scans) {
                 //sca scan summary
-                if (includesca && jsonLastScanSummResp.scans[item].engines.toString().includes("sca")) {
+                if (includesca && jsonLastScanSummResp.scans[item].engines.toString().indexOf("sca") != -1) {
                     var scaresponsevul = this.UTIL.getScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
                     var scaScanType = "Full Scan";
                     if (scaresponsevul != -1) {
@@ -92,7 +92,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                 }
 
                 //sast scan summary
-                if (includesast && jsonLastScanSummResp.scans[item].engines.toString().includes("sast")) {
+                if (includesast && jsonLastScanSummResp.scans[item].engines.toString().indexOf("sast") != -1) {
                     var sastresponsevul = this.UTIL.getSastScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
                     var sastScanType = jsonLastScanSummResp.scans[item].metadata.configs[0].value.incremental == "false" ? "Full Scan" : "Incremental Scan";
                     if (sastresponsevul != -1) {
@@ -110,7 +110,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                 }
 
                 //kics scan summary
-                if (includekics && jsonLastScanSummResp.scans[item].engines.toString().includes("kics")) {
+                if (includekics && jsonLastScanSummResp.scans[item].engines.toString().indexOf("kics") != -1) {
                     var kicsresponsevul = this.UTIL.getKicsScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
                     var scanType = "Full Scan";
                     if (kicsresponsevul != -1) {
@@ -152,8 +152,9 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
             run: null,
             remaining: {}
         };
-        var appId = '';
         var offsetId = '';
+        var app_list = [];
+        var projectIdsByLastScanDate = [];
         try {
             if (parameters) {
                 params = JSON.parse(parameters);
@@ -167,7 +168,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
             } else {
                 this.LATEST = new GlideDateTime(this.DELTA_START_TIME || '1970-01-01T10:16:06.17544Z').getDate();
                 var apps = this.AVR_API.getAppReleases();
-                var projectIdsByLastScanDate = this.UTIL.getprojectScanList(this.IMPLEMENTATION, this._getCurrentDeltaStartTime());
+                projectIdsByLastScanDate = this.UTIL.getprojectScanList(this.IMPLEMENTATION, this._getCurrentDeltaStartTime());
 
                 var config = this.UTIL._getConfig(this.IMPLEMENTATION);
                 var filter_project = config.filter_project;
@@ -177,10 +178,14 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                     var projectIdsByNames = this.UTIL.getProjectIdsFromProjectNames(this.IMPLEMENTATION, list_projects_name);
 
                 for (var j in apps) {
-                    appId = apps[j].source_app_id;
-                    if (appId !== "undefined") {
+                    app_list.push(apps[j].source_app_id);
+                }
+
+                for (var item in projectIdsByLastScanDate) {
+                    var appId = projectIdsByLastScanDate[item];
+                    if (appId !== "undefined" && app_list.indexOf(appId) != -1) {
                         var includeProjectFlag = this.UTIL.isProjectIncluded(this.IMPLEMENTATION, filter_project, list_projects, list_projects_name, projectIdsByNames, appId);
-                        if (includeProjectFlag == 'true' && projectIdsByLastScanDate.includes(appId)) {
+                        if (includeProjectFlag == 'true') {
                             offsetId = this._getoffsets(appId);
                             params.remaining[appId] = offsetId;
                         }
@@ -281,13 +286,13 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-18 05:18:19</sys_created_on>
 <sys_id>d7f2d2e447131110328ca368436d4321</sys_id>
-<sys_mod_count>211</sys_mod_count>
+<sys_mod_count>216</sys_mod_count>
 <sys_name>CheckmarxOneScanSummaryIntegration</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_d7f2d2e447131110328ca368436d4321</sys_update_name>
-<sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2024-05-22 06:39:00</sys_updated_on>
+<sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
+<sys_updated_on>2024-06-03 17:08:59</sys_updated_on>
 </sys_script_include>
 </unload>

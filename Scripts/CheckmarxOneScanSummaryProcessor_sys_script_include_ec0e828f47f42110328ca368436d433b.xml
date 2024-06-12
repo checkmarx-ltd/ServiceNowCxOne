@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2024-05-23 09:42:39">
+<unload unload_date="2024-06-12 10:11:07">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -19,22 +19,26 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                 this.UTIL.validateXML(new GlideSysAttachment().getContent(attachment), 'error');
                 var doc = new XMLDocument2();
                 doc.parseXML(new GlideSysAttachment().getContent(attachment));
-                var Node = doc.getNode('/scanData');
+                var node = doc.getNode('/scanData');
+                if (node.toString().indexOf("sastScanData") != -1) {
+                    var sastnodes = doc.getNode('/scanData/sastScanData/scans');
+                }
+                if (node.toString().indexOf("scaScanData") != -1) {
+                    var scanodes = doc.getNode('/scanData/scaScanData/scans');
+                }
+                if (node.toString().indexOf("kicsScanData") != -1) {
+                    var kicsnodes = doc.getNode('/scanData/kicsScanData/scans');
+                }
+
             } catch (ex) {
                 gs.error(this.MSG + "Error occurred while validating or parsing the XML: " + ex);
                 throw ex;
             }
             var errorProcess = '';
 
-            if (Node.toString().includes("sastScanData")) {
-                try {
-                    var sastnodes = doc.getNode('/scanData/sastScanData/scans');
-                    var iteration = sastnodes.getChildNodeIterator();
-                } catch (ex) {
-                    gs.error(this.MSG + "Error occurred while parsing the XML: " + ex);
-                    throw ex;
-                }
+            if (sastnodes) {
                 var sastdata = {};
+                var iteration = sastnodes.getChildNodeIterator();
                 while (iteration.hasNext()) {
                     try {
                         var SastappNode = iteration.next();
@@ -57,15 +61,9 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                     }
                 }
             }
-            if (Node.toString().includes("scaScanData")) {
-                try {
-                    var scanodes = doc.getNode('/scanData/scaScanData/scans');
-                    var iter = scanodes.getChildNodeIterator();
-                } catch (ex) {
-                    gs.error(this.MSG + "Error occurred while validating or parsing the XML: " + ex);
-                    throw ex;
-                }
+            if (scanodes) {
                 var data = {};
+                var iter = scanodes.getChildNodeIterator();
                 while (iter.hasNext()) {
                     try {
                         var appNode = iter.next();
@@ -87,15 +85,9 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                     }
                 }
             }
-            if (Node.toString().includes("kicsScanData")) {
-                try {
-                    var kicsnodes = doc.getNode('/scanData/kicsScanData/scans');
-                    var kicsiteration = kicsnodes.getChildNodeIterator();
-                } catch (ex) {
-                    gs.error(this.MSG + "Error occurred while parsing the XML: " + ex);
-                    throw ex;
-                }
+            if (kicsnodes) {
                 var kicsdata = {};
+                var kicsiteration = kicsnodes.getChildNodeIterator();
                 while (kicsiteration.hasNext()) {
                     try {
                         var kicsappNode = kicsiteration.next();
@@ -169,13 +161,13 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2023-02-08 12:56:43</sys_created_on>
 <sys_id>ec0e828f47f42110328ca368436d433b</sys_id>
-<sys_mod_count>16</sys_mod_count>
+<sys_mod_count>20</sys_mod_count>
 <sys_name>CheckmarxOneScanSummaryProcessor</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_ec0e828f47f42110328ca368436d433b</sys_update_name>
-<sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2024-05-22 05:07:01</sys_updated_on>
+<sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
+<sys_updated_on>2024-06-03 17:08:30</sys_updated_on>
 </sys_script_include>
 </unload>

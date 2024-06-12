@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2024-05-23 09:39:15">
+<unload unload_date="2024-06-12 10:09:49">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -66,6 +66,59 @@ CheckmarxOneUtilBase.prototype = {
             throw err;
         }
         return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+    },
+
+    //get all project list
+    getProjects: function(configId) {
+        var projectJson = '';
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "post";
+            var save_token_flag = "true";
+            var token = this.getNewToken(accesscontrolbaseUrl, config, method, request, config.client_id, config.client_secret, config.tenant, save_token_flag, configId);
+            var query = '/api/projects/?offset=0&limit=20000';
+            var response = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+            projectJson = JSON.parse(response.getBody());
+        } catch (err) {
+            gs.error(this.MSG + " getProjects: Error while getting projects." + err);
+            throw err;
+        }
+        return projectJson;
+    },
+
+    //get ProjectId and Primary Branch list
+    getProjectPrimaryBranchList: function(configId) {
+        var projectPrimaryBranchList = [];
+        try {
+            var projectJson = this.getProjects(configId);
+            for (var item in projectJson.projects) {
+                var id = projectJson.projects[item].id;
+                var mainBranch = projectJson.projects[item].mainBranch;
+                if (null != mainBranch && mainBranch != "") {
+                    var projectPrimaryBranch = id + ':' + mainBranch;
+                    projectPrimaryBranchList.push(projectPrimaryBranch);
+                }
+            }
+        } catch (err) {
+            gs.error(this.MSG + ' getProjectPrimaryBranchList: error while getting project primary branch list.')
+        }
+        return projectPrimaryBranchList;
+    },
+
+    //get Primary Branch By projectId
+    getPrimaryBranchByProjectId: function(projectPrimaryBranchList, projectId) {
+        var primaryBranch = '';
+        for (var item in projectPrimaryBranchList) {
+            var primaryBranchWithProjectId = projectPrimaryBranchList[item];
+            if (primaryBranchWithProjectId.indexOf(projectId) != -1) {
+                primaryBranch = primaryBranchWithProjectId.split(':')[1];
+                break;
+            }
+        }
+        return primaryBranch;
     },
 
     //get new project list
@@ -151,6 +204,8 @@ CheckmarxOneUtilBase.prototype = {
     //get 50 project list at a time
     getNextProjectList: function(configId, offsetno) {
         var projects = [];
+        var list_projects = [];
+        var list_projects_name = [];
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -162,8 +217,8 @@ CheckmarxOneUtilBase.prototype = {
             var query = '';
             var projectid = '';
             var filter_project = config.filter_project;
-            var list_projects = this.getConfigProjectList(configId);
-            var list_projects_name = this.getConfigProjectNameList(configId);
+            list_projects = this.getConfigProjectList(configId);
+            list_projects_name = this.getConfigProjectNameList(configId);
 
             if (list_projects && list_projects.length > 0 && list_projects.indexOf('exclude') == -1 && filter_project == 'by_Id') {
                 var index = parseInt(offsetno);
@@ -194,7 +249,7 @@ CheckmarxOneUtilBase.prototype = {
                 var projectIdsByNames = this.getProjectIdsFromProjectNames(configId, list_projects_name);
             }
             for (var item in projectJSON.projects) {
-                if (filter_project == 'by_Id' && list_projects && list_projects.length > 0 && list_projects.indexOf('exclude') != -1 && !list_projects.includes(projectJSON.projects[item].id.toString())) {
+                if (filter_project == 'by_Id' && list_projects && list_projects.length > 0 && list_projects.indexOf('exclude') != -1 && list_projects.indexOf(projectJSON.projects[item].id.toString()) == -1) {
                     try {
                         var not_exclude_project = this.getProjectById(configId, projectJSON.projects[item].id);
                         projects.push(not_exclude_project);
@@ -202,7 +257,7 @@ CheckmarxOneUtilBase.prototype = {
                         gs.error(this.MSG + " getProjectById: Failed to get detail about project Id: " + projectJSON.projects[item].id + " with error: " + error);
                         continue;
                     }
-                } else if (filter_project == 'by_Id' && list_projects && list_projects.length > 0 && list_projects.indexOf('exclude') == -1 && list_projects.includes(projectJSON.projects[item].id.toString())) {
+                } else if (filter_project == 'by_Id' && list_projects && list_projects.length > 0 && list_projects.indexOf('exclude') == -1 && list_projects.indexOf(projectJSON.projects[item].id.toString()) != -1) {
                     try {
                         var include_project = this.getProjectById(configId, projectJSON.projects[item].id);
                         projects.push(include_project);
@@ -210,7 +265,7 @@ CheckmarxOneUtilBase.prototype = {
                         gs.error(this.MSG + " getProjectById: Failed to get detail about project Id: " + projectJSON.projects[item].id + " with error: " + error);
                         continue;
                     }
-                } else if (filter_project == 'by_name' && list_projects_name && list_projects_name.length > 0 && list_projects_name.indexOf('exclude') != -1 && !projectIdsByNames.includes(projectJSON.projects[item].id.toString())) {
+                } else if (filter_project == 'by_name' && list_projects_name && list_projects_name.length > 0 && list_projects_name.indexOf('exclude') != -1 && projectIdsByNames.indexOf(projectJSON.projects[item].id.toString()) == -1) {
                     try {
                         var not_exclude_project_name = this.getProjectById(configId, projectJSON.projects[item].id);
                         projects.push(not_exclude_project_name);
@@ -218,7 +273,7 @@ CheckmarxOneUtilBase.prototype = {
                         gs.error(this.MSG + " getProjectById: Failed to get detail about project Id: " + projectJSON.projects[item].id + " with error: " + error);
                         continue;
                     }
-                } else if (filter_project == 'by_name' && list_projects_name && list_projects_name.length > 0 && list_projects_name.indexOf('exclude') == -1 && projectIdsByNames.includes(projectJSON.projects[item].id)) {
+                } else if (filter_project == 'by_name' && list_projects_name && list_projects_name.length > 0 && list_projects_name.indexOf('exclude') == -1 && projectIdsByNames.indexOf(projectJSON.projects[item].id) != -1) {
                     try {
                         var include_project_name = this.getProjectById(configId, projectJSON.projects[item].id);
                         projects.push(include_project_name);
@@ -258,10 +313,11 @@ CheckmarxOneUtilBase.prototype = {
             var regex = '^.*(';
             for (var id in list_projects_name) {
                 if (list_projects_name[id] && null != list_projects_name[id] && '' != list_projects_name[id] && 'undefined' != list_projects_name[id] && list_projects_name[id].indexOf('exclude') == -1) {
-                    if ((id == 0 && !list_projects_name.includes('exclude')) || (id == 1 && list_projects_name.includes('exclude')))
-                        regex += list_projects_name[id];
+                    var escapedProjectName = this.escapeProjectName(list_projects_name[id]);
+                    if ((id == 0 && list_projects_name.indexOf('exclude') == -1) || (id == 1 && list_projects_name.indexOf('exclude') != -1))
+                        regex += escapedProjectName;
                     else
-                        regex += '|' + list_projects_name[id];
+                        regex += '|' + escapedProjectName;
                 }
             }
             regex += ').*$';
@@ -282,17 +338,34 @@ CheckmarxOneUtilBase.prototype = {
         return projectIds;
     },
 
+    // Escape Special Chars in ProjectName
+    escapeProjectName: function(projectName) {
+        var escapedProjectName = '';
+        var projectNameArr = projectName.split('');
+
+        var specialChars = ['!', '@', '#', '%', '*', '+', '.', '_', '-', ',', '\'', ':', '"', '`', '~', '>', '<', '$', '^', '&', ')', '(', ']', '[', '}', '{', '/', '\\', '|'];
+
+        for (var item in projectNameArr) {
+            if (specialChars.indexOf(projectNameArr[item]) != -1)
+                escapedProjectName += '\\' + projectNameArr[item];
+            else
+                escapedProjectName += projectNameArr[item];
+        }
+
+        return escapedProjectName;
+    },
+
     //check if project needs to be included or not
     isProjectIncluded: function(configId, filter_project, list_projects, list_projects_name, projectIdsByNames, projectId) {
         var includeProjectFlag = 'true';
 
-        if (filter_project == 'by_Id' && list_projects && list_projects.length > 0 && list_projects.indexOf('exclude') != -1 && list_projects.includes(projectId)) {
+        if (filter_project == 'by_Id' && list_projects && list_projects.length > 0 && list_projects.indexOf('exclude') != -1 && list_projects.indexOf(projectId) != -1) {
             includeProjectFlag = 'false';
-        } else if (filter_project == 'by_Id' && list_projects && list_projects.length > 0 && list_projects.indexOf('exclude') == -1 && !list_projects.includes(projectId)) {
+        } else if (filter_project == 'by_Id' && list_projects && list_projects.length > 0 && list_projects.indexOf('exclude') == -1 && list_projects.indexOf(projectId) == -1) {
             includeProjectFlag = 'false';
-        } else if (filter_project == 'by_name' && list_projects_name && list_projects_name.length > 0 && list_projects_name.indexOf('exclude') != -1 && projectIdsByNames.includes(projectId)) {
+        } else if (filter_project == 'by_name' && list_projects_name && list_projects_name.length > 0 && list_projects_name.indexOf('exclude') != -1 && projectIdsByNames.indexOf(projectId) != -1) {
             includeProjectFlag = 'false';
-        } else if (filter_project == 'by_name' && list_projects_name && list_projects_name.length > 0 && list_projects_name.indexOf('exclude') == -1 && !projectIdsByNames.includes(projectId)) {
+        } else if (filter_project == 'by_name' && list_projects_name && list_projects_name.length > 0 && list_projects_name.indexOf('exclude') == -1 && projectIdsByNames.indexOf(projectId) == -1) {
             includeProjectFlag = 'false';
         } else if (filter_project == '' || filter_project == null || filter_project == 'none') {
             includeProjectFlag = 'true';
@@ -364,17 +437,17 @@ CheckmarxOneUtilBase.prototype = {
                 var includeProject = 'false';
                 if (projectId && projectId != '' && projectId != 'undefined' && projectIdsByLastScanDate.indexOf(projectId) == -1) {
                     if (includesca) {
-                        if (scanJson.scans[item].engines.toString().includes("sca")) {
+                        if (scanJson.scans[item].engines.toString().indexOf("sca") != -1) {
                             includeProject = 'true';
                         }
                     }
                     if (includesast) {
-                        if (scanJson.scans[item].engines.toString().includes("sast")) {
+                        if (scanJson.scans[item].engines.toString().indexOf("sast") != -1) {
                             includeProject = 'true';
                         }
                     }
                     if (includekics) {
-                        if (scanJson.scans[item].engines.toString().includes("kics")) {
+                        if (scanJson.scans[item].engines.toString().indexOf("kics") != -1) {
                             includeProject = 'true';
                         }
                     }
@@ -440,13 +513,13 @@ CheckmarxOneUtilBase.prototype = {
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
             var apibaseurl = config.checkmarxone_api_base_url;
             var method = "post";
-            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId)
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
             var isPrimaryBranchEnabled = config.sync_only_primary_branch.toString();
             var query = '';
-            if(isPrimaryBranchEnabled == 'true' && null != primaryBranch && '' != primaryBranch)
+            if (isPrimaryBranchEnabled == 'true' && null != primaryBranch && '' != primaryBranch)
                 query = '/api/scans/?offset=0&limit=1000&statuses=Completed&project-id=' + projectId + '&sort=%2Bcreated_at&sort=%2Bstatus&field=scan-ids&branch=' + primaryBranch;
             else
-             query = '/api/scans/?offset=0&limit=1000&statuses=Completed&project-id=' + projectId + '&sort=%2Bcreated_at&sort=%2Bstatus&field=scan-ids';
+                query = '/api/scans/?offset=0&limit=1000&statuses=Completed&project-id=' + projectId + '&sort=%2Bcreated_at&sort=%2Bstatus&field=scan-ids';
             var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
             var body = resp.getBody();
             var secondscan = -1;
@@ -536,7 +609,7 @@ CheckmarxOneUtilBase.prototype = {
             var body = resp.getBody();
             queryJSON = JSON.parse(body);
         } catch (err) {
-            gs.error(this.MSG + " getQueryInfo: Error while getting the Query Info: "+err);
+            gs.error(this.MSG + " getQueryInfo: Error while getting the Query Info: " + err);
             throw err;
         }
         return queryJSON;
@@ -660,7 +733,7 @@ CheckmarxOneUtilBase.prototype = {
                 }
             }
         } catch (err) {
-            gs.error(this.MSG + " getTotalVulcount: Error while getting the total vul count for scanId: " + scanId+" with error: "+err);
+            gs.error(this.MSG + " getTotalVulcount: Error while getting the total vul count for scanId: " + scanId + " with error: " + err);
             return -1;
         }
 
@@ -688,7 +761,7 @@ CheckmarxOneUtilBase.prototype = {
                 var count = ScanSummaryJson.scansSummaries[item].sastCounters.totalCounter;
             }
         } catch (err) {
-            gs.error(this.MSG + " getSASTVulcount: Error while getting the SAST vul count for scanId: "+ scanId +" with error: "+err);
+            gs.error(this.MSG + " getSASTVulcount: Error while getting the SAST vul count for scanId: " + scanId + " with error: " + err);
             return -1;
         }
 
@@ -790,7 +863,7 @@ CheckmarxOneUtilBase.prototype = {
             }
 
         } catch (err) {
-            gs.error(this.MSG + " getScanSummaryInfo: Error while getting the scan summary Ids for scanId: " + scanId + "with error: "+ err);
+            gs.error(this.MSG + " getScanSummaryInfo: Error while getting the scan summary Ids for scanId: " + scanId + "with error: " + err);
             return -1;
 
         }
@@ -828,7 +901,7 @@ CheckmarxOneUtilBase.prototype = {
                 }
             }
         } catch (err) {
-            gs.error(this.MSG + " getSastScanSummaryInfo: Error while getting the sast scan summary Ids for scanId: " + scanId + "with error: "+ err);
+            gs.error(this.MSG + " getSastScanSummaryInfo: Error while getting the sast scan summary Ids for scanId: " + scanId + "with error: " + err);
             return -1;
         }
         return flaws;
@@ -865,8 +938,9 @@ CheckmarxOneUtilBase.prototype = {
                     }
                 }
             }
+			gs.info("flaws=" + flaws);
         } catch (err) {
-            gs.error(this.MSG + " getKicsScanSummaryInfo: Error while getting the kics scan summary Ids for scanId: " + scanId + "with error: "+ err);
+            gs.error(this.MSG + " getKicsScanSummaryInfo: Error while getting the kics scan summary Ids for scanId: " + scanId + "with error: " + err);
             return -1;
 
         }
@@ -887,7 +961,7 @@ CheckmarxOneUtilBase.prototype = {
             var query = '/api/sast-results/compare?scan-id=' + scanId + '&base-scan-id=' + secondlastscan + '&offset=' + offset + '&limit=' + limit_val;
             var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
         } catch (err) {
-            gs.error(this.MSG + " getDeltaScan: Error while getting the delta state for scanId: " + scanId + "with error: "+ err);
+            gs.error(this.MSG + " getDeltaScan: Error while getting the delta state for scanId: " + scanId + "with error: " + err);
             return -1;
         }
         return resp;
@@ -906,7 +980,7 @@ CheckmarxOneUtilBase.prototype = {
             var query = '/api/sca/scan-results/scans/' + scanId + '/compare-risks?previousScanId=' + secondlastscan;
             var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
         } catch (err) {
-            gs.error(this.MSG + " getSCADeltaVul: Error while getting the SCA delta state for scanId: " + scanId + "with error: "+ err);
+            gs.error(this.MSG + " getSCADeltaVul: Error while getting the SCA delta state for scanId: " + scanId + "with error: " + err);
             return -1;
         }
         return resp;
@@ -1380,13 +1454,13 @@ CheckmarxOneUtilBase.prototype = {
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-21 19:26:28</sys_created_on>
 <sys_id>1980bcb147935110328ca368436d435a</sys_id>
-<sys_mod_count>353</sys_mod_count>
+<sys_mod_count>362</sys_mod_count>
 <sys_name>CheckmarxOneUtilBase</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_1980bcb147935110328ca368436d435a</sys_update_name>
-<sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2024-05-23 05:38:05</sys_updated_on>
+<sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
+<sys_updated_on>2024-06-03 09:38:29</sys_updated_on>
 </sys_script_include>
 </unload>
