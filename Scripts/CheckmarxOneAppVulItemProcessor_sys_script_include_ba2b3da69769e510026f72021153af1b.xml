@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2024-06-12 10:11:31">
+<unload unload_date="2024-10-11 12:59:25">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -28,8 +28,11 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                 if (result_node.toString().includes("Results")) {
                     var listNode = doc.getNode('/scanResults/Results');
                 }
+                if (result_node.toString().includes("fixedSASTData")) {
+                    var fixedSASTNode = doc.getNode('/scanResults/fixedSASTData');
+                }
                 if (result_node.toString().includes("fixedSCAData")) {
-                    var fixedNode = doc.getNode('/scanResults/fixedSCAData');
+                    var fixedSCANode = doc.getNode('/scanResults/fixedSCAData');
                 }
 
             } catch (ex) {
@@ -136,6 +139,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                             queryData['source_entry_id'] = 'Checkmarx One' + "-" + node.getAttribute('id');
                             resultObj['source_avit_id'] = node.getAttribute('id') + node.getAttribute('package_unique_id');
                             resultObj['source_references'] = node.getFirstChild().getTextContent().toString();
+							resultObj['source_notes'] = node.getAttribute('exploitable_method').toString();
 
                         }
                         if (scan_type == 'kics') {
@@ -197,9 +201,9 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
 
                 }
             }
-            if (fixedNode) {
+            if (fixedSCANode) {
                 var fixedData = {};
-                var sca_iter = fixedNode.getChildNodeIterator();
+                var sca_iter = fixedSCANode.getChildNodeIterator();
                 while (sca_iter.hasNext()) {
                     try {
                         var sca_node = sca_iter.next();
@@ -220,11 +224,53 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         fixedData['source_severity'] = severity;
                         fixedData['scan_summary_name'] = reportData.scan_summary_name;
                         fixedData['source_sdlc_status'] = 'Not Applicable';
-                        fixedData['package_unique_id'] = scaattributes.id;
+                        fixedData['package_unique_id'] = 'scaattributes.id';
                         this._upsertAVIT(fixedData);
 
                     } catch (ex) {
-                        errorMessage = gs.getMessage("Error in retriving data for app vulnerability item integration!");
+                        errorMessage = gs.getMessage("Error in processing SCA Fixed Vulnerability!");
+                        gs.error(this.MSG + " " + errorMessage + " " + ex.message);
+                        errorProcess += " | " + ex.message;
+
+                    }
+                }
+            }
+
+            if (fixedSASTNode) {
+                var fixedSASTData = {};
+                var sast_iter = fixedSASTNode.getChildNodeIterator();
+                while (sast_iter.hasNext()) {
+                    try {
+                        var sast_node = sast_iter.next();
+                        var sastattributes = sast_node.getAttributes();
+
+                        var fixedResultHash = '';
+                        var fixedChildIter = sast_node.getChildNodeIterator();
+                        while (fixedChildIter.hasNext) {
+                            var fixedChildNode = fixedChildIter.next();
+                            if (fixedChildNode.getNodeName() == "resultHash") {
+                                fixedResultHash = fixedChildNode.getTextContent();
+                                break;
+                            }                    
+                        }
+                        var fixedSimilarityId = sastattributes.id;
+                        var fixedSimilarityIdHash = fixedSimilarityId + '_' + fixedResultHash;
+
+                        var last_scan_date = new GlideDateTime(sastattributes.last_scan_date); 
+                        fixedSASTData['source_app_id'] = sastattributes.app_id;
+                        fixedSASTData['source_scan_id'] = sastattributes.scan_id;
+                        fixedSASTData['scan_type'] = 'static';
+                        fixedSASTData['source_avit_id'] = fixedSimilarityIdHash;
+                        fixedSASTData['source_entry_id'] ='Checkmarx One' + " CWE-" + sastattributes.cweId;
+                        fixedSASTData['source_remediation_status'] = 'FIXED';
+                        fixedSASTData['source_severity'] =  sastattributes.source_severity;
+                        fixedSASTData['scan_summary_name'] = fixedSASTData.source_scan_id + ' ' + last_scan_date;
+                        fixedSASTData['source_sdlc_status'] = 'Not Applicable';
+                        fixedSASTData['package_unique_id'] = sastattributes.package_unique_id;
+                        this._upsertAVIT(fixedSASTData);
+
+                    } catch (ex) {
+                        errorMessage = gs.getMessage("Error in processing SAST Fixed Vulnerability!");
                         gs.error(this.MSG + " " + errorMessage + " " + ex.message);
                         errorProcess += " | " + ex.message;
 
@@ -337,13 +383,13 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
 <sys_created_by>apoorva.singh@checkmarx.com</sys_created_by>
 <sys_created_on>2023-03-16 05:04:10</sys_created_on>
 <sys_id>ba2b3da69769e510026f72021153af1b</sys_id>
-<sys_mod_count>61</sys_mod_count>
+<sys_mod_count>66</sys_mod_count>
 <sys_name>CheckmarxOneAppVulItemProcessor</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_ba2b3da69769e510026f72021153af1b</sys_update_name>
 <sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2024-05-22 13:26:13</sys_updated_on>
+<sys_updated_on>2024-09-18 10:33:40</sys_updated_on>
 </sys_script_include>
 </unload>

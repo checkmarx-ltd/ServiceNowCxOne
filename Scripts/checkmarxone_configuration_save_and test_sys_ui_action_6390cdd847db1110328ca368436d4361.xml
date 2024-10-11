@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2024-05-23 09:38:23">
+<unload unload_date="2024-10-11 13:05:47">
 <sys_ui_action action="INSERT_OR_UPDATE">
 <action_name>checkmarxone_configuration_save</action_name>
 <active>true</active>
@@ -33,7 +33,6 @@
 <order>100</order>
 <script><![CDATA[function clientValidation() {
     g_form.clearMessages();
-    var regex = new RegExp("^[a-zA-Z0-9=_;-]*$");
     if (!g_form.getValue("client_id") && !g_form.getValue("client_secret")) {
         g_form.addErrorMessage(getMessage("Enter Client ID and Client Key."));
         return false;
@@ -64,10 +63,7 @@
     } else if (g_form.getValue("filter_project") == "by_name" && g_form.getValue("project_filter_by_name").split(";").length > 1000) {
         g_form.addWarningMessage(getMessage("Project Name's list is too long."));
         return false;
-    } else if (g_form.getValue("filter_project") == "by_name" && (!regex.test(g_form.getValue("project_filter_by_name")))) {
-        g_form.addWarningMessage(getMessage("Project Name should not contain any special character except '-' and '_'"));
-        return false;
-    }
+    } 
     if (g_form.getValue("import_sast") == "false" && g_form.getValue("import_sca") == "false" && g_form.getValue("import_kics") == "false") {
         g_form.addWarningMessage(getMessage("Select SCA, SAST or KICS to proceed."));
         return false;
@@ -115,15 +111,15 @@ function serverSide() {
 <sys_domain>global</sys_domain>
 <sys_domain_path>/</sys_domain_path>
 <sys_id>6390cdd847db1110328ca368436d4361</sys_id>
-<sys_mod_count>64</sys_mod_count>
+<sys_mod_count>67</sys_mod_count>
 <sys_name>Save and Test Credentials</sys_name>
 <sys_overrides display_value=""/>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_ui_action_6390cdd847db1110328ca368436d4361</sys_update_name>
-<sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2024-05-21 13:22:58</sys_updated_on>
+<sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
+<sys_updated_on>2024-05-31 11:21:58</sys_updated_on>
 <table>x_chec3_chexone_checkmarxone_configuration</table>
 <ui11_compatible>true</ui11_compatible>
 <ui16_compatible>false</ui16_compatible>
