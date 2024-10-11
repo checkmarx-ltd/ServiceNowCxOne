@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2024-06-12 10:09:49">
+<unload unload_date="2024-10-11 13:00:36">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -59,7 +59,7 @@ CheckmarxOneUtilBase.prototype = {
             var apibaseurl = config.checkmarxone_api_base_url;
             var method = "post";
             var save_token_flag = "true";
-            var token = this.getNewToken(accesscontrolbaseUrl, config, method, request, config.client_id, config.client_secret, config.tenant, save_token_flag, configId);
+            var token = this.getNewTokenForValidation(accesscontrolbaseUrl, config, method, request, config.client_id, config.client_secret, config.tenant, save_token_flag, configId);
             var query = '/api/projects/?offset=0&limit=1';
         } catch (err) {
             gs.error(this.MSG + " getProject: Error while getting project." + err);
@@ -103,7 +103,7 @@ CheckmarxOneUtilBase.prototype = {
                 }
             }
         } catch (err) {
-            gs.error(this.MSG + ' getProjectPrimaryBranchList: error while getting project primary branch list.')
+            gs.error(this.MSG + ' getProjectPrimaryBranchList: error while getting project primary branch list.');
         }
         return projectPrimaryBranchList;
     },
@@ -162,6 +162,7 @@ CheckmarxOneUtilBase.prototype = {
         }
         return project_lists;
     },
+
     //To get the list of project name from Configuration Page
     getConfigProjectNameList: function(configId) {
         try {
@@ -198,6 +199,23 @@ CheckmarxOneUtilBase.prototype = {
             gs.error(this.MSG + " getConfigProjectById: Error while getting the details of project present in config." + err);
         }
         return resp;
+    },
+
+    // To Get Result state from configuartion	
+    getResultStateFromUI: function(configId) {
+        try {
+            var config = this._getConfig(configId);
+            var resultState = config.result_states;
+            var result_state = [];
+            var resultStateUIArr = resultState.split(',');
+            for (var item in resultStateUIArr) {
+                result_state.push(resultStateUIArr[item]);
+            }
+
+        } catch (err) {
+            gs.error(this.MSG + " getResultStateFromUI: Error while getting Result State from Configuration " + err);
+        }
+        return JSON.stringify(result_state);
     },
 
 
@@ -394,6 +412,27 @@ CheckmarxOneUtilBase.prototype = {
         return projectJSON;
     },
 
+    //get Project Branch List
+    getProjectBranchList: function(configId, projectId) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "post";
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
+            var query = '/api/projects/branches?offset=0&limit=10000&project-id=' + projectId;
+            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+            var body = resp.getBody();
+            var projectJSON = JSON.parse(body);
+
+        } catch (err) {
+            gs.error(this.MSG + " getProjectBranchList: Error while getting the project info: " + err);
+            throw err;
+        }
+        return projectJSON;
+    },
+
     //get Project By Name
     getProjectByName: function(configId, projectName) {
         try {
@@ -505,6 +544,29 @@ CheckmarxOneUtilBase.prototype = {
 
     },
 
+    //List of scanIds for a given app/project filter by branch name
+    getScanListFilterByMultipleBranch: function(configId, projectId, last_run_date, branches) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var branch = '';
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "post";
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
+            for (var item in branches) {
+                branch += '&branches=' + branches[item];
+            }
+            var query = '/api/scans/?offset=0&limit=10000&statuses=Completed&project-id=' + projectId + '&from-date=' + last_run_date + '&sort=%2Bcreated_at&sort=%2Bstatus&field=scan-ids' + branch;
+            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+        } catch (err) {
+            gs.error(this.MSG + " :getScanListFilterByMultipleBranch :Error in getting the scan details with branch filter: " + err);
+            return -1;
+        }
+        return resp;
+    },
+
+
     //Second Last scanId for a given app/project
     getSecondLastScan: function(configId, projectId, scanId, primaryBranch) {
         try {
@@ -554,6 +616,27 @@ CheckmarxOneUtilBase.prototype = {
             throw err;
         }
         return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+
+    },
+
+    // last  scan  config details of a given appId  and scanId
+    getScanConfigInfo: function(configId, appId, scanId) {
+        var responseBody = '';
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "post";
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
+            var query = '/api/configuration/scan?project-id=' + appId + '&scan-id=' + scanId;
+            var response = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+            responseBody = JSON.parse(response.getBody());
+        } catch (err) {
+            gs.error(this.MSG + " getScanConfigInfo: Error while getting the scan configuration info: " + err);
+            throw err;
+        }
+        return responseBody;
 
     },
 
@@ -938,7 +1021,6 @@ CheckmarxOneUtilBase.prototype = {
                     }
                 }
             }
-			gs.info("flaws=" + flaws);
         } catch (err) {
             gs.error(this.MSG + " getKicsScanSummaryInfo: Error while getting the kics scan summary Ids for scanId: " + scanId + "with error: " + err);
             return -1;
@@ -955,10 +1037,10 @@ CheckmarxOneUtilBase.prototype = {
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
             var apibaseurl = config.checkmarxone_api_base_url;
             var method = "post";
-            var limit_val = config.limit;
+            // var limit_val = config.limit;
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
-            var offset = offsetId * 50;
-            var query = '/api/sast-results/compare?scan-id=' + scanId + '&base-scan-id=' + secondlastscan + '&offset=' + offset + '&limit=' + limit_val;
+            // var offset = offsetId * 50;
+            var query = '/api/sast-results/compare?scan-id=' + scanId + '&base-scan-id=' + secondlastscan + '&status=FIXED&offset=0&limit=10000'; /* + offset + '&limit=' + limit_val;*/
             var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
         } catch (err) {
             gs.error(this.MSG + " getDeltaScan: Error while getting the delta state for scanId: " + scanId + "with error: " + err);
@@ -1078,10 +1160,13 @@ CheckmarxOneUtilBase.prototype = {
                     "triaging_in_snow": gr.getValue("triaging_in_snow") === "1",
                     "access_token": gr.access_token.getDecryptedValue(),
                     "vulnerability_threshold_level": gr.getValue("vulnerability_threshold_level"),
+                    "scan_synchronization": gr.getValue("scan_synchronization"),
                     "sync_only_primary_branch": gr.getValue("sync_only_primary_branch") === "1",
                     "list_projects": gr.getValue("list_of_project_id_s"),
+                    "result_states": gr.getValue("result_states"),
                     "project_filter_by_name": gr.getValue("project_filter_by_name"),
                     "filter_project": gr.getValue("filter_project"),
+                    "scan_type": gr.getValue("scan_type"),
                 };
             }
         } catch (err) {
@@ -1177,6 +1262,90 @@ CheckmarxOneUtilBase.prototype = {
         }
 
         return accessToken;
+
+    },
+
+    getNewTokenForValidation: function(baseUrl, config, method, request, username, password, tenant, saveinstanceflag, configId) {
+        try {
+            var fullUrl = baseUrl + '/auth/realms/' + tenant + '/protocol/openid-connect/token';
+            var query = "client_id=" + username + "&grant_type=" + "client_credentials" + "&client_secret=" + password;
+            request.setEndpoint(fullUrl);
+            request.setHttpMethod(method);
+            var log_level = config.log_level;
+            request.setLogLevel(log_level);
+            request.setRequestBody(query);
+            request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+            request.setRequestHeader("Accept", "application/json");
+            request.setRequestHeader('User-Agent', this.getUserAgentHeaderDetails());
+            //Convert the object to string and set it to Request Body-
+            request.setRequestBody(query);
+            var response = request.execute();
+            var status = response.getStatusCode();
+            var accessToken = '';
+            if (status == 200 || status == 202) {
+                var responseBody = response.getBody();
+                var tokenResponse = JSON.parse(responseBody);
+                accessToken = tokenResponse.access_token;
+
+                var tokenPayload = accessToken.split(".")[1];
+                var tokenPayloadJson = JSON.parse(gs.base64Decode(tokenPayload));
+                var permissionFlag = 'true';
+                var missingPermissions = '';
+                if (null != tokenPayloadJson["roles_ast"]) {
+                    var permissions = tokenPayloadJson["roles_ast"];
+                    var requiredPermissions = this.getRequiredPermission(configId);
+                    for (var item in requiredPermissions) {
+                        if (permissions.indexOf(requiredPermissions[item]) == -1) {
+                            permissionFlag = 'false';
+                            if (missingPermissions != '')
+                                missingPermissions += ', ';
+                            missingPermissions += requiredPermissions[item];
+                        }
+                    }
+                } else {
+                    permissionFlag = 'false';
+                    missingPermissions = this.getRequiredPermission(configId).toString();
+                }
+                if (permissionFlag == 'false')
+                    throw (new Error('Credential validation failed due to missing Permissions: ' + missingPermissions));
+
+
+                if (saveinstanceflag == "true") {
+                    var tokenexpiretime = this._getTokenExpiredTime(this._getExpTimeFromAccessToken(accessToken));
+                    var obj = {
+                        "expires_on": tokenexpiretime.toString(),
+                        "auth_config": accessToken
+                    };
+                    //to set access token in sn_sec_cmn_int_auth_config table
+                    this.SEC_UTIL.setConfig(configId, obj);
+                }
+
+            }
+
+        } catch (err) {
+
+            gs.error(this.MSG + " :getNewTokenForValidation : Error while getting the new token." + err);
+            throw err;
+
+        }
+
+        return accessToken;
+
+    },
+
+    // get required permission from config
+    getRequiredPermission: function(configId) {
+        var config = this._getConfig(configId);
+        var requiredPermission = [];
+        var requiredPermissionarr;
+        var required_permission = config.permission;
+        if (required_permission && required_permission.length > 0) {
+            requiredPermissionarr = required_permission.split(";");
+            for (var id in requiredPermissionarr) {
+                requiredPermission.push(requiredPermissionarr[id]);
+            }
+        }
+        return requiredPermission;
 
     },
 
@@ -1454,13 +1623,13 @@ CheckmarxOneUtilBase.prototype = {
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-21 19:26:28</sys_created_on>
 <sys_id>1980bcb147935110328ca368436d435a</sys_id>
-<sys_mod_count>362</sys_mod_count>
+<sys_mod_count>377</sys_mod_count>
 <sys_name>CheckmarxOneUtilBase</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_1980bcb147935110328ca368436d435a</sys_update_name>
-<sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
-<sys_updated_on>2024-06-03 09:38:29</sys_updated_on>
+<sys_updated_by>admin</sys_updated_by>
+<sys_updated_on>2024-10-03 05:12:07</sys_updated_on>
 </sys_script_include>
 </unload>
