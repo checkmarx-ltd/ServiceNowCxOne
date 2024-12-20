@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2024-10-11 12:59:25">
+<unload unload_date="2024-12-20 12:24:30">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -42,6 +42,30 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
             }
             var reportData = {};
             var errorProcess = '';
+
+            var avitArr = [];
+            var config = this.UTIL._getConfig('1234');
+            var scan_synchronization = config.scan_synchronization.toString();
+
+            if(fixedSCANode || fixedSASTNode) {
+                
+                var projectIdToCheck = '';
+                var projectBranchToCheck = '';
+                var prvBranchToCheck = '';
+                if (fixedSCANode) {
+                    projectIdToCheck = fixedSCANode.getAttribute('app_id');
+                    projectBranchToCheck = fixedSCANode.getAttribute('branch');
+                    prvBranchToCheck = fixedSCANode.getAttribute('prvBranch');
+                } else if (fixedSASTNode) {
+                    projectIdToCheck = fixedSASTNode.getAttribute('app_id');
+                    projectBranchToCheck = fixedSASTNode.getAttribute('branch');
+                    prvBranchToCheck = fixedSASTNode.getAttribute('prvBranch');
+                }
+
+                if (projectBranchToCheck != null && projectBranchToCheck != '' && projectBranchToCheck != '.unknown' && projectBranchToCheck != 'undefined' && prvBranchToCheck != null && prvBranchToCheck != '' && prvBranchToCheck != '.unknown' && prvBranchToCheck != 'undefined')
+                    avitArr = this._getAvitDetailsByProjectId(projectIdToCheck);
+            }
+
             if (listNode) {
                 var iter = listNode.getChildNodeIterator();
                 while (iter.hasNext()) {
@@ -60,7 +84,9 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         var queryData = {};
                         var nvdData = {};
                         var resultObj = {};
+                        var projectId = node.getAttribute('app_id');
                         var scan_type = node.getAttribute('scan_type');
+
                         var source_severity_string = node.getAttribute('source_severity');
                         if (source_severity_string == 'CRITICAL') {
                             var source_severity = 0;
@@ -87,7 +113,6 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         queryData['cvss_base_score'] = node.getAttribute('cvssScore');
                         queryData['cvss_vector'] = node.getAttribute('cvssVector');
                         queryData['last_detection_date'] = reportData.last_scan_date.getDate();
-
                         if (reportData['scan_type'] == 'static') {
                             if (node.getAttribute('OWASPTop10') != '') {
                                 var owaspObj = {};
@@ -109,7 +134,9 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         if (node.getAttribute('recommendation') != '') {
                             resultObj['source_recommendation'] = 'Recommended version-' + node.getAttribute('recommendation');
                         }
-
+                        var branch = node.getAttribute('branch');
+                        var prvBranch = node.getAttribute('prvBranch');
+                        var similarityIdToUpsert = '';
                         if (scan_type == 'static') {
                             var resultHash = '';
                             var childIter = node.getChildNodeIterator();
@@ -129,30 +156,43 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                             var similarityId = node.getAttribute('id');
                             var digest = new GlideDigest();
                             var similarityIdHash = similarityId + '_' + resultHash;
-                            var projectId = node.getAttribute('app_id');
-                            this._handleSimilarityId(similarityId, similarityIdHash, projectId);
                             resultObj['source_request'] = similarityId;
-                            resultObj['source_avit_id'] = similarityIdHash;
+
+                            this._handleSimilarityId(similarityId, similarityIdHash, projectId);
+                            similarityIdToUpsert = similarityIdHash;
                         }
 
                         if (scan_type == 'sca') {
                             queryData['source_entry_id'] = 'Checkmarx One' + "-" + node.getAttribute('id');
-                            resultObj['source_avit_id'] = node.getAttribute('id') + node.getAttribute('package_unique_id');
+                            var scaAvitId = node.getAttribute('id') + node.getAttribute('package_unique_id');
+                            similarityIdToUpsert = scaAvitId;
                             resultObj['source_references'] = node.getFirstChild().getTextContent().toString();
-							resultObj['source_notes'] = node.getAttribute('exploitable_method').toString();
+                            resultObj['source_notes'] = node.getAttribute('exploitable_method').toString();
 
                         }
                         if (scan_type == 'kics') {
-
                             queryData['source_entry_id'] = 'Checkmarx One' + "-" + node.getAttribute('cweId');
-                            resultObj['source_avit_id'] = node.getAttribute('id');
+                            var kicsavitId = node.getAttribute('id');
+                            similarityIdToUpsert = kicsavitId;
                         }
+
+                        if (branch == null || branch == '' || branch == '.unknown' || branch == 'undefined')
+                            resultObj['source_avit_id'] = similarityIdToUpsert;
+                        else {
+                            this._handleSimilarityIdHashForBranches(similarityIdToUpsert, projectId, prvBranch, branch, scan_synchronization);
+                            if (scan_synchronization == 'latest scan from each branch') {
+                                resultObj['source_avit_id'] = similarityIdToUpsert + branch;
+                            } else if (scan_synchronization == 'latest scan across all branches' || scan_synchronization == 'latest scan of primary branch') {
+                                resultObj['source_avit_id'] = similarityIdToUpsert;
+                            }
+                        }
+
                         resultObj['source_app_id'] = reportData['source_app_id'];
                         resultObj['scan_type'] = reportData['scan_type'];
                         resultObj['package_unique_id'] = node.getAttribute('package_unique_id');
                         resultObj['package_name'] = node.getAttribute('package_name');
                         resultObj['location'] = node.getAttribute('location');
-						resultObj['source_sdlc_status'] = 'Not Applicable';
+                        resultObj['source_sdlc_status'] = 'Not Applicable';
                         resultObj['source_link'] = node.getAttribute('sourcefile');
                         if (node.getAttribute('line_no') != '') {
                             resultObj['line_number'] = parseInt(node.getAttribute('line_no'));
@@ -162,7 +202,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         resultObj['scan_summary_name'] = reportData['scan_summary_name'];
                         resultObj['description'] = node.getLastChild().getTextContent().toString();
 
-                        resultObj['source_vulnerability_summary'] = node.getLastChild().getTextContent().toString();
+                        resultObj['source_vulnerability_explanation'] = node.getLastChild().getTextContent().toString();
                         if (reportData['scan_type'] == 'static') {
                             var status = this.UTIL.getSASTRemediationStatus(node.getAttribute('status'), node.getAttribute('state'));
                         } else {
@@ -187,7 +227,6 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                             nvdData['cvss_vector'] = node.getAttribute('cvssVector');
                             this._handleCVE(nvdData, resultObj, cwe_name);
                         }
-
                         this._upsertQuery(queryData);
                         this._upsertAVIT(resultObj);
 
@@ -201,8 +240,14 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
 
                 }
             }
+
             if (fixedSCANode) {
                 var fixedData = {};
+                var scaAppId = fixedSCANode.getAttribute('app_id');
+                var scaScanId = 'sca' + fixedSCANode.getAttribute('scanId');
+                var scaSummaryName = scaScanId + ' ' + fixedSCANode.getAttribute('lastscandate');
+                var scaBranch = fixedSCANode.getAttribute('branch');
+                var scaPrvBranch = fixedSCANode.getAttribute('prvBranch');
                 var sca_iter = fixedSCANode.getChildNodeIterator();
                 while (sca_iter.hasNext()) {
                     try {
@@ -211,20 +256,30 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         var avit_id = scaattributes.vulnerabilityId + scaattributes.id;
                         var id = 'Checkmarx One' + "-" + scaattributes.vulnerabilityId;
                         var severity = this._handleFixedVul(id);
-                        fixedData['source_app_id'] = reportData.source_app_id;
-                        fixedData['source_scan_id'] = reportData.source_scan_id;
+                        fixedData['source_app_id'] = scaAppId;
+                        fixedData['source_scan_id'] = scaScanId;
                         fixedData['scan_type'] = 'sca';
+                        fixedData['source_severity'] = severity;
                         fixedData['source_avit_id'] = avit_id;
                         fixedData['source_entry_id'] = id;
-						if(scaattributes.riskState == 'NOT_EXPLOITABLE'){
-							fixedData['source_remediation_status'] = scaattributes.riskState;
-						}else{
+                        if (scaattributes.riskState == 'NOT_EXPLOITABLE') {
+                            fixedData['source_remediation_status'] = scaattributes.riskState;
+                        } else {
                             fixedData['source_remediation_status'] = 'FIXED';
-						}
-                        fixedData['source_severity'] = severity;
-                        fixedData['scan_summary_name'] = reportData.scan_summary_name;
+                        }
+                        fixedData['scan_summary_name'] = scaSummaryName;
                         fixedData['source_sdlc_status'] = 'Not Applicable';
                         fixedData['package_unique_id'] = 'scaattributes.id';
+
+                            var avitIdBranch = '';
+                            if (scan_synchronization == 'latest scan from each branch') 
+                                avitIdBranch = avit_id + scaBranch;
+                            else 
+                                avitIdBranch = avit_id + scaPrvBranch;
+                            if (scaBranch != null && scaBranch != '' && scaBranch != '.unknown' && scaBranch != 'undefined' && scaPrvBranch != null && scaPrvBranch != '' && scaPrvBranch != '.unknown' && scaPrvBranch != 'undefined' && avitArr.indexOf(avitIdBranch) != -1)
+                                fixedData['source_avit_id'] = avitIdBranch;
+                            else
+                                fixedData['source_avit_id'] = avit_id;
                         this._upsertAVIT(fixedData);
 
                     } catch (ex) {
@@ -238,6 +293,8 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
 
             if (fixedSASTNode) {
                 var fixedSASTData = {};
+                var sastBranch = fixedSASTNode.getAttribute('branch');
+                var sastPrvBranch = fixedSASTNode.getAttribute('prvBranch');
                 var sast_iter = fixedSASTNode.getChildNodeIterator();
                 while (sast_iter.hasNext()) {
                     try {
@@ -251,22 +308,31 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                             if (fixedChildNode.getNodeName() == "resultHash") {
                                 fixedResultHash = fixedChildNode.getTextContent();
                                 break;
-                            }                    
+                            }
                         }
                         var fixedSimilarityId = sastattributes.id;
                         var fixedSimilarityIdHash = fixedSimilarityId + '_' + fixedResultHash;
-
-                        var last_scan_date = new GlideDateTime(sastattributes.last_scan_date); 
                         fixedSASTData['source_app_id'] = sastattributes.app_id;
                         fixedSASTData['source_scan_id'] = sastattributes.scan_id;
                         fixedSASTData['scan_type'] = 'static';
-                        fixedSASTData['source_avit_id'] = fixedSimilarityIdHash;
-                        fixedSASTData['source_entry_id'] ='Checkmarx One' + " CWE-" + sastattributes.cweId;
+                        fixedSASTData['source_entry_id'] = 'Checkmarx One' + " CWE-" + sastattributes.cweId;
                         fixedSASTData['source_remediation_status'] = 'FIXED';
-                        fixedSASTData['source_severity'] =  sastattributes.source_severity;
-                        fixedSASTData['scan_summary_name'] = fixedSASTData.source_scan_id + ' ' + last_scan_date;
+                        fixedSASTData['source_severity'] = sastattributes.source_severity;
+                        fixedSASTData['scan_summary_name'] = fixedSASTData.source_scan_id + ' ' + sastattributes.last_scan_date;
                         fixedSASTData['source_sdlc_status'] = 'Not Applicable';
                         fixedSASTData['package_unique_id'] = sastattributes.package_unique_id;
+
+                            var fixedSimilarityIdHashBranch = '';
+                            if (scan_synchronization == 'latest scan from each branch') 
+                                fixedSimilarityIdHashBranch = fixedSimilarityIdHash + sastBranch;
+                            else 
+                                fixedSimilarityIdHashBranch = fixedSimilarityIdHash + sastPrvBranch;
+                           
+                            if (sastBranch != null && sastBranch != '' && sastBranch != '.unknown' && sastBranch != 'undefined' && sastPrvBranch != null && sastPrvBranch != '' && sastPrvBranch != '.unknown' && sastPrvBranch != 'undefined' && avitArr.indexOf(fixedSimilarityIdHashBranch) != -1)
+                                fixedSASTData['source_avit_id'] = fixedSimilarityIdHashBranch;
+                            else
+                                fixedSASTData['source_avit_id'] = fixedSimilarityIdHash;
+
                         this._upsertAVIT(fixedSASTData);
 
                     } catch (ex) {
@@ -277,6 +343,8 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                     }
                 }
             }
+
+
             if (!gs.nil(errorProcess))
                 gs.error(this.MSG + "All errors that occurred while processing Vulnerability lists: " + errorProcess);
             this.completeProcess(this.integrationProcessGr, this.import_counts);
@@ -334,6 +402,46 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
             }
         }
     },
+
+    _getAvitDetailsByProjectId: function(projectId) {
+        var avitArr = [];
+        var avit = new GlideRecord('sn_vul_app_vulnerable_item');
+        avit.addQuery('application_release.source_app_id', projectId);
+        avit.query();
+        while (avit.next()) {
+            if (null != avit && null != avit.source_avit_id && '' != avit.source_avit_id)
+                avitArr.push(avit.getValue('source_avit_id'));
+        }
+        return avitArr;
+    },
+
+    _handleSimilarityIdHashForBranches: function(similarityIdHash, projectId, oldScanBranch, scanBranch, scan_synchronization) {
+        var similarityIdToCheck = '';
+        var similarityIdToUpdate = '';
+
+        if (scan_synchronization == 'latest scan from each branch') {
+            similarityIdToCheck = similarityIdHash;
+            similarityIdToUpdate = similarityIdHash + scanBranch;
+        } else if ((scan_synchronization == 'latest scan across all branches' || scan_synchronization == 'latest scan of primary branch') && null != oldScanBranch && '' != oldScanBranch && 'undefined' != oldScanBranch && '.unknown' != oldScanBranch) {
+            similarityIdToCheck = similarityIdHash + oldScanBranch;
+            similarityIdToUpdate = similarityIdHash;
+        }
+
+        if (similarityIdToCheck != '' && similarityIdToUpdate != '') {
+            var avit = new sn_vul.PagedGlideRecord('sn_vul_app_vulnerable_item');
+            avit.addQuery('source_avit_id', similarityIdToCheck);
+            avit.setSortField("sys_id");
+            while (avit.next()) {
+                var appId = avit.gr.application_release.source_app_id;
+                if (appId == projectId) {
+                    avit.gr.setValue('source_avit_id', similarityIdToUpdate);
+                    avit.gr.setValue('project_branch', scanBranch);
+                    avit.gr.update();
+                }
+            }
+        }
+    },
+
     _handleFixedVul: function(id) {
         var avit = new GlideRecord('sn_vul_app_vul_entry');
         avit.addQuery('id', id);
@@ -383,13 +491,13 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
 <sys_created_by>apoorva.singh@checkmarx.com</sys_created_by>
 <sys_created_on>2023-03-16 05:04:10</sys_created_on>
 <sys_id>ba2b3da69769e510026f72021153af1b</sys_id>
-<sys_mod_count>66</sys_mod_count>
+<sys_mod_count>138</sys_mod_count>
 <sys_name>CheckmarxOneAppVulItemProcessor</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_ba2b3da69769e510026f72021153af1b</sys_update_name>
 <sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2024-09-18 10:33:40</sys_updated_on>
+<sys_updated_on>2024-12-16 17:59:22</sys_updated_on>
 </sys_script_include>
 </unload>

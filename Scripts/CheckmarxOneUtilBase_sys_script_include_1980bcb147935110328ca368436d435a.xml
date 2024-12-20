@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2024-10-11 13:00:36">
+<unload unload_date="2024-12-20 12:24:51">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -218,6 +218,22 @@ CheckmarxOneUtilBase.prototype = {
         return JSON.stringify(result_state);
     },
 
+  // To Get Severity from configuartion	
+    getSeverityFromUI: function(configId) {
+        try {
+            var config = this._getConfig(configId);
+            var severity = config.severity;
+            var severity_list = [];
+            var severityUIArr = severity.split(',');
+            for (var item in severityUIArr) {
+                severity_list.push(severityUIArr[item]);
+            }
+
+        } catch (err) {
+            gs.error(this.MSG + " getSeverityFromUI: Error while getting Result State from Configuration " + err);
+        }
+        return JSON.stringify(severity_list);
+    },
 
     //get 50 project list at a time
     getNextProjectList: function(configId, offsetno) {
@@ -757,7 +773,12 @@ CheckmarxOneUtilBase.prototype = {
             var includekics = this.importKicsFlaw(configId);
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
             var apibaseurl = config.checkmarxone_api_base_url;
-            var vulnerabilityCountThresholdLevel = config.vulnerability_threshold_level;
+			var ui_severity = config.severity;
+			var severityFilter = false;
+			if(null != ui_severity && ''!= ui_severity){
+				severityFilter = true;
+				var severity_array = this.getSeverityFromUI(configId);
+			}
             var method = "post";
             var count = 0;
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
@@ -770,11 +791,7 @@ CheckmarxOneUtilBase.prototype = {
 
                 for (var value in ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters) {
                     var severity = ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters[value].severity;
-                    if ((vulnerabilityCountThresholdLevel == 'INFO') ||
-                        (vulnerabilityCountThresholdLevel == 'LOW' && severity.toUpperCase() != 'INFO') ||
-                        (vulnerabilityCountThresholdLevel == 'MEDIUM' && severity.toUpperCase() != 'INFO' && severity.toUpperCase() != 'LOW') ||
-                        (vulnerabilityCountThresholdLevel == 'HIGH' && severity.toUpperCase() != 'INFO' && severity.toUpperCase() != 'LOW' && severity.toUpperCase() != 'MEDIUM') ||
-                        severity.toUpperCase() == 'CRITICAL') {
+                    if (severity_array.indexOf(severity) != -1) {
                         var counts = ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters[value].counter;
                         count += counts;
                     }
@@ -782,22 +799,14 @@ CheckmarxOneUtilBase.prototype = {
 
                 for (var sca_value in ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters) {
                     var sca_severity = ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters[sca_value].severity;
-                    if ((vulnerabilityCountThresholdLevel == 'INFO') ||
-                        (vulnerabilityCountThresholdLevel == 'LOW' && sca_severity.toUpperCase() != 'INFO') ||
-                        (vulnerabilityCountThresholdLevel == 'MEDIUM' && sca_severity.toUpperCase() != 'INFO' && sca_severity.toUpperCase() != 'LOW') ||
-                        (vulnerabilityCountThresholdLevel == 'HIGH' && sca_severity.toUpperCase() != 'INFO' && sca_severity.toUpperCase() != 'LOW' && sca_severity.toUpperCase() != 'MEDIUM') ||
-                        sca_severity.toUpperCase() == 'CRITICAL') {
+                    if (severity_array.indexOf(sca_severity) != -1) {
                         var sca_counts = ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters[sca_value].counter;
                         count += sca_counts;
                     }
                 }
                 for (var sca_container_value in ScanSummaryJson.scansSummaries[item].scaContainersCounters.severityVulnerabilitiesCounters) {
                     var sca_container_severity = ScanSummaryJson.scansSummaries[item].scaContainersCounters.severityVulnerabilitiesCounters[sca_container_value].severity;
-                    if ((vulnerabilityCountThresholdLevel == 'INFO') ||
-                        (vulnerabilityCountThresholdLevel == 'LOW' && sca_container_severity.toUpperCase() != 'INFO') ||
-                        (vulnerabilityCountThresholdLevel == 'MEDIUM' && sca_container_severity.toUpperCase() != 'INFO' && sca_container_severity.toUpperCase() != 'LOW') ||
-                        (vulnerabilityCountThresholdLevel == 'HIGH' && sca_container_severity.toUpperCase() != 'INFO' && sca_container_severity.toUpperCase() != 'LOW' && sca_container_severity.toUpperCase() != 'MEDIUM') ||
-                        sca_container_severity.toUpperCase() == 'CRITICAL') {
+                    if (severity_array.indexOf(sca_container_severity) != -1) {
                         var sca_container_counts = ScanSummaryJson.scansSummaries[item].scaContainersCounters.severityVulnerabilitiesCounters[sca_container_value].counter;
                         count += sca_container_counts;
                     }
@@ -805,11 +814,7 @@ CheckmarxOneUtilBase.prototype = {
                 for (var kics_value in ScanSummaryJson.scansSummaries[item].kicsCounters.severityCounters) {
                     var kics_severity = ScanSummaryJson.scansSummaries[item].kicsCounters.severityCounters[kics_value].severity;
 
-                    if ((vulnerabilityCountThresholdLevel == 'INFO') ||
-                        (vulnerabilityCountThresholdLevel == 'LOW' && kics_severity.toUpperCase() != 'INFO') ||
-                        (vulnerabilityCountThresholdLevel == 'MEDIUM' && kics_severity.toUpperCase() != 'INFO' && kics_severity.toUpperCase() != 'LOW') ||
-                        (vulnerabilityCountThresholdLevel == 'HIGH' && kics_severity.toUpperCase() != 'INFO' && kics_severity.toUpperCase() != 'LOW' && kics_severity.toUpperCase() != 'MEDIUM') ||
-                        kics_severity.toUpperCase() == 'CRITICAL') {
+                    if (severity_array.indexOf(kics_severity) != -1) {
                         var kics_counts = ScanSummaryJson.scansSummaries[item].kicsCounters.severityCounters[kics_value].counter;
                         count += kics_counts;
                     }
@@ -890,7 +895,12 @@ CheckmarxOneUtilBase.prototype = {
             var includekics = this.importKicsFlaw(configId);
 
             var limit_val = config.limit;
-            var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val + '&sort=-severity';
+			var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val + '&sort=-severity';
+			var exclude_dev_and_test_dependencies = config.exclude_dev_and_test_dependencies;
+			if(exclude_dev_and_test_dependencies){
+              query += '&exclude-result-types=DEV_AND_TEST';
+			}
+            
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
             var apibaseurl = config.checkmarxone_api_base_url;
             var method = "post";
@@ -919,26 +929,23 @@ CheckmarxOneUtilBase.prototype = {
             var body = resp.getBody();
             var ScanSummaryJson = JSON.parse(body);
             var flaws = 0;
-            var vulnerabilityCountThresholdLevel = config.vulnerability_threshold_level;
+			var ui_severity = config.severity;
+			var severityFilter = false;
+			if(null != ui_severity && ''!= ui_severity){
+				severityFilter = true;
+				var severity_array = this.getSeverityFromUI(configId);
+			}
             for (var item in ScanSummaryJson.scansSummaries) {
                 for (var value in ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters) {
                     var severity = ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters[value].severity;
-                    if ((vulnerabilityCountThresholdLevel == 'INFO') ||
-                        (vulnerabilityCountThresholdLevel == 'LOW' && severity.toUpperCase() != 'INFO') ||
-                        (vulnerabilityCountThresholdLevel == 'MEDIUM' && severity.toUpperCase() != 'INFO' && severity.toUpperCase() != 'LOW') ||
-                        (vulnerabilityCountThresholdLevel == 'HIGH' && severity.toUpperCase() != 'INFO' && severity.toUpperCase() != 'LOW' && severity.toUpperCase() != 'MEDIUM') ||
-                        severity.toUpperCase() == 'CRITICAL') {
+                    if (severity_array.indexOf(severity) != -1) {
                         var counts = ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters[value].counter;
                         flaws += counts;
                     }
                 }
                 for (value in ScanSummaryJson.scansSummaries[item].scaContainersCounters.severityVulnerabilitiesCounters) {
                     var sca_container_severity = ScanSummaryJson.scansSummaries[item].scaContainersCounters.severityVulnerabilitiesCounters[value].severity;
-                    if ((vulnerabilityCountThresholdLevel == 'INFO') ||
-                        (vulnerabilityCountThresholdLevel == 'LOW' && sca_container_severity.toUpperCase() != 'INFO') ||
-                        (vulnerabilityCountThresholdLevel == 'MEDIUM' && sca_container_severity.toUpperCase() != 'INFO' && sca_container_severity.toUpperCase() != 'LOW') ||
-                        (vulnerabilityCountThresholdLevel == 'HIGH' && sca_container_severity.toUpperCase() != 'INFO' && sca_container_severity.toUpperCase() != 'LOW' && sca_container_severity.toUpperCase() != 'MEDIUM') ||
-                        sca_container_severity.toUpperCase() == 'CRITICAL') {
+                    if (severity_array.indexOf(sca_container_severity) != -1) {
                         var sca_container_counts = ScanSummaryJson.scansSummaries[item].scaContainersCounters.severityVulnerabilitiesCounters[value].counter;
                         flaws += sca_container_counts;
                     }
@@ -969,15 +976,16 @@ CheckmarxOneUtilBase.prototype = {
             var body = resp.getBody();
             var ScanSummaryJson = JSON.parse(body);
             var flaws = 0;
-            var vulnerabilityCountThresholdLevel = config.vulnerability_threshold_level;
+			var ui_severity = config.severity;
+			var severityFilter = false;
+			if(null != ui_severity && ''!= ui_severity){
+				severityFilter = true;
+				var severity_array = this.getSeverityFromUI(configId);
+			}
             for (var item in ScanSummaryJson.scansSummaries) {
                 for (var value in ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters) {
                     var severity = ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters[value].severity;
-                    if ((vulnerabilityCountThresholdLevel == 'INFO') ||
-                        (vulnerabilityCountThresholdLevel == 'LOW' && severity.toUpperCase() != 'INFO') ||
-                        (vulnerabilityCountThresholdLevel == 'MEDIUM' && severity.toUpperCase() != 'INFO' && severity.toUpperCase() != 'LOW') ||
-                        (vulnerabilityCountThresholdLevel == 'HIGH' && severity.toUpperCase() != 'INFO' && severity.toUpperCase() != 'LOW' && severity.toUpperCase() != 'MEDIUM') ||
-                        severity.toUpperCase() == 'CRITICAL') {
+                    if (severity_array.indexOf(severity) != -1) {
                         var counts = ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters[value].counter;
                         flaws += counts;
                     }
@@ -1006,16 +1014,17 @@ CheckmarxOneUtilBase.prototype = {
             var body = resp.getBody();
             var ScanSummaryJson = JSON.parse(body);
             var flaws = 0;
-            var vulnerabilityCountThresholdLevel = config.vulnerability_threshold_level;
+			var ui_severity = config.severity;
+			var severityFilter = false;
+			if(null != ui_severity && ''!= ui_severity){
+				severityFilter = true;
+				var severity_array = this.getSeverityFromUI(configId);
+			}
             for (var item in ScanSummaryJson.scansSummaries) {
                 for (var value in ScanSummaryJson.scansSummaries[item].kicsCounters.severityCounters) {
                     var severity = ScanSummaryJson.scansSummaries[item].kicsCounters.severityCounters[value].severity;
 
-                    if ((vulnerabilityCountThresholdLevel == 'INFO') ||
-                        (vulnerabilityCountThresholdLevel == 'LOW' && severity.toUpperCase() != 'INFO') ||
-                        (vulnerabilityCountThresholdLevel == 'MEDIUM' && severity.toUpperCase() != 'INFO' && severity.toUpperCase() != 'LOW') ||
-                        (vulnerabilityCountThresholdLevel == 'HIGH' && severity.toUpperCase() != 'INFO' && severity.toUpperCase() != 'LOW' && severity.toUpperCase() != 'MEDIUM') ||
-                        severity.toUpperCase() == 'CRITICAL') {
+                    if (severity_array.indexOf(severity) != -1) {
                         var counts = ScanSummaryJson.scansSummaries[item].kicsCounters.severityCounters[value].counter;
                         flaws += counts;
                     }
@@ -1166,7 +1175,10 @@ CheckmarxOneUtilBase.prototype = {
                     "result_states": gr.getValue("result_states"),
                     "project_filter_by_name": gr.getValue("project_filter_by_name"),
                     "filter_project": gr.getValue("filter_project"),
+					"link": gr.getValue("link"),
+					"exclude_dev_and_test_dependencies": gr.getValue("exclude_dev_and_test_dependencies") === "1",
                     "scan_type": gr.getValue("scan_type"),
+					"severity": gr.getValue("severity"),
                 };
             }
         } catch (err) {
@@ -1623,13 +1635,13 @@ CheckmarxOneUtilBase.prototype = {
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-21 19:26:28</sys_created_on>
 <sys_id>1980bcb147935110328ca368436d435a</sys_id>
-<sys_mod_count>377</sys_mod_count>
+<sys_mod_count>388</sys_mod_count>
 <sys_name>CheckmarxOneUtilBase</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_1980bcb147935110328ca368436d435a</sys_update_name>
 <sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2024-10-03 05:12:07</sys_updated_on>
+<sys_updated_on>2024-11-28 14:23:38</sys_updated_on>
 </sys_script_include>
 </unload>
