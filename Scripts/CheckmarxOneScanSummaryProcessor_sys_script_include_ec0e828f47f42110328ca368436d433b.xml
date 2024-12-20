@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2024-10-11 13:00:25">
+<unload unload_date="2024-12-20 12:24:45">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -43,6 +43,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         var SastappNode = iteration.next();
                         var Sastattributes = SastappNode.getAttributes();
                         var prvScanId = Sastattributes.prvScanId;
+						var prvBranch = Sastattributes.prvBranch;
                         //map attributes from CheckmarxOne into the servicenow scan summary table
                         sastdata['source_app_id'] = Sastattributes.app_id;
                         sastdata['source_scan_id'] = Sastattributes.id;
@@ -50,7 +51,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         sastdata['last_scan_date'] = new GlideDateTime(Sastattributes.last_scan_date);
                         sastdata['scan_summary_name'] = Sastattributes.id + ' ' + sastdata['last_scan_date'];
                         sastdata['scan_analysis_size'] = +Sastattributes.loc;
-                        sastdata['tags'] = "Branch: " + Sastattributes.branch + " | Old ScanId: " + prvScanId;
+                        sastdata['tags'] = "Branch: " + Sastattributes.branch + " | Old ScanId: " + prvScanId + " | Old Branch: " + prvBranch;
                         sastdata['scan_submitted_by'] = 'Scan Origin: ' + Sastattributes.scan_origin + '\n' + 'Scan Source: ' + Sastattributes.scan_source + '\n' + 'Scan Type: ' + Sastattributes.scan_type + '\n';
                         this._upsert(sastdata);
                     } catch (ex) {
@@ -75,7 +76,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         data['detected_flaw_count'] = +attributes.total_no_flaws;
                         data['last_scan_date'] = new GlideDateTime(attributes.last_scan_date);
                         data['scan_summary_name'] = attributes.id + ' ' + data['last_scan_date'];
-                        data['tags'] = "Branch: " + attributes.branch + " | Old ScanId: " + scaPrvScanId;
+                        data['tags'] = "Branch: " + attributes.branch + " | Old ScanId: " + scaPrvScanId  + " | Old Branch: " + prvBranch;
                         data['scan_submitted_by'] = 'Scan Origin: ' + attributes.scan_origin + '\n' + 'Scan Source: ' + attributes.scan_source + '\n' + 'Scan Type: ' + attributes.scan_type + '\n';
                         this._upsert(data);
                     } catch (ex) {
@@ -100,7 +101,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         kicsdata['detected_flaw_count'] = +kicsattributes.total_no_flaws;
                         kicsdata['last_scan_date'] = new GlideDateTime(kicsattributes.last_scan_date);
                         kicsdata['scan_summary_name'] = kicsattributes.id + ' ' + kicsdata['last_scan_date'];
-                        kicsdata['tags'] = "Branch: " + kicsattributes.branch + " | Old ScanId: " + kicsPrvScanId;
+                        kicsdata['tags'] = "Branch: " + kicsattributes.branch + " | Old ScanId: " + kicsPrvScanId  + " | Old Branch: " + prvBranch;
                         kicsdata['scan_submitted_by'] = 'Scan Origin: ' + kicsattributes.scan_origin + '\n' + 'Scan Source: ' + kicsattributes.scan_source + '\n' + 'Scan Type: ' + kicsattributes.scan_type + '\n';
                         this._upsert(kicsdata);
                     } catch (ex) {
@@ -163,13 +164,13 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2023-02-08 12:56:43</sys_created_on>
 <sys_id>ec0e828f47f42110328ca368436d433b</sys_id>
-<sys_mod_count>22</sys_mod_count>
+<sys_mod_count>25</sys_mod_count>
 <sys_name>CheckmarxOneScanSummaryProcessor</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_ec0e828f47f42110328ca368436d433b</sys_update_name>
 <sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2024-09-30 06:38:36</sys_updated_on>
+<sys_updated_on>2024-11-27 10:02:47</sys_updated_on>
 </sys_script_include>
 </unload>

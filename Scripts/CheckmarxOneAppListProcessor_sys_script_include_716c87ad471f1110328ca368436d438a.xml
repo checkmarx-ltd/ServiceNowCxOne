@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2024-10-11 12:59:01">
+<unload unload_date="2024-12-20 12:24:20">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -110,13 +110,13 @@ CheckmarxOneAppListProcessor.prototype = Object.extendsObject(sn_vul.Application
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-21 12:03:00</sys_created_on>
 <sys_id>716c87ad471f1110328ca368436d438a</sys_id>
-<sys_mod_count>75</sys_mod_count>
+<sys_mod_count>79</sys_mod_count>
 <sys_name>CheckmarxOneAppListProcessor</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_716c87ad471f1110328ca368436d438a</sys_update_name>
 <sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2024-05-22 05:08:04</sys_updated_on>
+<sys_updated_on>2024-12-02 17:29:36</sys_updated_on>
 </sys_script_include>
 </unload>
