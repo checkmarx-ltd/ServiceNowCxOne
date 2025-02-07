@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2024-12-20 12:24:40">
+<unload unload_date="2025-02-07 05:42:00">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -7,7 +7,9 @@
 <caller_access/>
 <client_callable>false</client_callable>
 <description>Integration script for the CheckmarxOne Scan Summary Integration.</description>
+<mobile_callable>false</mobile_callable>
 <name>CheckmarxOneScanSummaryIntegration</name>
+<sandbox_callable>false</sandbox_callable>
 <script><![CDATA[var CheckmarxOneScanSummaryIntegration = Class.create();
 CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.ApplicationVulnerabilityIntegrationBase, {
 
@@ -59,11 +61,13 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
             var scaScanSummaryAll = '';
             var sastScanSummaryAll = '';
             var kicsScanSummaryAll = '';
+            var containerSecurityScanSummaryAll = '';
             var includescanSummaryAll = '';
             var newoffset = offsetId - 1;
             var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
             var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
             var includekics = this.UTIL.importKicsFlaw(this.IMPLEMENTATION);
+            var includeContainerSecurity = this.UTIL.importContainerSecurityFlaw(this.IMPLEMENTATION);
             var config = this.UTIL._getConfig(this.IMPLEMENTATION);
             var scan_synchronization = config.scan_synchronization.toString();
             var primaryBranch = '';
@@ -93,16 +97,20 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
             var prvSastScanIdBranch = '';
             var prvScaScanIdBranch = '';
             var prvKicsScanIdBranch = '';
+            var prvConSecScanIdBranch = '';
             var sastPrvScanId = '';
             var scaPrvScanId = '';
             var kicsPrvScanId = '';
+            var conSecPrvScanId = '';
             var lastSastDate;
             var lastScaDate;
             var lastKicsDate;
+            var lastConSecDate;
             var prvBranch = '';
             var prvSastScanBranch = '';
             var prvScaScanBranch = '';
             var prvKicsScanBranch = '';
+            var prvConSecScanBranch = '';
 
             while (scanSummary.hasNext()) {
                 scanSummary.next();
@@ -163,6 +171,19 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                             if (prvKicsScanIdBranch != '')
                                 prvKicsScanIdBranch += '|||';
                             prvKicsScanIdBranch += prvBranch + ':::' + prvScanId + ':::' + lastUpdatedDate;
+                        }
+                    }
+
+                    if (prvScanId.indexOf('CS') != -1 && isBranchMatched == 'true') {
+                        if ((null == lastConSecDate || '' == lastConSecDate || 'undefined' == lastConSecDate) || (lastConSecDate && lastUpdatedDate >= lastConSecDate)) {
+                            conSecPrvScanId = prvScanId;
+                            prvConSecScanBranch = prvBranch;
+                            lastConSecDate = lastUpdatedDate;
+                        }
+                        if (null != scan_synchronization && '' != scan_synchronization && 'undefined' != scan_synchronization && scan_synchronization == 'latest scan from each branch') {
+                            if (prvConSecScanIdBranch != '')
+                                prvConSecScanIdBranch += '|||';
+                            prvConSecScanIdBranch += prvBranch + ':::' + prvScanId + ':::' + lastUpdatedDate;
                         }
                     }
                 }
@@ -258,6 +279,33 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                             '" app_name="' + appId + '"/>';
                     }
                 }
+
+                //Container Security scan summary
+                if (includeContainerSecurity && jsonLastScanSummResp.scans[item].engines.toString().indexOf("containers") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
+                    var containerSecurityResponseVul = this.UTIL.getContainerSecurityScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
+                    var scanType = "Full Scan";
+                    if (containerSecurityResponseVul != -1) {
+
+                       if (null != scan_synchronization && '' != scan_synchronization && 'undefined' != scan_synchronization && scan_synchronization == 'latest scan from each branch') {
+                            conSecPrvScanId = this._getPrvScanIdForSpecificBranch(prvConSecScanIdBranch, jsonLastScanSummResp.scans[item].branch);
+                            if (conSecPrvScanId == '')
+                                prvConSecScanBranch = '';
+                            else
+                                prvConSecScanBranch = '' + jsonLastScanSummResp.scans[item].branch;
+                        } 
+                        containerSecurityScanSummaryAll += '<scan id="' + 'CS' + jsonLastScanSummResp.scans[item].id + '" app_id="' + appId +
+                            '" last_scan_date="' + this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt) +
+                            '" total_no_flaws="' + containerSecurityResponseVul +
+                            '" branch="' + jsonLastScanSummResp.scans[item].branch +
+                            '" prvScanId="' + conSecPrvScanId +
+                            '" scan_origin="' + jsonLastScanSummResp.scans[item].sourceOrigin +
+                            '" scan_source="' + jsonLastScanSummResp.scans[item].sourceType +
+                            '" scan_type="' + scanType +
+                            '" prvBranch="' + prvConSecScanBranch +
+                            '" app_name="' + appId + '"/>';
+                    }
+                }
+
                 branch.push(jsonLastScanSummResp.scans[item].branch);
 
                 var date = new GlideDateTime(this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt));
@@ -272,6 +320,9 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
             }
             if (includekics) {
                 includescanSummaryAll += "<kicsScanData><scans>" + kicsScanSummaryAll + "</scans></kicsScanData>";
+            }
+            if (includeContainerSecurity) {
+                includescanSummaryAll += "<conSecScanData><scans>" + containerSecurityScanSummaryAll + "</scans></conSecScanData>";
             }
 
             reportContent = scanSummaryRootNodeStart + includescanSummaryAll + scanSummaryRootNodeEnd;
@@ -464,13 +515,13 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-18 05:18:19</sys_created_on>
 <sys_id>d7f2d2e447131110328ca368436d4321</sys_id>
-<sys_mod_count>267</sys_mod_count>
+<sys_mod_count>271</sys_mod_count>
 <sys_name>CheckmarxOneScanSummaryIntegration</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_d7f2d2e447131110328ca368436d4321</sys_update_name>
 <sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2024-12-11 16:31:25</sys_updated_on>
+<sys_updated_on>2024-12-31 08:00:01</sys_updated_on>
 </sys_script_include>
 </unload>

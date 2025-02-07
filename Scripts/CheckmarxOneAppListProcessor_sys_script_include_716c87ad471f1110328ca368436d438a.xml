@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2024-12-20 12:24:20">
+<unload unload_date="2025-02-07 05:33:25">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -7,7 +7,9 @@
 <caller_access/>
 <client_callable>false</client_callable>
 <description>Converts the appinfo xml data into a json object that can be consumed by the VR Application Vulnerability API.</description>
+<mobile_callable>false</mobile_callable>
 <name>CheckmarxOneAppListProcessor</name>
+<sandbox_callable>false</sandbox_callable>
 <script><![CDATA[var CheckmarxOneAppListProcessor = Class.create();
 CheckmarxOneAppListProcessor.prototype = Object.extendsObject(sn_vul.ApplicationVulnerabilityImportProcessorBase, {
     /*

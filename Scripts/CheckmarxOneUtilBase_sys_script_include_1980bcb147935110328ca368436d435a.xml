@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2024-12-20 12:24:51">
+<unload unload_date="2025-02-07 05:44:12">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -7,7 +7,9 @@
 <caller_access/>
 <client_callable>false</client_callable>
 <description>Wrapper class to assemble the components for Checkmarx One integration calls.</description>
+<mobile_callable>false</mobile_callable>
 <name>CheckmarxOneUtilBase</name>
+<sandbox_callable>false</sandbox_callable>
 <script><![CDATA[var CheckmarxOneUtilBase = Class.create();
 
 CheckmarxOneUtilBase.prototype = {
@@ -218,7 +220,7 @@ CheckmarxOneUtilBase.prototype = {
         return JSON.stringify(result_state);
     },
 
-  // To Get Severity from configuartion	
+    // To Get Severity from configuartion	
     getSeverityFromUI: function(configId) {
         try {
             var config = this._getConfig(configId);
@@ -773,12 +775,12 @@ CheckmarxOneUtilBase.prototype = {
             var includekics = this.importKicsFlaw(configId);
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
             var apibaseurl = config.checkmarxone_api_base_url;
-			var ui_severity = config.severity;
-			var severityFilter = false;
-			if(null != ui_severity && ''!= ui_severity){
-				severityFilter = true;
-				var severity_array = this.getSeverityFromUI(configId);
-			}
+            var ui_severity = config.severity;
+            var severityFilter = false;
+            if (null != ui_severity && '' != ui_severity) {
+                severityFilter = true;
+                var severity_array = this.getSeverityFromUI(configId);
+            }
             var method = "post";
             var count = 0;
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
@@ -817,6 +819,15 @@ CheckmarxOneUtilBase.prototype = {
                     if (severity_array.indexOf(kics_severity) != -1) {
                         var kics_counts = ScanSummaryJson.scansSummaries[item].kicsCounters.severityCounters[kics_value].counter;
                         count += kics_counts;
+                    }
+                }
+
+                for (var conSec_value in ScanSummaryJson.scansSummaries[item].containersCounters.severityCounters) {
+                    var conSec_severity = ScanSummaryJson.scansSummaries[item].containersCounters.severityCounters[conSec_value].severity;
+
+                    if (severity_array.indexOf(conSec_severity) != -1) {
+                        var conSec_counts = ScanSummaryJson.scansSummaries[item].containersCounters.severityCounters[conSec_value].counter;
+                        count += conSec_counts;
                     }
                 }
             }
@@ -895,12 +906,12 @@ CheckmarxOneUtilBase.prototype = {
             var includekics = this.importKicsFlaw(configId);
 
             var limit_val = config.limit;
-			var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val + '&sort=-severity';
-			var exclude_dev_and_test_dependencies = config.exclude_dev_and_test_dependencies;
-			if(exclude_dev_and_test_dependencies){
-              query += '&exclude-result-types=DEV_AND_TEST';
-			}
-            
+            var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val + '&sort=-severity';
+            var exclude_dev_and_test_dependencies = config.exclude_dev_and_test_dependencies;
+            if (exclude_dev_and_test_dependencies) {
+                query += '&exclude-result-types=DEV_AND_TEST';
+            }
+
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
             var apibaseurl = config.checkmarxone_api_base_url;
             var method = "post";
@@ -929,12 +940,12 @@ CheckmarxOneUtilBase.prototype = {
             var body = resp.getBody();
             var ScanSummaryJson = JSON.parse(body);
             var flaws = 0;
-			var ui_severity = config.severity;
-			var severityFilter = false;
-			if(null != ui_severity && ''!= ui_severity){
-				severityFilter = true;
-				var severity_array = this.getSeverityFromUI(configId);
-			}
+            var ui_severity = config.severity;
+            var severityFilter = false;
+            if (null != ui_severity && '' != ui_severity) {
+                severityFilter = true;
+                var severity_array = this.getSeverityFromUI(configId);
+            }
             for (var item in ScanSummaryJson.scansSummaries) {
                 for (var value in ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters) {
                     var severity = ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters[value].severity;
@@ -976,12 +987,12 @@ CheckmarxOneUtilBase.prototype = {
             var body = resp.getBody();
             var ScanSummaryJson = JSON.parse(body);
             var flaws = 0;
-			var ui_severity = config.severity;
-			var severityFilter = false;
-			if(null != ui_severity && ''!= ui_severity){
-				severityFilter = true;
-				var severity_array = this.getSeverityFromUI(configId);
-			}
+            var ui_severity = config.severity;
+            var severityFilter = false;
+            if (null != ui_severity && '' != ui_severity) {
+                severityFilter = true;
+                var severity_array = this.getSeverityFromUI(configId);
+            }
             for (var item in ScanSummaryJson.scansSummaries) {
                 for (var value in ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters) {
                     var severity = ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters[value].severity;
@@ -1014,18 +1025,59 @@ CheckmarxOneUtilBase.prototype = {
             var body = resp.getBody();
             var ScanSummaryJson = JSON.parse(body);
             var flaws = 0;
-			var ui_severity = config.severity;
-			var severityFilter = false;
-			if(null != ui_severity && ''!= ui_severity){
-				severityFilter = true;
-				var severity_array = this.getSeverityFromUI(configId);
-			}
+            var ui_severity = config.severity;
+            var severityFilter = false;
+            if (null != ui_severity && '' != ui_severity) {
+                severityFilter = true;
+                var severity_array = this.getSeverityFromUI(configId);
+            }
             for (var item in ScanSummaryJson.scansSummaries) {
                 for (var value in ScanSummaryJson.scansSummaries[item].kicsCounters.severityCounters) {
                     var severity = ScanSummaryJson.scansSummaries[item].kicsCounters.severityCounters[value].severity;
 
                     if (severity_array.indexOf(severity) != -1) {
                         var counts = ScanSummaryJson.scansSummaries[item].kicsCounters.severityCounters[value].counter;
+                        flaws += counts;
+                    }
+                }
+            }
+        } catch (err) {
+            gs.error(this.MSG + " getKicsScanSummaryInfo: Error while getting the kics scan summary Ids for scanId: " + scanId + "with error: " + err);
+            return -1;
+
+        }
+        return flaws;
+
+    },
+
+
+    //Container Security scan details of a given scanId
+    getContainerSecurityScanSummaryInfo: function(configId, scanId) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "post";
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
+
+            var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=false';
+            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+            var body = resp.getBody();
+            var ScanSummaryJson = JSON.parse(body);
+            var flaws = 0;
+            var ui_severity = config.severity;
+            var severityFilter = false;
+            if (null != ui_severity && '' != ui_severity) {
+                severityFilter = true;
+                var severity_array = this.getSeverityFromUI(configId);
+            }
+            for (var item in ScanSummaryJson.scansSummaries) {
+                for (var value in ScanSummaryJson.scansSummaries[item].containersCounters.severityCounters) {
+                    var severity = ScanSummaryJson.scansSummaries[item].containersCounters.severityCounters[value].severity;
+
+                    if (severity_array.indexOf(severity) != -1) {
+                        var counts = ScanSummaryJson.scansSummaries[item].containersCounters.severityCounters[value].counter;
                         flaws += counts;
                     }
                 }
@@ -1166,6 +1218,8 @@ CheckmarxOneUtilBase.prototype = {
                     "import_sca": gr.getValue("import_sca") === "1",
                     "import_sast": gr.getValue("import_sast") === "1",
                     "import_kics": gr.getValue("import_kics") === "1",
+                    "include_container_security": gr.getValue("include_container_security") === "1",
+                    "include_only_similarity_id": gr.getValue("include_only_similarity_id") === "1",
                     "triaging_in_snow": gr.getValue("triaging_in_snow") === "1",
                     "access_token": gr.access_token.getDecryptedValue(),
                     "vulnerability_threshold_level": gr.getValue("vulnerability_threshold_level"),
@@ -1175,10 +1229,10 @@ CheckmarxOneUtilBase.prototype = {
                     "result_states": gr.getValue("result_states"),
                     "project_filter_by_name": gr.getValue("project_filter_by_name"),
                     "filter_project": gr.getValue("filter_project"),
-					"link": gr.getValue("link"),
-					"exclude_dev_and_test_dependencies": gr.getValue("exclude_dev_and_test_dependencies") === "1",
+                    "link": gr.getValue("link"),
+                    "exclude_dev_and_test_dependencies": gr.getValue("exclude_dev_and_test_dependencies") === "1",
                     "scan_type": gr.getValue("scan_type"),
-					"severity": gr.getValue("severity"),
+                    "severity": gr.getValue("severity"),
                 };
             }
         } catch (err) {
@@ -1609,7 +1663,10 @@ CheckmarxOneUtilBase.prototype = {
     importKicsFlaw: function(configId) {
         return this._getConfig(configId).import_kics;
     },
-
+    //value of Container Security checkbox
+    importContainerSecurityFlaw: function(configId) {
+        return this._getConfig(configId).include_container_security;
+    },
     //validate XML
     validateXML: function(body, errorNodeName) {
         if (!body) return;
@@ -1635,13 +1692,13 @@ CheckmarxOneUtilBase.prototype = {
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-21 19:26:28</sys_created_on>
 <sys_id>1980bcb147935110328ca368436d435a</sys_id>
-<sys_mod_count>388</sys_mod_count>
+<sys_mod_count>392</sys_mod_count>
 <sys_name>CheckmarxOneUtilBase</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_1980bcb147935110328ca368436d435a</sys_update_name>
 <sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2024-11-28 14:23:38</sys_updated_on>
+<sys_updated_on>2025-01-21 07:28:52</sys_updated_on>
 </sys_script_include>
 </unload>

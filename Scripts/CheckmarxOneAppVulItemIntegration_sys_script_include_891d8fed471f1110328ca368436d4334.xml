@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2024-12-20 12:24:25">
+<unload unload_date="2025-02-07 05:38:09">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>public</access>
 <active>true</active>
@@ -7,7 +7,9 @@
 <caller_access/>
 <client_callable>false</client_callable>
 <description>Integration script for use with the Checkmarx Application Vulnerability Item Integration run.</description>
+<mobile_callable>false</mobile_callable>
 <name>CheckmarxOneAppVulItemIntegration</name>
+<sandbox_callable>false</sandbox_callable>
 <script><![CDATA[var CheckmarxOneAppVulItemIntegration = Class.create();
 CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.ApplicationVulnerabilityIntegrationBase, {
 
@@ -37,7 +39,6 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                 for (var loop = 0; loop <= parseInt(loopLength); loop++) {
                     sast_offset += 1;
                 }
-                var delta_offset = sast_offset;
                 var responseLastScanSummary = this.UTIL.getScanDetails(this.IMPLEMENTATION, Object.keys(params.run)[0]);
                 var jsonLastScanSummResp = JSON.parse(responseLastScanSummary.getBody());
                 //to map value of last_scan_date, project name and project Id in XML
@@ -60,8 +61,6 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                 var date = new GlideDateTime(this.UTIL.parseDate(jsonLastScanSummResp.scans[value].updatedAt));
                 if (!this.LATEST || date > this.LATEST)
                     this.LATEST = date;
-                var sastSecondlastscan = '';
-                var scaSecondlastscan = '';
                 var isPrvScanEmpty = 'true';
                 var config = this.UTIL._getConfig(this.IMPLEMENTATION);
                 var scan_synchronization = config.scan_synchronization.toString();
@@ -102,67 +101,24 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                                     prvScanBranch = prvScanSummaryBranch; 
                                     lastDate = lastScanSummaryDate;
                                 }
-                                var prvScanType = '';
-                                if (prvScanId.length >= 4)
-                                    prvScanType = prvScanId.substring(0, 4);
-                                if (prvScanType.indexOf('sast') != -1 && ((null == lastSastDate || '' == lastSastDate || 'undefined' == lastSastDate) || (lastSastDate && lastSastDate < lastScanSummaryDate))) {
-                                    sastSecondlastscan = prvScanId.substring(4, prvScanId.length);
-                                    lastSastDate = lastScanSummaryDate;
-                                }
-                                if (prvScanType.indexOf('sca') != -1 && ((null == lastScaDate || '' == lastScaDate || 'undefined' == lastScaDate) || (lastScaDate && lastScaDate < lastScanSummaryDate))) {
-                                    scaSecondlastscan = prvScanId.substring(3, prvScanId.length);
-                                    lastScaDate = lastScanSummaryDate;
-                                }
                             }
 
                         }
                     }
-                }
-
-                if (isPrvScanEmpty == 'true') {
-                    var secondlastscan = this.UTIL.getSecondLastScan(this.IMPLEMENTATION, appId, Object.keys(params.run)[0], primaryBranch);
-                    sastSecondlastscan = secondlastscan;
-                    scaSecondlastscan = secondlastscan;
                 }
 
                 if (applicationIds.length > 0) {
                     applicationIdsStr = applicationIds.toString();
                 }
                 var offset = params.run[Object.keys(params.run)[0]];
-                var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
-                var sastDeltaScanDetailedAll = '';
-                if (includesast && null != sastSecondlastscan && '' != sastSecondlastscan && 'undefined' != sastSecondlastscan && sastSecondlastscan != -1 && offset == 1 && sastSecondlastscan != Object.keys(params.run)[0]) {
-                    sastDeltaScanDetailedAll = this.getSASTDeltaDetailedReport(Object.keys(params.run)[0], params.run[Object.keys(params.run)[0]], lastscandate, sastSecondlastscan, branch, prvScanBranch, appId, engine, delta_offset);
-                }
-                var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
-                var scaDeltascanDetailedAll = '';
-                if (includesca && null != scaSecondlastscan && '' != scaSecondlastscan && 'undefined' != scaSecondlastscan && scaSecondlastscan != -1 && offset == 1 && scaSecondlastscan != Object.keys(params.run)[0]) {
-                    var responseSCADeltaScanReport = this.UTIL.getSCADeltaVul(this.IMPLEMENTATION, appId, Object.keys(params.run)[0], scaSecondlastscan);
-                    if (responseSCADeltaScanReport != -1) {
-                        var jsonSCADeltaScanReportResp = JSON.parse(responseSCADeltaScanReport.getBody());
-                        for (var item in jsonSCADeltaScanReportResp) {
-                            var state = '';
-                            if (jsonSCADeltaScanReportResp[item].riskState && jsonSCADeltaScanReportResp[item].riskState == 'NotExploitable') {
-                                state = 'NOT_EXPLOITABLE';
-                            }
-                            if (jsonSCADeltaScanReportResp[item].riskStatus == 'fixed' || (jsonSCADeltaScanReportResp[item].riskState && jsonSCADeltaScanReportResp[item].riskState == 'NotExploitable')) {
-                                scaDeltascanDetailedAll += '<package id="' + jsonSCADeltaScanReportResp[item].packageId +
-                                    '" vulnerabilityId="' + jsonSCADeltaScanReportResp[item].vulnerabilityId +
-                                    '" riskStatus="' + jsonSCADeltaScanReportResp[item].riskStatus +
-                                    '" riskState="' + state +
-                                    '"/>';
-                            }
-                        }
-                        scaDeltascanDetailedAll = '<fixedSCAData app_id="'+appId+'" scanId="'+Object.keys(params.run)[0]+ '" lastscandate="'+lastscandate+ '" branch="'+branch+ '" prvBranch="'+prvScanBranch+'">' + scaDeltascanDetailedAll + '</fixedSCAData>';
-                    }
-                }
+               
             }
             if (params.run) {
                 //   scanId, offset
                 var scanId = Object.keys(params.run)[0];
-                response = this.getDetailedReport(scanId, params.run[Object.keys(params.run)[0]], lastscandate, secondlastscan, appname, branch, prvScanBranch, appId, applicationIdsStr, engine, delta_offset);
+                response = this.getDetailedReport(scanId, params.run[Object.keys(params.run)[0]], lastscandate, appname, branch, prvScanBranch, appId, applicationIdsStr, engine);
                 gs.debug(this.MSG + ' getDetailedReport response:' + response);
-                var xml_response = scanDetailedRootNodeStart + response + sastDeltaScanDetailedAll + scaDeltascanDetailedAll + scanDetailedRootNodeEnd;
+                var xml_response = scanDetailedRootNodeStart + response + scanDetailedRootNodeEnd;
             }
 
         } catch (err) {
@@ -190,66 +146,19 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         };
     },
 
-    getSASTDeltaDetailedReport: function(scanId, offset, lastscandate, secondlastscan, branch, prvScanBranch, appId, engine, delta_offset) {
-        try {
-            var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
-            var config = this.UTIL._getConfig(this.IMPLEMENTATION);
-            var SASTDeltascanDetailedAll = '';
-            var package_unique_id = " ";
-            var newoffset = offset - 1;
-            var ui_severity = config.severity;
-            var severityFilter = false;
-            if (null != ui_severity && '' != ui_severity) {
-                severityFilter = true;
-                var severity_array = this.UTIL.getSeverityFromUI(this.IMPLEMENTATION);
-            }
-            if (includesast == true && engine.indexOf('sast') != -1) {
-                if (secondlastscan != -1 && delta_offset > newoffset) {
-                    var responseDeltaScanReport = this.UTIL.getDeltaScan(this.IMPLEMENTATION, appId, scanId, secondlastscan, newoffset);
-                    if (responseDeltaScanReport != -1) {
-                        var jsonDeltaScanReportResp = JSON.parse(responseDeltaScanReport.getBody());
-                        for (var item in jsonDeltaScanReportResp.results) {
-                            var status = jsonDeltaScanReportResp.results[item].status;
-                            if (status == 'FIXED') {
-                                var severity = jsonDeltaScanReportResp.results[item].severity;
-
-                                if (severity_array.indexOf(severity) != -1) {
-                                    SASTDeltascanDetailedAll += '<result id="' + jsonDeltaScanReportResp.results[item].similarityID +
-                                        '" cweId="' + jsonDeltaScanReportResp.results[item].cweID +
-                                        '" source_severity="' + jsonDeltaScanReportResp.results[item].severity +
-                                        '" package_unique_id="' + package_unique_id +
-                                        '" state="' + jsonDeltaScanReportResp.results[item].state +
-                                        '" status="' + jsonDeltaScanReportResp.results[item].status +
-                                        '" app_id="' + appId +
-                                        '" last_scan_date="' + lastscandate +
-                                        '" scan_id="' + 'sast' + scanId + '">' +
-                                        '<resultHash><' + '![CDATA[' + jsonDeltaScanReportResp.results[item].resultHash + ']]' + '></resultHash></result>';
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (err) {
-            gs.info(this.MSG + " getSASTDeltaDetailedReport : Error while getting the SAST Delta detailed report: " + err);
-            throw err;
-        }
-        var sastDeltascanDetail = '<fixedSASTData app_id="'+appId+'" branch="'+branch+ '" prvBranch="'+prvScanBranch+'">' + SASTDeltascanDetailedAll + '</fixedSASTData>';
-        return sastDeltascanDetail;
-    },
-
-
-    getDetailedReport: function(scanId, offset, lastscandate, secondlastscan, appname, branch, prvScanBranch, appId, applicationIdsStr, engine, delta_offset) {
+    getDetailedReport: function(scanId, offset, lastscandate, appname, branch, prvScanBranch, appId, applicationIdsStr, engine) {
         try {
             var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
             var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
             var includekics = this.UTIL.importKicsFlaw(this.IMPLEMENTATION);
+            var includeContainerSecurity = this.UTIL.importContainerSecurityFlaw(this.IMPLEMENTATION);
             var config = this.UTIL._getConfig(this.IMPLEMENTATION);
             var apibaseurl = config.checkmarxone_api_base_url;
             var SCAscanDetailedAll = '';
             var SASTscanDetailedAll = '';
             // var SASTDeltascanDetailedAll = '';
             var KICSscanDetailedAll = '';
+            var conSecScanDetailedAll = '';
             var scanDetailedAll = '';
             var line = '';
             var ref = '';
@@ -422,6 +331,39 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             '<references><' + '![CDATA[' + notes + ']]' + '></references>' +
                             '<description><' + '![CDATA[' + jsonLastScanReportResp.results[item].description + ']]' + '></description></result>';
                     }
+
+                    if (includeContainerSecurity == true && jsonLastScanReportResp.results[item].type == "containers") {
+                        var conSecSeverity = jsonLastScanReportResp.results[item].severity;
+                        var packageName = jsonLastScanReportResp.results[item].data.packageName + jsonLastScanReportResp.results[item].data.packageVersion;
+                        var pathStr = jsonLastScanReportResp.results[item].data.packageName + jsonLastScanReportResp.results[item].data.packageVersion + jsonLastScanReportResp.results[item].data.imageName + jsonLastScanReportResp.results[item].data.imageTag + jsonLastScanReportResp.results[item].data.imageFilePath + jsonLastScanReportResp.results[item].data.imageOrigin;
+                        var digest = new GlideDigest();
+                        var result_hash = '' + digest.getSHA256Base64(pathStr);
+                        conSecScanDetailedAll += '<result id="' + jsonLastScanReportResp.results[item].similarityId + '" scan_type="' + 'containers' +
+                            '" cweId="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId +
+                            '" cweName="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cveName +
+                            '" category_name="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId +
+                            '" source_severity="' + jsonLastScanReportResp.results[item].severity +
+                            '" package_unique_id="' + package_unique_id +
+                            '" package_name="' + packageName + 
+                            '" location="' + jsonLastScanReportResp.results[item].data.imageFilePath +
+                            '" line_no="' + line +
+                            '" cvssScore="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cvssScore +
+                            '" recommendation="' + recommendedVersion +
+                            '" sourcefile="' + apibaseurl + '/container-security-results/' + appId + '/' + scanId + '/results/' +
+                            '" cvssVector="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cvss.access_vector +
+                            '" first_found_date="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt) +
+                            '" state="' + jsonLastScanReportResp.results[item].state +
+                            '" status="' + jsonLastScanReportResp.results[item].status +
+                            '" app_id="' + appId +
+                            '" branch="' + branch +
+                            '" prvBranch="' + prvScanBranch +
+                            '" last_scan_date="' + lastscandate +
+                            '" application_ids="' + applicationIdsStr +
+                            '" result_hash="' + result_hash +
+                            '" scan_id="' + 'CS' + scanId + '">' +
+                            '<references><' + '![CDATA[' + notes + ']]' + '></references>' +
+                            '<description><' + '![CDATA[' + jsonLastScanReportResp.results[item].description + ']]' + '></description></result>';
+                    } 
                 }
             }
             if (includesca == true) {
@@ -433,6 +375,9 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             }
             if (includekics == true) {
                 scanDetailedAll += KICSscanDetailedAll;
+            }
+            if (includeContainerSecurity == true) {
+                scanDetailedAll += conSecScanDetailedAll;
             }
         } catch (err) {
             gs.info(this.MSG + " getDetailedReport : Error while getting the detailed report: " + err);
@@ -783,13 +728,13 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-21 12:06:20</sys_created_on>
 <sys_id>891d8fed471f1110328ca368436d4334</sys_id>
-<sys_mod_count>386</sys_mod_count>
+<sys_mod_count>400</sys_mod_count>
 <sys_name>CheckmarxOneAppVulItemIntegration</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_891d8fed471f1110328ca368436d4334</sys_update_name>
-<sys_updated_by>apoorva.singh@checkmarx.com</sys_updated_by>
-<sys_updated_on>2024-12-17 14:53:40</sys_updated_on>
+<sys_updated_by>admin</sys_updated_by>
+<sys_updated_on>2025-01-20 08:55:38</sys_updated_on>
 </sys_script_include>
 </unload>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<unload unload_date="2024-12-20 12:24:35">
+<unload unload_date="2025-02-07 05:40:43">
 <sys_script_include action="INSERT_OR_UPDATE">
 <access>package_private</access>
 <active>true</active>
@@ -7,7 +7,9 @@
 <caller_access/>
 <client_callable>false</client_callable>
 <description>Wrapper class to assemble the components for Checkmarx One Configuration Calls.</description>
+<mobile_callable>false</mobile_callable>
 <name>CheckmarxOneConfigUtilBase</name>
+<sandbox_callable>false</sandbox_callable>
 <script><![CDATA[var CheckmarxOneConfigUtilBase = Class.create();
 CheckmarxOneConfigUtilBase.prototype = {
     initialize: function() {},
@@ -66,22 +68,24 @@ CheckmarxOneConfigUtilBase.prototype = {
                 "checkmarxone_api_base_url": gr.getValue("checkmarxone_api_base_url"),
                 "checkmarxone_server_url": gr.getValue("checkmarxone_server_url"),
                 "include_first_detection_date": gr.getValue("include_first_detection_date") === "1",
+                "include_only_similarity_id": gr.getValue("include_only_similarity_id") === "1",
                 "import_sca": gr.getValue("import_sca") === "1",
                 "import_sast": gr.getValue("import_sast") === "1",
                 "import_kics": gr.getValue("import_kics") === "1",
-				"exclude_dev_and_test_dependencies": gr.getValue("exclude_dev_and_test_dependencies") === "1",
+                "include_container_security": gr.getValue("include_container_security") === "1",
+                "exclude_dev_and_test_dependencies": gr.getValue("exclude_dev_and_test_dependencies") === "1",
                 "triaging_in_snow": gr.getValue("triaging_in_snow") === "1",
                 "vulnerability_threshold_level": gr.getValue("vulnerability_threshold_level"),
                 "scan_synchronization": gr.getValue("scan_synchronization"),
                 "access_token": gr.access_token.getDecryptedValue(),
                 "sync_only_primary_branch": gr.getValue("sync_only_primary_branch") === "1",
                 "list_projects": gr.getValue("list_of_project_id_s"),
-				"result_states": gr.getValue("result_states"),
-				"link": gr.getValue("link"),
+                "result_states": gr.getValue("result_states"),
+                "link": gr.getValue("link"),
                 "project_filter_by_name": gr.getValue("project_filter_by_name"),
                 "filter_project": gr.getValue("filter_project"),
-				"severity": gr.getValue("severity"),
-				"scan_type" : gs.nil(gr.getValue("scan_type")) ? "" : gr.getValue("scan_type"),
+                "severity": gr.getValue("severity"),
+                "scan_type": gs.nil(gr.getValue("scan_type")) ? "" : gr.getValue("scan_type"),
             };
 
             new sn_sec_int.Implementation().setConfiguration(instance, newconfig);
@@ -96,13 +100,13 @@ CheckmarxOneConfigUtilBase.prototype = {
 <sys_created_by>admin</sys_created_by>
 <sys_created_on>2022-11-17 05:45:19</sys_created_on>
 <sys_id>508f0d54471f1110328ca368436d43f8</sys_id>
-<sys_mod_count>64</sys_mod_count>
+<sys_mod_count>66</sys_mod_count>
 <sys_name>CheckmarxOneConfigUtilBase</sys_name>
 <sys_package display_value="Checkmarx One Vulnerability Integration" source="x_chec3_chexone">3d20e92d47471110328ca368436d436a</sys_package>
 <sys_policy/>
 <sys_scope display_value="Checkmarx One Vulnerability Integration">3d20e92d47471110328ca368436d436a</sys_scope>
 <sys_update_name>sys_script_include_508f0d54471f1110328ca368436d43f8</sys_update_name>
 <sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2024-11-05 10:44:52</sys_updated_on>
+<sys_updated_on>2025-01-21 07:27:57</sys_updated_on>
 </sys_script_include>
 </unload>
