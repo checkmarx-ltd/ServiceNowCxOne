@@ -1,0 +1,371 @@
+var CheckmarxOneAppVulItemProcessor = Class.create();
+CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.ApplicationVulnerabilityImportProcessorBase, {
+
+    MSG: 'CheckmarxOne Application Vulnerable Item Processor: ',
+    NOT_AVAILABLE: 'Not Available',
+    UTIL: new x_chec3_chexone.CheckmarxOneUtil(),
+
+    import_static_flaws: null,
+
+    process: function(attachment) {
+
+        if (attachment) {
+            try {
+                this.UTIL.validateXML(new GlideSysAttachment().getContent(attachment), 'error');
+                var doc = new XMLDocument2();
+                doc.parseXML(new GlideSysAttachment().getContent(attachment));
+                var result_node = doc.getNode('/scanResults');
+                if (result_node.toString().includes("Results")) {
+                    var listNode = doc.getNode('/scanResults/Results');
+                }
+
+
+            } catch (ex) {
+                gs.info("error reported" + new GlideSysAttachment().getContent(attachment));
+                gs.error(this.MSG + "Error occurred while validating or parsing the XML: " + ex);
+                throw ex;
+            }
+            var reportData = {};
+            var errorProcess = '';
+
+            var avitArr = [];
+            var config = this.UTIL._getConfig('1234');
+            var scan_synchronization = config.scan_synchronization.toString();
+
+            if (listNode) {
+                var iter = listNode.getChildNodeIterator();
+                while (iter.hasNext()) {
+                    try {
+                        var node = iter.next();
+                        reportData['source_app_id'] = node.getAttribute('app_id');
+                        reportData['source_scan_id'] = node.getAttribute('scan_id');
+                        reportData['last_scan_date'] = new GlideDateTime(node.getAttribute('last_scan_date'));
+                        reportData['scan_summary_name'] = reportData['source_scan_id'] + ' ' + reportData['last_scan_date'];
+                        if (node.getAttribute('scan_type') == 'kics') {
+                            reportData['scan_type'] = 'static';
+                        } else if (node.getAttribute('scan_type') == 'containers') {
+                            reportData['scan_type'] = 'sca';
+                        } else {
+                            reportData['scan_type'] = node.getAttribute('scan_type');
+                        }
+                        reportData['application_Id'] = node.getAttribute('application_ids').toString();
+                        var queryData = {};
+                        var nvdData = {};
+                        var resultObj = {};
+                        var projectId = node.getAttribute('app_id');
+                        var scan_type = node.getAttribute('scan_type');
+
+                        var source_severity_string = node.getAttribute('source_severity');
+                        if (source_severity_string == 'CRITICAL') {
+                            var source_severity = 0;
+                        } else if (source_severity_string == 'HIGH') {
+                            source_severity = 1;
+                        } else if (source_severity_string == 'MEDIUM') {
+                            source_severity = 2;
+                        } else if (source_severity_string == 'LOW') {
+                            source_severity = 3;
+                        } else if (source_severity_string == 'INFO') {
+                            source_severity = 4;
+                        } else {
+                            source_severity = 5;
+                        }
+
+                        queryData['category_name'] = node.getAttribute('category_name');
+                        var query_id = 'Checkmarx One' + "-" + node.getAttribute('id');
+                        var cwe_name = node.getAttribute('cweName');
+                        // var url = node.getAttribute('url');
+                        queryData['scan_type'] = reportData['scan_type'];
+                        queryData['source_severity'] = +source_severity;
+                        queryData['threat'] = '';
+                        reportData['cweId'] = node.getAttribute('cweId');
+                        queryData['cvss_base_score'] = node.getAttribute('cvssScore');
+                        queryData['cvss_vector'] = node.getAttribute('cvssVector');
+                        queryData['last_detection_date'] = reportData.last_scan_date.getDate();
+                        if (reportData['scan_type'] == 'static') {
+                            if (node.getAttribute('OWASPTop10') != '') {
+                                var owaspObj = {};
+                                owaspObj[gs.getMessage("OWASPTop10")] = node.getAttribute('OWASPTop10');
+                                queryData['owasp'] = JSON.stringify(owaspObj);
+                            }
+                            queryData['short_description'] = node.getAttribute('SANSTop25');
+                            resultObj['source_notes'] = node.getFirstChild().getTextContent().toString();
+                        }
+
+                        // to check if first_detection_date checkbox is selected
+                        var include_first_detection_date = this.UTIL.getFirstDetectionDate();
+                        if (include_first_detection_date) {
+                            queryData['first_detection_date'] = new GlideDateTime(node.getAttribute('first_found_date')).getDate();
+                            resultObj['first_found'] = new GlideDateTime(node.getAttribute('first_found_date')).getDate();
+                        }
+
+                        reportData['cweName'] = node.getAttribute('cweName');
+                        if (node.getAttribute('recommendation') != '') {
+                            resultObj['source_recommendation'] = 'Recommended version-' + node.getAttribute('recommendation');
+                        }
+                        var branch = node.getAttribute('branch');
+                        var prvBranch = node.getAttribute('prvBranch');
+                        var similarityIdToUpsert = '';
+                        if (scan_type == 'static') {
+                            var resultHash = '';
+                            var childIter = node.getChildNodeIterator();
+                            while (childIter.hasNext) {
+                                var childNode = childIter.next();
+                                if (childNode.getNodeName() == "resultHash") {
+                                    resultHash = childNode.getTextContent();
+                                    break;
+                                }
+                            }
+
+                            queryData['source_entry_id'] = 'Checkmarx One' + " CWE-" + reportData['cweId'];
+                            queryData['cwe_list'] = [{
+                                cwe_id: reportData['cweId'],
+                                name: queryData['category_name']
+                            }];
+                            var similarityId = node.getAttribute('id');
+                            var digest = new GlideDigest();
+                            var include_only_similarity_id = config.include_only_similarity_id;
+                            var similarityIdHash = similarityId + '_' + resultHash;
+                            resultObj['source_request'] = similarityId;
+                            if (include_only_similarity_id) {
+                                similarityIdToUpsert = similarityId;
+                                this._fixSimilarityId(similarityId, similarityIdHash, projectId);
+                            } else {
+                                this._handleSimilarityId(similarityId, similarityIdHash, projectId);
+                                similarityIdToUpsert = similarityIdHash;
+                            }
+                        }
+
+                        if (scan_type == 'sca') {
+                            queryData['source_entry_id'] = 'Checkmarx One' + "-" + node.getAttribute('id');
+                            var scaAvitId = node.getAttribute('id') + node.getAttribute('package_unique_id');
+                            similarityIdToUpsert = scaAvitId;
+                            resultObj['source_references'] = node.getFirstChild().getTextContent().toString();
+                            resultObj['source_notes'] = node.getAttribute('exploitable_method').toString();
+
+                        }
+                        if (scan_type == 'kics') {
+                            queryData['source_entry_id'] = 'Checkmarx One' + "-" + node.getAttribute('cweId');
+                            var kicsavitId = node.getAttribute('id');
+                            similarityIdToUpsert = kicsavitId;
+                        }
+
+                        if (scan_type == 'containers') {
+                            queryData['source_entry_id'] = 'Checkmarx One' + "-" + node.getAttribute('cweId');
+                            var consecAvitId = node.getAttribute('id') + '_' + node.getAttribute('result_hash');
+                            similarityIdToUpsert = consecAvitId;
+                        }
+
+                        if (branch == null || branch == '' || branch == '.unknown' || branch == 'undefined')
+                            resultObj['source_avit_id'] = similarityIdToUpsert;
+                        else {
+                            this._handleSimilarityIdHashForBranches(similarityIdToUpsert, projectId, prvBranch, branch, scan_synchronization);
+                            if (scan_synchronization == 'latest scan from each branch') {
+                                resultObj['source_avit_id'] = similarityIdToUpsert + branch;
+                            } else if (scan_synchronization == 'latest scan across all branches' || scan_synchronization == 'latest scan of primary branch') {
+                                resultObj['source_avit_id'] = similarityIdToUpsert;
+                            }
+                        }
+
+                        resultObj['source_app_id'] = reportData['source_app_id'];
+                        resultObj['scan_type'] = reportData['scan_type'];
+                        resultObj['package_unique_id'] = node.getAttribute('package_unique_id');
+                        resultObj['package_name'] = node.getAttribute('package_name');
+                        resultObj['location'] = node.getAttribute('location');
+                        resultObj['source_sdlc_status'] = 'Not Applicable';
+                        resultObj['source_link'] = node.getAttribute('sourcefile');
+                        if (node.getAttribute('line_no') != '') {
+                            resultObj['line_number'] = parseInt(node.getAttribute('line_no'));
+                        }
+                        resultObj['source_scan_id'] = reportData['source_scan_id'];
+                        resultObj['last_scan_date'] = reportData['last_scan_date'];
+                        resultObj['scan_summary_name'] = reportData['scan_summary_name'];
+                        resultObj['description'] = node.getLastChild().getTextContent().toString();
+
+                        resultObj['source_vulnerability_explanation'] = node.getLastChild().getTextContent().toString();
+                        if (reportData['scan_type'] == 'static') {
+                            var status = this.UTIL.getSASTRemediationStatus(node.getAttribute('status'), node.getAttribute('state'));
+                        } else {
+                            status = this.UTIL.getSCARemediationStatus(node.getAttribute('status'), node.getAttribute('state'));
+                        }
+
+                        resultObj['source_remediation_status'] = status;
+                        var infObj = {};
+                        infObj[gs.getMessage("Application Id")] = node.getAttribute('application_ids').toString();
+                        infObj[gs.getMessage("Branch Name")] = node.getAttribute('branch');
+                        infObj[gs.getMessage("Project Id")] = node.getAttribute('app_id');
+                        resultObj['source_additional_info'] = JSON.stringify(infObj);
+                        resultObj['source_finding_status'] = node.getAttribute('state');
+                        resultObj['last_found'] = reportData.last_scan_date.getDate();
+                        resultObj['source_severity'] = source_severity_string;
+                        resultObj['complies_with_policy'] = 'not_applicable';
+                        resultObj['source_entry_id'] = queryData['source_entry_id'];
+                        resultObj['category_name'] = queryData['category_name'];
+                        resultObj['project_branch'] = node.getAttribute('branch');
+                        this._handleFixedAVIT(reportData.last_scan_date, reportData.source_app_id, resultObj.project_branch, scan_synchronization);
+                        if (reportData['scan_type'] != 'static') {
+                            nvdData['cvss_base_score'] = node.getAttribute('cvssScore');
+                            nvdData['cvss_vector'] = node.getAttribute('cvssVector');
+                            this._handleCVE(nvdData, resultObj, cwe_name);
+                        }
+                        this._upsertQuery(queryData);
+                        this._upsertAVIT(resultObj);
+
+
+                    } catch (ex) {
+                        errorMessage = gs.getMessage("Error in retriving data for app vulnerability item integration!");
+                        gs.error(this.MSG + " " + errorMessage + " " + ex.message);
+                        errorProcess += " | " + ex.message;
+
+                    }
+
+                }
+            }
+
+            if (!gs.nil(errorProcess))
+                gs.error(this.MSG + "All errors that occurred while processing Vulnerability lists: " + errorProcess);
+            this.completeProcess(this.integrationProcessGr, this.import_counts);
+        } else
+            gs.warn(this.MSG + ':process called with no attachment');
+
+    },
+
+    //updating data to app vul entry table
+    _upsertQuery: function(data) {
+        try {
+            var result = this.AVR_API.createOrUpdateAppVulEntry(data);
+            if (!result)
+                return;
+            if (result.updated)
+                this.import_counts.updated++;
+            else if (result.inserted)
+                this.import_counts.inserted++;
+            else if (result.unchanged)
+                this.import_counts.unchanged++;
+        } catch (err) {
+            gs.error(this.MSG + " _upsert : Error while inserting data into ServiceNow App Vul Entry Table." + err);
+
+        }
+    },
+    //updating data to app vul item table
+    _upsertAVIT: function(data) {
+        try {
+            var result = this.AVR_API.createOrUpdateAVIT(data);
+            if (!result)
+                return;
+            if (result.updated) {
+                this.import_counts.updated++;
+            } else if (result.inserted) {
+                this.import_counts.inserted++;
+            } else if (result.unchanged) {
+                this.import_counts.unchanged++;
+            }
+
+        } catch (err) {
+            gs.error(this.MSG + " _upsert : Error while inserting data into ServiceNow App Vul Item Table." + err);
+        }
+    },
+
+    _handleSimilarityId: function(similarityId, similarityIdHash, projectId) {
+        var avit = new sn_vul.PagedGlideRecord('sn_vul_app_vulnerable_item');
+        avit.addQuery('source_avit_id', similarityId);
+        avit.setSortField("sys_id");
+        while (avit.next()) {
+            var appId = avit.gr.application_release.source_app_id;
+            if (appId == projectId) {
+                avit.gr.setValue('source_avit_id', similarityIdHash);
+                avit.gr.setValue('source_request', similarityId);
+                avit.gr.update();
+            }
+        }
+    },
+    _fixSimilarityId: function(similarityId, similarityIdHash, projectId) {
+        var avit = new sn_vul.PagedGlideRecord('sn_vul_app_vulnerable_item');
+		gs.info("similarityIdHash= "+ similarityIdHash + " projectId= " + projectId)  ;
+        avit.addEncodedQuery('source_avit_id='+ similarityIdHash + '^application_release.source_app_id=' + projectId);
+		gs.info("avit= "+ JSON.stringify(avit));
+        avit.setSortField("sys_id");
+        while (avit.next()) {
+            avit.gr.setValue('source_remediation_status', 'FIXED');
+            avit.gr.setValue('state', 3);
+            avit.gr.update('substate', 4);
+
+        }
+    },
+
+    _getAvitDetailsByProjectId: function(projectId) {
+        var avitArr = [];
+        var avit = new GlideRecord('sn_vul_app_vulnerable_item');
+        avit.addQuery('application_release.source_app_id', projectId);
+        avit.query();
+        while (avit.next()) {
+            if (null != avit && null != avit.source_avit_id && '' != avit.source_avit_id)
+                avitArr.push(avit.getValue('source_avit_id'));
+        }
+        return avitArr;
+    },
+
+    _handleSimilarityIdHashForBranches: function(similarityIdHash, projectId, oldScanBranch, scanBranch, scan_synchronization) {
+        var similarityIdToCheck = '';
+        var similarityIdToUpdate = '';
+
+        if (scan_synchronization == 'latest scan from each branch') {
+            similarityIdToCheck = similarityIdHash;
+            similarityIdToUpdate = similarityIdHash + scanBranch;
+        } else if ((scan_synchronization == 'latest scan across all branches' || scan_synchronization == 'latest scan of primary branch') && null != oldScanBranch && '' != oldScanBranch && 'undefined' != oldScanBranch && '.unknown' != oldScanBranch) {
+            similarityIdToCheck = similarityIdHash + oldScanBranch;
+            similarityIdToUpdate = similarityIdHash;
+        }
+
+        if (similarityIdToCheck != '' && similarityIdToUpdate != '') {
+            var avit = new sn_vul.PagedGlideRecord('sn_vul_app_vulnerable_item');
+            avit.addQuery('source_avit_id', similarityIdToCheck);
+            avit.setSortField("sys_id");
+            while (avit.next()) {
+                var appId = avit.gr.application_release.source_app_id;
+                if (appId == projectId) {
+                    avit.gr.setValue('source_avit_id', similarityIdToUpdate);
+                    avit.gr.setValue('project_branch', scanBranch);
+                    avit.gr.update();
+                }
+            }
+        }
+    },
+
+    _handleFixedAVIT: function(source_scan_id, projectId, branch, scan_synchronization) {
+        var avit = new sn_vul.PagedGlideRecord('sn_vul_app_vulnerable_item');
+        if (scan_synchronization == 'latest scan from each branch' && (branch != null || branch != '' || branch != '.unknown' || branch != 'undefined')) {
+            avit.addEncodedQuery('application_release.source_app_id=' + projectId + '^app_vul_scan_summaryNOT LIKE' + source_scan_id + '^state!=3^project_branch=' + branch);
+        } else {
+            avit.addEncodedQuery('application_release.source_app_id=' + projectId + '^app_vul_scan_summaryNOT LIKE' + source_scan_id + '^state!=3');
+        }
+        avit.setSortField("sys_id");
+        while (avit.next()) {
+            avit.gr.setValue('source_remediation_status', 'FIXED');
+            avit.gr.setValue('state', 3);
+            avit.gr.update('substate', 4);
+
+        }
+    },
+
+    _handleCVE: function(nvdData, resultObj, cve) {
+        var name = cve;
+        var url = resultObj.source_references;
+        var cvss_base_score = nvdData.cvss_base_score;
+        var cvss_vector = nvdData.cvss_vector;
+
+        // insert to sn_vul_nvd_entry
+        var nvd = new GlideRecord("sn_vul_nvd_entry");
+        var nvdExist = nvd.get("id", name);
+        if (!nvdExist) {
+            nvd.initialize();
+            nvd.setValue("id", name);
+            nvd.setValue("summary", url);
+            nvd.setValue("v3_base_score", cvss_base_score);
+            nvd.setValue("v3_attack_vector", cvss_vector);
+            nvd.setValue("source", "Checkmarx One");
+            nvd.setValue("integration_run", this.integrationProcessGr.integration_run + "");
+            nvdExist = nvd.insert();
+        }
+    },
+    type: 'CheckmarxOneAppVulItemProcessor'
+});
