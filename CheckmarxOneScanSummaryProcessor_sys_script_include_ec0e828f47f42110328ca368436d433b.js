@@ -22,6 +22,15 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                 if (node.toString().indexOf("conSecScanData") != -1) {
                     var containerSecurityNodes = doc.getNode('/scanData/conSecScanData/scans');
                 }
+                if (node.toString().indexOf("apiSecScanData") != -1) {
+                    var apiSecNodes = doc.getNode('/scanData/apiSecScanData/scans');
+                }
+                if (node.toString().indexOf("scoreCardScanData") != -1) {
+                    var scoreCardNodes = doc.getNode('/scanData/scoreCardScanData/scans');
+                }
+                if (node.toString().indexOf("secretDetectionScanData") != -1) {
+                    var secretDetectionNodes = doc.getNode('/scanData/secretDetectionScanData/scans');
+                }
 
             } catch (ex) {
                 gs.error(this.MSG + "Error occurred while validating or parsing the XML: " + ex);
@@ -36,7 +45,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         var SastappNode = iteration.next();
                         var Sastattributes = SastappNode.getAttributes();
                         var prvScanId = Sastattributes.prvScanId;
-						var prvBranch = Sastattributes.prvBranch;
+                        var prvBranch = Sastattributes.prvBranch;
                         //map attributes from CheckmarxOne into the servicenow scan summary table
                         sastdata['source_app_id'] = Sastattributes.app_id;
                         sastdata['source_scan_id'] = Sastattributes.id;
@@ -69,7 +78,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         data['detected_flaw_count'] = +attributes.total_no_flaws;
                         data['last_scan_date'] = new GlideDateTime(attributes.last_scan_date);
                         data['scan_summary_name'] = attributes.id + ' ' + data['last_scan_date'];
-                        data['tags'] = "Branch: " + attributes.branch + " | Old ScanId: " + scaPrvScanId  + " | Old Branch: " + prvBranch;
+                        data['tags'] = "Branch: " + attributes.branch + " | Old ScanId: " + scaPrvScanId + " | Old Branch: " + prvBranch;
                         data['scan_submitted_by'] = 'Scan Origin: ' + attributes.scan_origin + '\n' + 'Scan Source: ' + attributes.scan_source + '\n' + 'Scan Type: ' + attributes.scan_type + '\n';
                         this._upsert(data);
                     } catch (ex) {
@@ -94,7 +103,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         kicsdata['detected_flaw_count'] = +kicsattributes.total_no_flaws;
                         kicsdata['last_scan_date'] = new GlideDateTime(kicsattributes.last_scan_date);
                         kicsdata['scan_summary_name'] = kicsattributes.id + ' ' + kicsdata['last_scan_date'];
-                        kicsdata['tags'] = "Branch: " + kicsattributes.branch + " | Old ScanId: " + kicsPrvScanId  + " | Old Branch: " + prvBranch;
+                        kicsdata['tags'] = "Branch: " + kicsattributes.branch + " | Old ScanId: " + kicsPrvScanId + " | Old Branch: " + prvBranch;
                         kicsdata['scan_submitted_by'] = 'Scan Origin: ' + kicsattributes.scan_origin + '\n' + 'Scan Source: ' + kicsattributes.scan_source + '\n' + 'Scan Type: ' + kicsattributes.scan_type + '\n';
                         this._upsert(kicsdata);
                     } catch (ex) {
@@ -119,7 +128,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         conSecData['detected_flaw_count'] = +conSecAttributes.total_no_flaws;
                         conSecData['last_scan_date'] = new GlideDateTime(conSecAttributes.last_scan_date);
                         conSecData['scan_summary_name'] = conSecAttributes.id + ' ' + conSecData['last_scan_date'];
-                        conSecData['tags'] = "Branch: " + conSecAttributes.branch + " | Old ScanId: " + conSecPrvScanId  + " | Old Branch: " + prvBranch;
+                        conSecData['tags'] = "Branch: " + conSecAttributes.branch + " | Old ScanId: " + conSecPrvScanId + " | Old Branch: " + prvBranch;
                         conSecData['scan_submitted_by'] = 'Scan Origin: ' + conSecAttributes.scan_origin + '\n' + 'Scan Source: ' + conSecAttributes.scan_source + '\n' + 'Scan Type: ' + conSecAttributes.scan_type + '\n';
                         this._upsert(conSecData);
                     } catch (ex) {
@@ -130,6 +139,83 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                     }
                 }
             }
+            if (apiSecNodes) {
+                var apiSecData = {};
+                var apiSecIteration = apiSecNodes.getChildNodeIterator();
+                while (apiSecIteration.hasNext()) {
+                    try {
+                        var apiSecAppNode = apiSecIteration.next();
+                        var apiSecAttributes = apiSecAppNode.getAttributes();
+                        var apiSecPrvScanId = apiSecAttributes.prvScanId;
+                        // Map API Security attributes
+                        apiSecData['source_app_id'] = apiSecAttributes.app_id;
+                        apiSecData['source_scan_id'] = apiSecAttributes.id;
+                        apiSecData['detected_flaw_count'] = +apiSecAttributes.total_no_flaws;
+                        apiSecData['last_scan_date'] = new GlideDateTime(apiSecAttributes.last_scan_date);
+                        apiSecData['scan_summary_name'] = apiSecAttributes.id + ' ' + apiSecData['last_scan_date'];
+                        apiSecData['tags'] = "Branch: " + apiSecAttributes.branch + " | Old ScanId: " + apiSecPrvScanId + " | Old Branch: " + prvBranch;
+                        apiSecData['scan_submitted_by'] = 'Scan Origin: ' + apiSecAttributes.scan_origin + '\n' + 'Scan Source: ' + apiSecAttributes.scan_source + '\n' + 'Scan Type: ' + apiSecAttributes.scan_type + '\n';
+                        this._upsert(apiSecData);
+                    } catch (ex) {
+                        errorMessage = gs.getMessage("Error processing API Security scan data!");
+                        gs.error(this.MSG + errorMessage + " " + ex);
+                        errorProcess += " | " + ex.getMessage();
+                    }
+                }
+            }
+            if (scoreCardNodes) {
+                var scoreCardData = {};
+                var scoreCardIteration = scoreCardNodes.getChildNodeIterator();
+                while (scoreCardIteration.hasNext()) {
+                    try {
+                        var scoreCardAppNode = scoreCardIteration.next();
+                        var scoreCardAttributes = scoreCardAppNode.getAttributes();
+                        var scoreCardcPrvScanId = scoreCardAttributes.prvScanId;
+                        //map attributes from CheckmarxOne into the servicenow scan summary table
+                        scoreCardData['source_app_id'] = scoreCardAttributes.app_id;
+                        scoreCardData['source_scan_id'] = scoreCardAttributes.id;
+                        scoreCardData['detected_flaw_count'] = +scoreCardAttributes.total_no_flaws;
+                        scoreCardData['last_scan_date'] = new GlideDateTime(scoreCardAttributes.last_scan_date);
+                        scoreCardData['scan_summary_name'] = scoreCardAttributes.id + ' ' + scoreCardData['last_scan_date'];
+                        scoreCardData['tags'] = "Branch: " + scoreCardAttributes.branch + " | Old ScanId: " + scoreCardcPrvScanId + " | Old Branch: " + prvBranch;
+                        scoreCardData['scan_submitted_by'] = 'Scan Origin: ' + scoreCardAttributes.scan_origin + '\n' + 'Scan Source: ' +
+                            scoreCardAttributes.scan_source + '\n' + 'Scan Type: ' + scoreCardAttributes.scan_type + '\n';
+                        this._upsert(scoreCardData);
+                    } catch (ex) {
+                        errorMessage = gs.getMessage("Error in retriving data for scan list integration!");
+                        gs.error(this.MSG + "errorMessage " + ex);
+                        errorProcess += " | " + ex.getMessage();
+                        //throw ex;
+                    }
+                }
+            }
+            if (secretDetectionNodes) {
+                var secretDetectionData = {};
+                var secretDetectionIteration = secretDetectionNodes.getChildNodeIterator();
+                while (secretDetectionIteration.hasNext()) {
+                    try {
+                        var secretDetectionAppNode = secretDetectionIteration.next();
+                        var secretDetectionAttributes = secretDetectionAppNode.getAttributes();
+                        var secretDetectionPrvScanId = secretDetectionAttributes.prvScanId;
+                        //map attributes from CheckmarxOne into the servicenow scan summary table
+                        secretDetectionData['source_app_id'] = secretDetectionAttributes.app_id;
+                        secretDetectionData['source_scan_id'] = secretDetectionAttributes.id;
+                        secretDetectionData['detected_flaw_count'] = +secretDetectionAttributes.total_no_flaws;
+                        secretDetectionData['last_scan_date'] = new GlideDateTime(secretDetectionAttributes.last_scan_date);
+                        secretDetectionData['scan_summary_name'] = secretDetectionAttributes.id + ' ' + secretDetectionAttributes['last_scan_date'];
+                        secretDetectionData['tags'] = "Branch: " + secretDetectionAttributes.branch + " | Old ScanId: " + secretDetectionAttributes + " | Old Branch: " + prvBranch;
+                        secretDetectionData['scan_submitted_by'] = 'Scan Origin: ' + secretDetectionAttributes.scan_origin + '\n' + 'Scan Source: ' +
+                            secretDetectionAttributes.scan_source + '\n' + 'Scan Type: ' + secretDetectionAttributes.scan_type + '\n';
+                        this._upsert(secretDetectionData);
+                    } catch (ex) {
+                        errorMessage = gs.getMessage("Error in retriving data for scan list integration!");
+                        gs.error(this.MSG + "errorMessage " + ex);
+                        errorProcess += " | " + ex.getMessage();
+                        //throw ex;
+                    }
+                }
+            }
+
             if (!gs.nil(errorProcess))
                 gs.error(this.MSG + "All errors that occurred while processing scan summary: " + errorProcess);
             this.completeProcess(this.integrationProcessGr, this.import_counts);

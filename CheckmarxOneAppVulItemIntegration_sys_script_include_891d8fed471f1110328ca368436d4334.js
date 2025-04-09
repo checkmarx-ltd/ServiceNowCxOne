@@ -6,9 +6,14 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 
     retrieveData: function() {
         var response = "<null/>";
+        var apiSecResponse = "<null/>";
         try {
             var params = this._getParameters(this.PROCESS.getValue('parameters'));
+
             if (params.run != null) {
+                var integration_run = this.PROCESS.integration_run;
+
+
                 var appname = '';
                 var lastscandate = '';
                 var branch = '';
@@ -18,15 +23,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                 var applicationIdsStr = '';
                 var engines = [];
                 var engine = '';
-                var scanDetailedRootNodeStart = "<scanResults>";
                 var scanDetailedRootNodeEnd = "</scanResults>";
-                var reportLength = this.UTIL.getSASTVulcount(this.IMPLEMENTATION, Object.keys(params.run)[0]);
-                var loopLength = reportLength / 50;
-                var sast_offset = 0;
-                //in result api offset value start from 0 and increment by 1, here it acts like page instead of number of item like other api
-                for (var loop = 0; loop <= parseInt(loopLength); loop++) {
-                    sast_offset += 1;
-                }
                 var responseLastScanSummary = this.UTIL.getScanDetails(this.IMPLEMENTATION, Object.keys(params.run)[0]);
                 var jsonLastScanSummResp = JSON.parse(responseLastScanSummary.getBody());
                 //to map value of last_scan_date, project name and project Id in XML
@@ -43,6 +40,26 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                     branch += jsonLastScanSummResp.scans[value].branch;
                     appId += jsonLastScanSummResp.scans[value].projectId;
                     engines = jsonLastScanSummResp.scans[value].engines;
+
+                    if (engines.indexOf('microengines') != -1) {
+                        for (var item in jsonLastScanSummResp.scans[value].metadata.configs) {
+                            if (jsonLastScanSummResp.scans[value].metadata.configs[item].type == 'microengines') {
+                                var secretDetetction = jsonLastScanSummResp.scans[value].metadata.configs[item].value;
+                                if ('2ms' in secretDetetction) {
+                                    engines.push('SecretDetection');
+                                }
+                                if ('Scorecard' in secretDetetction) {
+                                    engines.push('Scorecard');
+                                }
+                            }
+                        }
+                    }
+                    if (engines.indexOf('containers') != -1) {
+                        engines.push('CS');
+                    }
+                    if (engines.indexOf('kics') != -1) {
+                        engines.push('IaC');
+                    }
                     engine = engines.toString();
                 }
 
@@ -77,7 +94,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             //     prvScanSummaryBranch = record1.substring(8);
                             if (record2.length > 12)
                                 prvScanId = record2.substring(12);
-                            if (record3.length > 12 &&  record3.substring(12) != undefined &&  record3.substring(12) != 'undefined' &&  record3.substring(12) != null)
+                            if (record3.length > 12 && record3.substring(12) != undefined && record3.substring(12) != 'undefined' && record3.substring(12) != null)
                                 prvScanSummaryBranch = record3.substring(12);
                             if (scan_synchronization == 'latest scan from each branch' && branch == prvScanSummaryBranch) {
                                 isBranchMatched = 'true';
@@ -85,8 +102,8 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                                 isBranchMatched = 'true';
                             }
                             if (isBranchMatched == 'true') {
-                                if((null == lastDate || '' == lastDate || 'undefined' == lastDate) || (lastDate && lastScanSummaryDate >= lastDate)) {
-                                    prvScanBranch = prvScanSummaryBranch; 
+                                if ((null == lastDate || '' == lastDate || 'undefined' == lastDate) || (lastDate && lastScanSummaryDate >= lastDate)) {
+                                    prvScanBranch = prvScanSummaryBranch;
                                     lastDate = lastScanSummaryDate;
                                 }
                             }
@@ -99,22 +116,55 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                     applicationIdsStr = applicationIds.toString();
                 }
                 var offset = params.run[Object.keys(params.run)[0]];
-               
+
             }
+            var xml_response = '';
             if (params.run) {
                 //   scanId, offset
                 var scanId = Object.keys(params.run)[0];
-                response = this.getDetailedReport(scanId, params.run[Object.keys(params.run)[0]], lastscandate, appname, branch, prvScanBranch, appId, applicationIdsStr, engine);
-                gs.debug(this.MSG + ' getDetailedReport response:' + response);
-                var xml_response = scanDetailedRootNodeStart + response + scanDetailedRootNodeEnd;
+                if (offset > 0) {
+                    response = this.getDetailedReport(scanId, params.run[Object.keys(params.run)[0]], lastscandate, appname, branch, prvScanBranch, appId, applicationIdsStr, engine);
+                    if (response == "<null/>") {
+                        xml_response = '<scanResults><Results></Results><ApiSecResults></ApiSecResults></scanResults>';
+                    } else {
+                        xml_response = response + '<Results></Results>' + scanDetailedRootNodeEnd;
+                    }
+
+                } else {
+                    var process = this._getLatestProcessRecord();
+                    if (process == 'false' && process != '') {
+                        var trial = 0;
+                        while (trial < 100) {
+                            if (trial < 10) {
+                                this.customSleep(3000);
+                            } else {
+                                this.customSleep(5000);
+                            }
+                            var status = this._getLatestProcessRecord();
+                            if (status == 'true' && process != '') {
+                                break;
+                            }
+                            trial++;
+                        }
+                    }
+
+                    apiSecResponse = this.getApiSecReport(scanId, params.run[Object.keys(params.run)[0]], lastscandate, appname, branch, prvScanBranch, appId, applicationIdsStr, engine);
+
+                    if (apiSecResponse == "<null/>") {
+                        xml_response = '<scanResults><Results></Results><ApiSecResults></ApiSecResults></scanResults>';
+                    } else {
+                        xml_response = apiSecResponse + scanDetailedRootNodeEnd;
+                    }
+                }
+
             }
 
         } catch (err) {
             gs.error(this.MSG + " retrieveData : Error occured while getting report. Skipping buildId: " + Object.keys(params.run)[0] + " with error: " + err);
-            xml_response = '<scanResults><Results></Results></scanResults>';
+            xml_response = '<scanResults><Results></Results><ApiSecResults></ApiSecResults></scanResults>';
         }
-        if (response == "<null/>") {
-            xml_response = '<scanResults><Results></Results></scanResults>';
+        if (xml_response == "") {
+            xml_response = '<scanResults><Results></Results><ApiSecResults></ApiSecResults></scanResults>';
         }
         params = this._serializeParameters(this._nextParameters(params));
         this.setNextRunParameters(params);
@@ -140,13 +190,19 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
             var includekics = this.UTIL.importKicsFlaw(this.IMPLEMENTATION);
             var includeContainerSecurity = this.UTIL.importContainerSecurityFlaw(this.IMPLEMENTATION);
+            var includeSecretDetection = this.UTIL.importSecretDetectionFlaw(this.IMPLEMENTATION);
+            var includeScoreCard = this.UTIL.importScoreCardFlaw(this.IMPLEMENTATION);
+            var includeApiSecurity = this.UTIL.importApiSecurityFlaw(this.IMPLEMENTATION);
             var config = this.UTIL._getConfig(this.IMPLEMENTATION);
             var apibaseurl = config.checkmarxone_api_base_url;
+            var basicContent = '<scanResults app_id="' + appId + '"  scan_id="' + scanId + '" last_scan_date="' + lastscandate + '" branch="' + branch +  '"  engine="' + engine + '" ><Results>';
             var SCAscanDetailedAll = '';
             var SASTscanDetailedAll = '';
             // var SASTDeltascanDetailedAll = '';
             var KICSscanDetailedAll = '';
             var conSecScanDetailedAll = '';
+            var secretDetectionScanDetailedAll = '';
+            var scorecardScanDetailedAll = '';
             var scanDetailedAll = '';
             var line = '';
             var ref = '';
@@ -179,7 +235,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             for (item in jsonLastScanReportResp.results) {
                 if (((resultStateFilter == true && (result_state_array.indexOf(jsonLastScanReportResp.results[item].state) != -1)) ||
                         resultStateFilter == false) && (severity_array.indexOf(jsonLastScanReportResp.results[item].severity.toUpperCase())) != -1) {
-                    if (includesast == true && engine.indexOf('sast') != -1 && jsonLastScanReportResp.results[item].type == "sast") {
+                    if (includesast == true && jsonLastScanReportResp.results[item].type == "sast") {
                         var isSastScanIncluded = 'false';
                         var scanTypeToCheck = '';
                         if (null == configScanType || '' == configScanType)
@@ -199,7 +255,6 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                                     sast_path += full_path;
                                 }
                             }
-
                             var sastScanUrl = '';
 
                             if (!jsonLastScanReportResp.results[item].data.resultHash.indexOf('/') == -1) {
@@ -207,7 +262,9 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             } else {
                                 sastScanUrl = apibaseurl + '/results/' + scanId + '/' + appId + '/sast';
                             }
+                            var sastId = jsonLastScanReportResp.results[item].id;
                             SASTscanDetailedAll += '<result id="' + jsonLastScanReportResp.results[item].similarityId + '" scan_type="' + scan_type +
+                                '" sast_id="' + sastId +
                                 '" cweId="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId +
                                 '" cweName="' + jsonLastScanReportResp.results[item].data.queryName +
                                 '" category_name="' + jsonLastScanReportResp.results[item].data.queryName +
@@ -235,29 +292,23 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                         }
                     }
 
-                    if (includesca == true && (jsonLastScanReportResp.results[item].type == "sca" ||
-                            jsonLastScanReportResp.results[item].type == "sca-container")) {
+                    if (includesca == true && jsonLastScanReportResp.results[item].type == "sca") {
+                        var exploitable_method = '';
+                        for (var k in jsonLastScanReportResp.results[item].data.packageData) {
+                            var url = jsonLastScanReportResp.results[item].data.packageData[k].url;
+                            ref += url + ',  ';
+                            var sca_packageID = jsonLastScanReportResp.results[item].data.packageIdentifier;
+                            recommendedVersion = jsonLastScanReportResp.results[item].data.recommendedVersion;
+                        }
 
-                        if (jsonLastScanReportResp.results[item].type == "sca") {
-                            var exploitable_method = '';
-                            for (var k in jsonLastScanReportResp.results[item].data.packageData) {
-                                var url = jsonLastScanReportResp.results[item].data.packageData[k].url;
-                                ref += url + ',  ';
-                                var sca_packageID = jsonLastScanReportResp.results[item].data.packageIdentifier;
-                                recommendedVersion = jsonLastScanReportResp.results[item].data.recommendedVersion;
+                        if (jsonLastScanReportResp.results[item].data.exploitableMethods != null) {
+
+                            for (var exp in jsonLastScanReportResp.results[item].data.exploitableMethods) {
+                                var exp_path = 'fullName= ' + jsonLastScanReportResp.results[item].data.exploitableMethods[exp].fullName +
+                                    ' || SourceFile= ' + jsonLastScanReportResp.results[item].data.exploitableMethods[exp].sourceFile + ';  ';
                             }
 
-                            if (jsonLastScanReportResp.results[item].data.exploitableMethods != null) {
-
-                                for (var exp in jsonLastScanReportResp.results[item].data.exploitableMethods) {
-                                    var exp_path = 'fullName= ' + jsonLastScanReportResp.results[item].data.exploitableMethods[exp].fullName +
-                                        ' || SourceFile= ' + jsonLastScanReportResp.results[item].data.exploitableMethods[exp].sourceFile + ';  ';
-                                }
-
-                                exploitable_method = 'Exploitable methods: ' + exp_path;
-                            }
-                        } else {
-                            sca_packageID = jsonLastScanReportResp.results[item].data.packageName + ' version: ' + jsonLastScanReportResp.results[item].data.packageVersion;
+                            exploitable_method = 'Exploitable methods: ' + exp_path;
                         }
                         var scaseverity = jsonLastScanReportResp.results[item].severity;
                         SCAscanDetailedAll += '<result id="' + jsonLastScanReportResp.results[item].id +
@@ -325,20 +376,24 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                         var packageName = jsonLastScanReportResp.results[item].data.packageName + jsonLastScanReportResp.results[item].data.packageVersion;
                         var pathStr = jsonLastScanReportResp.results[item].data.packageName + jsonLastScanReportResp.results[item].data.packageVersion + jsonLastScanReportResp.results[item].data.imageName + jsonLastScanReportResp.results[item].data.imageTag + jsonLastScanReportResp.results[item].data.imageFilePath + jsonLastScanReportResp.results[item].data.imageOrigin;
                         var digest = new GlideDigest();
+                        var access_vector = '';
                         var result_hash = '' + digest.getSHA256Base64(pathStr);
+                        if (jsonLastScanReportResp.results[item].vulnerabilityDetails.cvss != null && jsonLastScanReportResp.results[item].vulnerabilityDetails.cvss != '') {
+                            access_vector = jsonLastScanReportResp.results[item].vulnerabilityDetails.cvss.access_vector;
+                        }
                         conSecScanDetailedAll += '<result id="' + jsonLastScanReportResp.results[item].similarityId + '" scan_type="' + 'containers' +
                             '" cweId="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId +
                             '" cweName="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cveName +
                             '" category_name="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId +
                             '" source_severity="' + jsonLastScanReportResp.results[item].severity +
                             '" package_unique_id="' + package_unique_id +
-                            '" package_name="' + packageName + 
+                            '" package_name="' + packageName +
                             '" location="' + jsonLastScanReportResp.results[item].data.imageFilePath +
                             '" line_no="' + line +
                             '" cvssScore="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cvssScore +
                             '" recommendation="' + recommendedVersion +
                             '" sourcefile="' + apibaseurl + '/container-security-results/' + appId + '/' + scanId + '/results/' +
-                            '" cvssVector="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cvss.access_vector +
+                            '" cvssVector="' + access_vector +
                             '" first_found_date="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt) +
                             '" state="' + jsonLastScanReportResp.results[item].state +
                             '" status="' + jsonLastScanReportResp.results[item].status +
@@ -351,7 +406,74 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             '" scan_id="' + 'CS' + scanId + '">' +
                             '<references><' + '![CDATA[' + notes + ']]' + '></references>' +
                             '<description><' + '![CDATA[' + jsonLastScanReportResp.results[item].description + ']]' + '></description></result>';
-                    } 
+                    }
+                    // secret detection
+                    if (includeSecretDetection == true && jsonLastScanReportResp.results[item].type == "sscs-secret-detection") {
+                        var secretDetectionSeverity = jsonLastScanReportResp.results[item].severity;
+                        secretDetectionScanDetailedAll += '<result id="' + jsonLastScanReportResp.results[item].similarityId + '_' + jsonLastScanReportResp.results[item].id +
+                            '" scan_type="' + 'SecretDetection' +
+                            '" cweId="' + jsonLastScanReportResp.results[item].id +
+                            '" cweName="' + '' +
+                            '" category_name="' + jsonLastScanReportResp.results[item].data.ruleName +
+                            '" source_severity="' + jsonLastScanReportResp.results[item].severity +
+                            '" package_unique_id="' + package_unique_id +
+                            '" package_name="' + package_name +
+                            '" location="' + jsonLastScanReportResp.results[item].data.fileName +
+                            '" line_no="' + jsonLastScanReportResp.results[item].data.line +
+                            '" cvssScore="' + cvssScore +
+                            '" recommendation="' + recommendedVersion +
+                            '" sourcefile="' + apibaseurl + '/results/' + scanId + '/' + appId + '/kics' +
+                            '" cvssVector="' + cvssVector +
+                            '" first_found_date="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt) +
+                            '" state="' + jsonLastScanReportResp.results[item].state +
+                            '" status="' + jsonLastScanReportResp.results[item].status +
+                            '" app_id="' + appId +
+                            '" branch="' + branch +
+                            '" prvBranch="' + prvScanBranch +
+                            '" last_scan_date="' + lastscandate +
+                            '" application_ids="' + applicationIdsStr +
+                            '" scan_id="' + 'SecretDetection' + scanId + '">' +
+                            '<source_notes><' + '![CDATA[' + jsonLastScanReportResp.results[item].data.ruleDescription + ']]' + '></source_notes>' +
+                            '<remediation><' + '![CDATA[' + 'Remediation: ' + jsonLastScanReportResp.results[item].data.remediation + ', Remediation link:' +
+                            jsonLastScanReportResp.results[item].data.remediationLink +
+                            ', Remediation Additional= ' + jsonLastScanReportResp.results[item].data.remediationAdditional + ']]' + '></remediation>' +
+                            '<description><' + '![CDATA[' + jsonLastScanReportResp.results[item].description + ']]' + '></description></result>';
+                    }
+
+
+                    // scorecard detection
+                    if (includeScoreCard == true && jsonLastScanReportResp.results[item].type == "sscs-scorecard") {
+                        var scorecardSeverity = jsonLastScanReportResp.results[item].severity;
+                        scorecardScanDetailedAll += '<result id="' + jsonLastScanReportResp.results[item].similarityId + '_' + jsonLastScanReportResp.results[item].id +
+                            '" scan_type="' + 'ScoreCard' +
+                            '" cweId="' + jsonLastScanReportResp.results[item].id +
+                            '" cweName="' + '' +
+                            '" category_name="' + jsonLastScanReportResp.results[item].data.ruleName +
+                            '" source_severity="' + jsonLastScanReportResp.results[item].severity +
+                            '" package_unique_id="' + package_unique_id +
+                            '" package_name="' + package_name +
+                            '" location="' + jsonLastScanReportResp.results[item].data.fileName +
+                            '" line_no="' + jsonLastScanReportResp.results[item].data.line +
+                            '" cvssScore="' + cvssScore +
+                            '" recommendation="' + recommendedVersion +
+                            '" sourcefile="' + apibaseurl + '/results/' + scanId + '/' + appId + '/kics' +
+                            '" cvssVector="' + cvssVector +
+                            '" first_found_date="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt) +
+                            '" state="' + jsonLastScanReportResp.results[item].state +
+                            '" status="' + jsonLastScanReportResp.results[item].status +
+                            '" app_id="' + appId +
+                            '" branch="' + branch +
+                            '" prvBranch="' + prvScanBranch +
+                            '" last_scan_date="' + lastscandate +
+                            '" application_ids="' + applicationIdsStr +
+                            '" scan_id="' + 'ScoreCard' + scanId + '">' +
+                            '<source_notes><' + '![CDATA[' + jsonLastScanReportResp.results[item].data.ruleDescription + ']]' + '></source_notes>' +
+                            '<remediation><' + '![CDATA[' + 'Remediation: ' + jsonLastScanReportResp.results[item].data.remediation + ', Remediation link:' +
+                            jsonLastScanReportResp.results[item].data.remediationLink +
+                            ', Remediation Additional= ' + jsonLastScanReportResp.results[item].data.remediationAdditional + ']]' + '></remediation>' +
+                            '<description><' + '![CDATA[' + jsonLastScanReportResp.results[item].description + ']]' + '></description></result>';
+                    }
+
                 }
             }
             if (includesca == true) {
@@ -367,12 +489,70 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             if (includeContainerSecurity == true) {
                 scanDetailedAll += conSecScanDetailedAll;
             }
+            if (includeScoreCard) {
+                scanDetailedAll += scorecardScanDetailedAll;
+            }
+            if (includeSecretDetection) {
+                scanDetailedAll += secretDetectionScanDetailedAll;
+            }
         } catch (err) {
             gs.info(this.MSG + " getDetailedReport : Error while getting the detailed report: " + err);
             throw err;
         }
-        var reportcontent = '<Results>' + scanDetailedAll + '</Results>';
+        var reportcontent = basicContent + scanDetailedAll + '</Results>';
         return reportcontent;
+    },
+
+    getApiSecReport: function(scanId, offset, lastscandate, appname, branch, prvScanBranch, appId, applicationIdsStr, engine) {
+        try {
+            var newoffset = offset - offset * 2;
+            var basicContent = '<scanResults app_id="' + appId + '"  scan_id="' + scanId + '" last_scan_date="' + lastscandate + '" branch="' + branch + '"><Results></Results><ApiSecResults>';
+            var apiSecScanDetailedAll = '';
+            var responseApiSecScanReport = this.UTIL.getApiSecVulInfo(this.IMPLEMENTATION, scanId, newoffset);
+            var jsonApiSecScanReportResp = JSON.parse(responseApiSecScanReport.getBody());
+
+            var config = this.UTIL._getConfig(this.IMPLEMENTATION);
+            var resultState = config.result_states;
+            var resultStateFilter = !!resultState;
+            var result_state_array = resultStateFilter ? this.UTIL.getResultStateFromUI(this.IMPLEMENTATION) : [];
+
+            var ui_severity = config.severity;
+            var severity_array = this.UTIL.getSeverityFromUI(this.IMPLEMENTATION);
+
+            for (var entry in jsonApiSecScanReportResp.entries) {
+                if (((resultStateFilter && result_state_array.includes(jsonApiSecScanReportResp.entries[entry].state)) ||
+                        !resultStateFilter) &&
+                    severity_array.includes(jsonApiSecScanReportResp.entries[entry].severity.toUpperCase())) {
+
+                    var affectedUrl = jsonApiSecScanReportResp.entries[entry].http_method + " " + jsonApiSecScanReportResp.entries[entry].url;
+                    apiSecScanDetailedAll += '<apisec appId="' + appId +
+                        '" scanId="' + scanId +
+                        '" sast_risk_id="' + jsonApiSecScanReportResp.entries[entry].sast_risk_id +
+                        '" affected_url="' + affectedUrl + '"/>';
+                }
+            }
+            var reportcontent = basicContent + apiSecScanDetailedAll + '</ApiSecResults>';
+            return reportcontent;
+
+        } catch (err) {
+            gs.error(this.MSG + " getApiSecReport : Error processing API Security report: " + err);
+            throw err;
+        }
+    },
+
+
+    //no system function for scoped application like this integration
+    customSleep: function(ms) {
+        try {
+            var endSleep = new GlideDuration().getNumericValue() + ms;
+            while (new GlideDuration().getNumericValue() < endSleep) {
+                //wait 
+            }
+        } catch (err) {
+            gs.error(this.MSG + " :customSleep :Error in customSleep().");
+            throw err;
+        }
+        return;
     },
 
 
@@ -400,6 +580,27 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             scanType = 'fullScan';
 
         return scanType;
+    },
+
+    _getLatestProcessRecord: function() {
+        var run = this.PROCESS.integration_run;
+        var number_arr = [];
+        var state = "complete";
+        var return_value = '';
+        var processGr = new GlideRecord('sn_vul_integration_process');
+        processGr.addQuery('integration_run', run + "");
+        processGr.addQuery("state", "IN", "waitComplete,complete");
+        processGr.query();
+        while (processGr.next()) {
+            if (processGr.state == 'complete') {
+                return_value = 'true';
+                continue;
+            } else {
+                return_value = 'false';
+                break;
+            }
+        }
+        return return_value;
     },
 
     // Get all the OWASP Top 10 compliances as a concatenated string with comma.
@@ -493,7 +694,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                                     scans.push(scanId);
                                 } else {
                                     scanId = this._getScanIdFromJSON(scanJson, appId);
-                                    if (scanId && scanId != '' && scanId != 'undefined') 
+                                    if (scanId && scanId != '' && scanId != 'undefined')
                                         scans.push(scanId);
                                 }
                             } else if (scan_synchronization == 'latest scan from each branch') {
@@ -537,6 +738,9 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
         var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
         var includekics = this.UTIL.importKicsFlaw(this.IMPLEMENTATION);
+        var includeContainerSecurity = this.UTIL.importContainerSecurityFlaw(this.IMPLEMENTATION);
+        var includeSecretDetection = this.UTIL.importSecretDetectionFlaw(this.IMPLEMENTATION);
+        var includeScoreCard = this.UTIL.importScoreCardFlaw(this.IMPLEMENTATION);
         for (var item in scanJson.scans) {
             var projectId = scanJson.scans[item].projectId;
             var projectScanId = scanJson.scans[item].id;
@@ -554,6 +758,18 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                     if (scanJson.scans[item].engines.toString().indexOf("kics") != -1)
                         includeScan = 'true';
                 }
+                if (includeContainerSecurity) {
+                    if (scanJson.scans[item].engines.toString().indexOf("containers") != -1)
+                        includeScan = 'true';
+                }
+                if (includeSecretDetection) {
+                    if (scanJson.scans[item].engines.toString().indexOf("microengines") != -1)
+                        includeScan = 'true';
+                }
+                if (includeScoreCard) {
+                    if (scanJson.scans[item].engines.toString().indexOf("microengines") != -1)
+                        includeScan = 'true';
+                }
             }
             if (includeScan == 'true') {
                 scanId = projectScanId;
@@ -569,6 +785,10 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
         var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
         var includekics = this.UTIL.importKicsFlaw(this.IMPLEMENTATION);
+        var includeContainerSecurity = this.UTIL.importContainerSecurityFlaw(this.IMPLEMENTATION);
+        var includeSecretDetection = this.UTIL.importSecretDetectionFlaw(this.IMPLEMENTATION);
+        var includeScoreCard = this.UTIL.importScoreCardFlaw(this.IMPLEMENTATION);
+        var includeApiSecurity = this.UTIL.importApiSecurityFlaw(this.IMPLEMENTATION);
         var project_primary_branch_list = this.UTIL.getProjectPrimaryBranchList(this.IMPLEMENTATION);
         var primaryBranch = this.UTIL.getPrimaryBranchByProjectId(project_primary_branch_list, appId);
         if (null != primaryBranch && '' != primaryBranch) {
@@ -590,6 +810,19 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                         if (scanJson.scans[item].engines.toString().indexOf("kics") != -1)
                             includeScan = 'true';
                     }
+
+                    if (includeContainerSecurity) {
+                        if (scanJson.scans[item].engines.toString().indexOf("containers") != -1)
+                            includeScan = 'true';
+                    }
+                    if (includeSecretDetection) {
+                        if (scanJson.scans[item].engines.toString().indexOf("microengines") != -1)
+                            includeScan = 'true';
+                    }
+                    if (includeScoreCard) {
+                        if (scanJson.scans[item].engines.toString().indexOf("microengines") != -1)
+                            includeScan = 'true';
+                    }
                 }
                 if (includeScan == 'true') {
                     scanId = projectScanId;
@@ -608,6 +841,10 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
         var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
         var includekics = this.UTIL.importKicsFlaw(this.IMPLEMENTATION);
+        var includeContainerSecurity = this.UTIL.importContainerSecurityFlaw(this.IMPLEMENTATION);
+        var includeSecretDetection = this.UTIL.importSecretDetectionFlaw(this.IMPLEMENTATION);
+        var includeScoreCard = this.UTIL.importScoreCardFlaw(this.IMPLEMENTATION);
+        var includeApiSecurity = this.UTIL.importApiSecurityFlaw(this.IMPLEMENTATION);
         var branches = this.UTIL.getProjectBranchList(this.IMPLEMENTATION, appId);
         if (null != branches && '' != branches) {
             for (var item in scanJson.scans) {
@@ -626,6 +863,19 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                     }
                     if (includekics) {
                         if (scanJson.scans[item].engines.toString().indexOf("kics") != -1)
+                            includeScan = 'true';
+                    }
+
+                    if (includeContainerSecurity) {
+                        if (scanJson.scans[item].engines.toString().indexOf("containers") != -1)
+                            includeScan = 'true';
+                    }
+                    if (includeSecretDetection) {
+                        if (scanJson.scans[item].engines.toString().indexOf("microengines") != -1)
+                            includeScan = 'true';
+                    }
+                    if (includeScoreCard) {
+                        if (scanJson.scans[item].engines.toString().indexOf("microengines") != -1)
                             includeScan = 'true';
                     }
                 }
@@ -657,6 +907,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
     _getoffsets: function(appId, scanId) {
         var offsets = [];
         var offset = 0;
+        var includeApiSecurity = this.UTIL.importApiSecurityFlaw(this.IMPLEMENTATION);
         var reportLength = this.UTIL.getTotalVulcount(this.IMPLEMENTATION, scanId);
         var loopLength = reportLength / 50;
         //in result api offset value start from 0 and increment by 1, here it acts like page instead of number of item like other api
@@ -667,6 +918,21 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                 offsets.push(offsetId);
                 var date = new GlideDateTime();
             }
+        }
+        if (includeApiSecurity) {
+            var pageNumber = 0;
+            var apiSecLength = this.UTIL.getApiSecVulCount(this.IMPLEMENTATION, scanId);
+            var apiSec_loopLength = apiSecLength / 50;
+			if(apiSecLength > 0){
+            for (var j = 0; j <= parseInt(apiSec_loopLength) + 1; j++) {
+                pageNumber = j * -1;
+                var finalOffset = this._getoffset(scanId, pageNumber);
+                if (finalOffset && pageNumber != 0) {
+                    offsets.push(finalOffset);
+                }
+
+            }
+			}
         }
         return offsets;
     },

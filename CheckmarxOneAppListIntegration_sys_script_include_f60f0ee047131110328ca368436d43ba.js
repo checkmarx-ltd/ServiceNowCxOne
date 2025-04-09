@@ -46,7 +46,6 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
     //Creates XML summary for Projects
     getAppList: function(filteredCount, offset) {
         try {
-            var gr = new GlideRecord("x_chec3_chexone_checkmarxone_configuration");
             var appListRootNodeStart = "<appInfoList><xml id=\"checkmarxone\"><projects>";
             var appListRootNodeEnd = "</projects></xml></appInfoList>";
             var appListAll = '';
