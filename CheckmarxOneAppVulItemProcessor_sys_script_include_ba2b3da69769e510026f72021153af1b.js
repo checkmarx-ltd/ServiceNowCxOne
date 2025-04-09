@@ -15,10 +15,31 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                 var doc = new XMLDocument2();
                 doc.parseXML(new GlideSysAttachment().getContent(attachment));
                 var result_node = doc.getNode('/scanResults');
-                if (result_node.toString().includes("Results")) {
-                    var listNode = doc.getNode('/scanResults/Results');
+                var result_iter = result_node.getChildNodeIterator();
+                while (result_iter.hasNext()) {
+                    if (result_iter.next().getNodeName().includes("Results")) {
+                        var listNode = doc.getNode('/scanResults/Results');
+                    }
+                    if (result_iter.next().getNodeName().includes("ApiSecResults")) {
+                        var apiSecResultsNode = doc.getNode('/scanResults/ApiSecResults');
+                        // Process API Security results
+                        if (apiSecResultsNode) {
+                            var apiSecIter = apiSecResultsNode.getChildNodeIterator();
+                            while (apiSecIter.hasNext()) {
+                                try {
+                                    var apiSecNode = apiSecIter.next();
+                                    this._handleApiSecurity(
+                                        apiSecNode.getAttribute('appId'),
+                                        apiSecNode.getAttribute('scanId'),
+                                        apiSecNode.getAttribute('sast_risk_id'),
+                                        apiSecNode.getAttribute('affected_url'));
+                                } catch (ex) {
+                                    gs.error(this.MSG + "Error processing API Security entry: " + ex);
+                                }
+                            }
+                        }
+                    }
                 }
-
 
             } catch (ex) {
                 gs.info("error reported" + new GlideSysAttachment().getContent(attachment));
@@ -27,11 +48,45 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
             }
             var reportData = {};
             var errorProcess = '';
-
             var avitArr = [];
+            var engineArr = [];
             var config = this.UTIL._getConfig('1234');
+            var includesca = this.UTIL.importScaFlaw('1234');
+            var includesast = this.UTIL.importSastFlaw('1234');
+            var includekics = this.UTIL.importKicsFlaw('1234');
+            var includeContainerSecurity = this.UTIL.importContainerSecurityFlaw('1234');
+            var includeSecretDetection = this.UTIL.importSecretDetectionFlaw('1234');
+            var includeScoreCard = this.UTIL.importScoreCardFlaw('1234');
+            if (includesast) {
+                engineArr.push('sast');
+            }
+            if (includesca) {
+                engineArr.push('sca');
+            }
+            if (includekics) {
+                engineArr.push('IaC');
+            }
+            if (includeContainerSecurity) {
+                engineArr.push('CS');
+            }
+            if (includeSecretDetection) {
+                engineArr.push('SecretDetection');
+            }
+            if (includeScoreCard) {
+                engineArr.push('ScoreCard');
+            }
             var scan_synchronization = config.scan_synchronization.toString();
-
+            var include_only_similarity_id = config.include_only_similarity_id;
+            var basicData = {};
+            basicData['source_app_id'] = result_node.getAttribute('app_id');
+            basicData['app_name'] = result_node.getAttribute('app_id');
+            basicData['app_version'] = this.NOT_AVAILABLE;
+            basicData['source_scan_id'] = result_node.getAttribute('scan_id');
+            basicData['last_scan_date'] = new GlideDateTime(result_node.getAttribute('last_scan_date'));
+            basicData['scan_summary_name'] = basicData['source_scan_id'] + ' ' + basicData['last_scan_date'];
+            basicData['branch'] = result_node.getAttribute('branch');
+            basicData['engines'] = result_node.getAttribute('engine');
+            var project_branch = basicData.branch;
             if (listNode) {
                 var iter = listNode.getChildNodeIterator();
                 while (iter.hasNext()) {
@@ -41,7 +96,8 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         reportData['source_scan_id'] = node.getAttribute('scan_id');
                         reportData['last_scan_date'] = new GlideDateTime(node.getAttribute('last_scan_date'));
                         reportData['scan_summary_name'] = reportData['source_scan_id'] + ' ' + reportData['last_scan_date'];
-                        if (node.getAttribute('scan_type') == 'kics') {
+                        if (node.getAttribute('scan_type') == 'kics' || node.getAttribute('scan_type') == 'SecretDetection' ||
+                            node.getAttribute('scan_type') == 'ScoreCard') {
                             reportData['scan_type'] = 'static';
                         } else if (node.getAttribute('scan_type') == 'containers') {
                             reportData['scan_type'] = 'sca';
@@ -73,7 +129,6 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         queryData['category_name'] = node.getAttribute('category_name');
                         var query_id = 'Checkmarx One' + "-" + node.getAttribute('id');
                         var cwe_name = node.getAttribute('cweName');
-                        // var url = node.getAttribute('url');
                         queryData['scan_type'] = reportData['scan_type'];
                         queryData['source_severity'] = +source_severity;
                         queryData['threat'] = '';
@@ -88,7 +143,6 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                                 queryData['owasp'] = JSON.stringify(owaspObj);
                             }
                             queryData['short_description'] = node.getAttribute('SANSTop25');
-                            resultObj['source_notes'] = node.getFirstChild().getTextContent().toString();
                         }
 
                         // to check if first_detection_date checkbox is selected
@@ -123,16 +177,16 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                             }];
                             var similarityId = node.getAttribute('id');
                             var digest = new GlideDigest();
-                            var include_only_similarity_id = config.include_only_similarity_id;
                             var similarityIdHash = similarityId + '_' + resultHash;
                             resultObj['source_request'] = similarityId;
                             if (include_only_similarity_id) {
                                 similarityIdToUpsert = similarityId;
-                                this._fixSimilarityId(similarityId, similarityIdHash, projectId);
                             } else {
                                 this._handleSimilarityId(similarityId, similarityIdHash, projectId);
                                 similarityIdToUpsert = similarityIdHash;
                             }
+                            resultObj['source_notes'] = node.getFirstChild().getTextContent().toString();
+                            resultObj['source_exploit'] = node.getAttribute('sast_id');
                         }
 
                         if (scan_type == 'sca') {
@@ -147,12 +201,29 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                             queryData['source_entry_id'] = 'Checkmarx One' + "-" + node.getAttribute('cweId');
                             var kicsavitId = node.getAttribute('id');
                             similarityIdToUpsert = kicsavitId;
+                            resultObj['source_notes'] = node.getFirstChild().getTextContent().toString();
                         }
 
                         if (scan_type == 'containers') {
                             queryData['source_entry_id'] = 'Checkmarx One' + "-" + node.getAttribute('cweId');
                             var consecAvitId = node.getAttribute('id') + '_' + node.getAttribute('result_hash');
                             similarityIdToUpsert = consecAvitId;
+                        }
+                        if (scan_type == 'SecretDetection' || scan_type == 'ScoreCard') {
+                            queryData['source_entry_id'] = 'Checkmarx One' + "-" + node.getAttribute('cweId');
+                            var secretDetectionAvitId = node.getAttribute('id');
+                            similarityIdToUpsert = secretDetectionAvitId;
+                            var remediation = '';
+                            var remediationIter = node.getChildNodeIterator();
+                            while (remediationIter.hasNext) {
+                                var remediationNode = remediationIter.next();
+                                if (remediationNode.getNodeName() == "remediation") {
+                                    remediation = remediationNode.getTextContent();
+                                    break;
+                                }
+                            }
+                            resultObj['source_recommendation'] = remediation;
+                            resultObj['source_notes'] = node.getFirstChild().getTextContent().toString();
                         }
 
                         if (branch == null || branch == '' || branch == '.unknown' || branch == 'undefined')
@@ -165,7 +236,6 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                                 resultObj['source_avit_id'] = similarityIdToUpsert;
                             }
                         }
-
                         resultObj['source_app_id'] = reportData['source_app_id'];
                         resultObj['scan_type'] = reportData['scan_type'];
                         resultObj['package_unique_id'] = node.getAttribute('package_unique_id');
@@ -201,7 +271,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         resultObj['source_entry_id'] = queryData['source_entry_id'];
                         resultObj['category_name'] = queryData['category_name'];
                         resultObj['project_branch'] = node.getAttribute('branch');
-                        this._handleFixedAVIT(reportData.last_scan_date, reportData.source_app_id, resultObj.project_branch, scan_synchronization);
+                        project_branch = resultObj['project_branch'];
                         if (reportData['scan_type'] != 'static') {
                             nvdData['cvss_base_score'] = node.getAttribute('cvssScore');
                             nvdData['cvss_vector'] = node.getAttribute('cvssVector');
@@ -209,7 +279,13 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         }
                         this._upsertQuery(queryData);
                         this._upsertAVIT(resultObj);
-
+                        var scan_intials = '';
+                        if (reportData.source_scan_id.slice(0, 2) == 'CS') {
+                            scan_intials = 'CS';
+                        } else {
+                            scan_intials = reportData.source_scan_id.slice(0, 3);
+                        }
+                        // this._handleFixedAVITwithScanIntials(basicData.source_scan_id, reportData.source_app_id, project_branch, scan_synchronization, scan_intials);
 
                     } catch (ex) {
                         errorMessage = gs.getMessage("Error in retriving data for app vulnerability item integration!");
@@ -220,7 +296,9 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
 
                 }
             }
-
+            if (basicData.engines != '') {
+                this._handleFixedAVIT(basicData.source_scan_id, basicData.source_app_id, project_branch, scan_synchronization, basicData.engines, engineArr);
+            }
             if (!gs.nil(errorProcess))
                 gs.error(this.MSG + "All errors that occurred while processing Vulnerability lists: " + errorProcess);
             this.completeProcess(this.integrationProcessGr, this.import_counts);
@@ -278,19 +356,6 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
             }
         }
     },
-    _fixSimilarityId: function(similarityId, similarityIdHash, projectId) {
-        var avit = new sn_vul.PagedGlideRecord('sn_vul_app_vulnerable_item');
-		gs.info("similarityIdHash= "+ similarityIdHash + " projectId= " + projectId)  ;
-        avit.addEncodedQuery('source_avit_id='+ similarityIdHash + '^application_release.source_app_id=' + projectId);
-		gs.info("avit= "+ JSON.stringify(avit));
-        avit.setSortField("sys_id");
-        while (avit.next()) {
-            avit.gr.setValue('source_remediation_status', 'FIXED');
-            avit.gr.setValue('state', 3);
-            avit.gr.update('substate', 4);
-
-        }
-    },
 
     _getAvitDetailsByProjectId: function(projectId) {
         var avitArr = [];
@@ -331,19 +396,45 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
         }
     },
 
-    _handleFixedAVIT: function(source_scan_id, projectId, branch, scan_synchronization) {
-        var avit = new sn_vul.PagedGlideRecord('sn_vul_app_vulnerable_item');
-        if (scan_synchronization == 'latest scan from each branch' && (branch != null || branch != '' || branch != '.unknown' || branch != 'undefined')) {
-            avit.addEncodedQuery('application_release.source_app_id=' + projectId + '^app_vul_scan_summaryNOT LIKE' + source_scan_id + '^state!=3^project_branch=' + branch);
-        } else {
-            avit.addEncodedQuery('application_release.source_app_id=' + projectId + '^app_vul_scan_summaryNOT LIKE' + source_scan_id + '^state!=3');
+    _handleFixedAVIT: function(source_scan_id, projectId, branch, scan_synchronization, engines, engineArr) {
+        var start = 0;
+        var engineList = [];
+        for (var i = 0; i < engines.length; i++) {
+            if (engines[i] === ",") {
+                engineList.push(engines.slice(start, i));
+                start = i + 1;
+            }
         }
+        engineList.push(engines.slice(start));
+        for (var item in engineList) {
+            if (engineArr.indexOf(engineList[item]) != -1) {
+                var avit = new sn_vul.PagedGlideRecord('sn_vul_app_vulnerable_item');
+                if (scan_synchronization == 'latest scan from each branch' && (branch != null || branch != '' || branch != '.unknown' || branch != 'undefined')) {
+                    avit.addEncodedQuery('application_release.source_app_id=' + GlideStringUtil.escapeQueryTermSeparator(projectId) + '^app_vul_scan_summaryNOT LIKE' + GlideStringUtil.escapeQueryTermSeparator(source_scan_id) +
+                        '^state!=3^project_branch=' + GlideStringUtil.escapeQueryTermSeparator(branch) + '^app_vul_scan_summarySTARTSWITH' +
+                        GlideStringUtil.escapeQueryTermSeparator(engineList[item]));
+                } else {
+                    avit.addEncodedQuery('application_release.source_app_id=' + GlideStringUtil.escapeQueryTermSeparator(projectId) + '^app_vul_scan_summaryNOT LIKE' + GlideStringUtil.escapeQueryTermSeparator(source_scan_id) + '^state!=3' + '^app_vul_scan_summarySTARTSWITH' + GlideStringUtil.escapeQueryTermSeparator(engineList[item]));
+                }
+                avit.setSortField("sys_id");
+                while (avit.next()) {
+                    avit.gr.setValue('source_remediation_status', 'FIXED');
+                    avit.gr.setValue('state', 3);
+                    avit.gr.update('substate', 4);
+                }
+            }
+        }
+    },
+
+    // To map API security vul info to exisiting sast vul items
+    _handleApiSecurity: function(source_app_id, source_scan_id, sast_risk_id, affected_url) {
+        var avit = new sn_vul.PagedGlideRecord('sn_vul_app_vulnerable_item');
+        avit.addEncodedQuery('application_release.source_app_id=' + GlideStringUtil.escapeQueryTermSeparator(source_app_id) + '^app_vul_scan_summaryLIKE' + GlideStringUtil.escapeQueryTermSeparator(source_scan_id) + '^source_exploit=' + GlideStringUtil.escapeQueryTermSeparator(sast_risk_id));
+        //avit.addQuery('source_exploit', sast_risk_id);
         avit.setSortField("sys_id");
         while (avit.next()) {
-            avit.gr.setValue('source_remediation_status', 'FIXED');
-            avit.gr.setValue('state', 3);
-            avit.gr.update('substate', 4);
-
+            avit.gr.setValue('affected_url', affected_url);
+            avit.gr.update();
         }
     },
 
