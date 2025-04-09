@@ -208,6 +208,25 @@ CheckmarxOneUtilBase.prototype = {
         return JSON.stringify(result_state);
     },
 
+    // To get API Security vulnerabilities information of scanId based on sast_risk_id
+    getApiSecVulInfoBySastRiskId: function(configId, scanId, sastRiskId) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var query = '/api/apisec/static/api/risks/' + scanId + '?filtering=' + encodeURIComponent('[{"column":"sast_risk_id","values": "' + sastRiskId + '","operator":"eq"}]');
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "get";
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
+
+        } catch (err) {
+            gs.error(this.MSG + " getApiSecVulInfo: Error while getting the apisec vul Info: " + err);
+            return -1;
+        }
+        return this._makeRestApiCall(apibaseurl, configId, token, query, method);
+
+    },
+
     // To Get Severity from configuartion	
     getSeverityFromUI: function(configId) {
         try {
@@ -467,6 +486,9 @@ CheckmarxOneUtilBase.prototype = {
             var includesca = this.importScaFlaw(this.IMPLEMENTATION);
             var includesast = this.importSastFlaw(this.IMPLEMENTATION);
             var includekics = this.importKicsFlaw(this.IMPLEMENTATION);
+            var includeContainerSecurity = this.importContainerSecurityFlaw(this.IMPLEMENTATION);
+            var includeSecretDetection = this.importSecretDetectionFlaw(this.IMPLEMENTATION);
+            var includeScoreCard = this.importScoreCardFlaw(this.IMPLEMENTATION);
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
@@ -493,6 +515,21 @@ CheckmarxOneUtilBase.prototype = {
                     }
                     if (includekics) {
                         if (scanJson.scans[item].engines.toString().indexOf("kics") != -1) {
+                            includeProject = 'true';
+                        }
+                    }
+                    if (includeContainerSecurity) {
+                        if (scanJson.scans[item].engines.toString().indexOf("containers") != -1) {
+                            includeProject = 'true';
+                        }
+                    }
+                    if (includeSecretDetection) {
+                        if (scanJson.scans[item].engines.toString().indexOf("microengines") != -1) {
+                            includeProject = 'true';
+                        }
+                    }
+                    if (includeScoreCard) {
+                        if (scanJson.scans[item].engines.toString().indexOf("microengines") != -1) {
                             includeProject = 'true';
                         }
                     }
@@ -753,7 +790,7 @@ CheckmarxOneUtilBase.prototype = {
 
     },
 
-    //to get total  vul item 
+    //to get total vul item 
     getTotalVulcount: function(configId, scanId) {
         try {
             var request = new sn_ws.RESTMessageV2();
@@ -818,6 +855,14 @@ CheckmarxOneUtilBase.prototype = {
                         count += conSec_counts;
                     }
                 }
+                for (var micro_value in ScanSummaryJson.scansSummaries[item].microEnginesCounters.severityCounters) {
+                    var micro_severity = ScanSummaryJson.scansSummaries[item].microEnginesCounters.severityCounters[micro_value].severity;
+
+                    if (severity_array.indexOf(micro_severity) != -1) {
+                        var micro_counts = ScanSummaryJson.scansSummaries[item].microEnginesCounters.severityCounters[micro_value].counter;
+                        count += micro_counts;
+                    }
+                }
             }
         } catch (err) {
             gs.error(this.MSG + " getTotalVulcount: Error while getting the total vul count for scanId: " + scanId + " with error: " + err);
@@ -828,6 +873,40 @@ CheckmarxOneUtilBase.prototype = {
 
     },
 
+    //to get Api Security vulnerability count
+    getApiSecVulCount: function(configId, scanId) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var ui_severity = config.severity;
+            var method = "get";
+            var count = 0;
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
+            var query = '/api/apisec/static/api/risks/' + scanId + '/group/severity';
+            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+            var body = resp.getBody();
+            var apiSecJson = JSON.parse(body);
+
+            if (null != ui_severity && '' != ui_severity) {
+                var severity_array = this.getSeverityFromUI(configId);
+            }
+
+            for (var item in apiSecJson.groups) {
+                var severity = apiSecJson.groups[item].top_level_group_value.toUpperCase();
+                if (severity_array.indexOf(severity) != -1) {
+                    count += apiSecJson.groups[item].total_records;
+                }
+            }
+        } catch (err) {
+            gs.error(this.MSG + " getApiSecVulCount: Error while getting the apisec vul count for scanId: " + scanId + " with error: " + err);
+            return -1;
+        }
+
+        return count;
+
+    },
 
     //to get SAST  vul item 
     getSASTVulcount: function(configId, scanId) {
@@ -910,6 +989,27 @@ CheckmarxOneUtilBase.prototype = {
             return -1;
         }
         return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+
+    },
+
+    // to get API Security vulnerabilities information of scanId
+    getApiSecVulInfo: function(configId, scanId, offsetId) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var per_page = config.limit;
+
+            var query = '/api/apisec/static/api/risks/' + scanId + '?page=' + offsetId + '&per_page=' + per_page;
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "get";
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
+
+        } catch (err) {
+            gs.error(this.MSG + " getApiSecVulInfo: Error while getting the apisec vul Info: " + err);
+            return -1;
+        }
+        return this._makeRestApiCall(apibaseurl, configId, token, query, method);
 
     },
 
@@ -1038,7 +1138,6 @@ CheckmarxOneUtilBase.prototype = {
 
     },
 
-
     //Container Security scan details of a given scanId
     getContainerSecurityScanSummaryInfo: function(configId, scanId) {
         try {
@@ -1071,7 +1170,162 @@ CheckmarxOneUtilBase.prototype = {
                 }
             }
         } catch (err) {
-            gs.error(this.MSG + " getKicsScanSummaryInfo: Error while getting the kics scan summary Ids for scanId: " + scanId + "with error: " + err);
+            gs.error(this.MSG + " getContainerScanSummaryInfo: Error while getting the kics scan summary Ids for scanId: " + scanId + "with error: " + err);
+            return -1;
+
+        }
+        return flaws;
+
+    },
+
+    //API Security scan details of a given scanId
+    getApiSecurityScanSummaryInfo: function(configId, scanId) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "post";
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
+
+            var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=false';
+            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+            var body = resp.getBody();
+            var ScanSummaryJson = JSON.parse(body);
+            var flaws = 0;
+            var ui_severity = config.severity;
+            var severityFilter = false;
+            if (null != ui_severity && '' != ui_severity) {
+                severityFilter = true;
+                var severity_array = this.getSeverityFromUI(configId);
+            }
+
+            for (var item in ScanSummaryJson.scansSummaries) {
+                var scanSummary = ScanSummaryJson.scansSummaries[item];
+                if (scanSummary.apiSecCounters && scanSummary.apiSecCounters.apiSecTotal !== undefined) {
+                    flaws += scanSummary.apiSecCounters.apiSecTotal;
+                }
+            }
+        } catch (err) {
+            gs.error(this.MSG + " getApiSecurityScanSummaryInfo: Error while getting the api security scan summary Ids for scanId: " + scanId + "with error: " + err);
+            return -1;
+        }
+        return flaws;
+
+    },
+    //ScoreCard scan details of a given scanId
+    getScoreCardScanSummaryInfo: function(configId, scanId) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "post";
+            var counts = 0;
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
+
+            var query = '/api/micro-engines/scans/' + scanId + '/scan-overview';
+            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+            var body = resp.getBody();
+            var ScanSummaryJson = JSON.parse(body);
+            var flaws = 0;
+            var ui_severity = config.severity;
+            var severityFilter = false;
+            if (null != ui_severity && '' != ui_severity) {
+                severityFilter = true;
+                var severity_array = this.getSeverityFromUI(configId);
+            }
+            for (var item in ScanSummaryJson.engineOverviews) {
+                if (ScanSummaryJson.engineOverviews[item].name == 'Scorecard' && ScanSummaryJson.engineOverviews[item].totalRisks != 0) {
+
+                    if (severity_array.indexOf('CRITICAL') != -1) {
+                        counts = ScanSummaryJson.engineOverviews[item].riskSummary.critical;
+                        flaws += counts;
+                    }
+                    if (severity_array.indexOf('HIGH') != -1) {
+                        counts = ScanSummaryJson.engineOverviews[item].riskSummary.high;
+                        flaws += counts;
+                    }
+                    if (severity_array.indexOf('MEDIUM') != -1) {
+                        counts = ScanSummaryJson.engineOverviews[item].riskSummary.medium;
+                        flaws += counts;
+                    }
+                    if (severity_array.indexOf('LOW') != -1) {
+                        counts = ScanSummaryJson.engineOverviews[item].riskSummary.low;
+                        flaws += counts;
+                    }
+                    if (severity_array.indexOf('INFO') != -1) {
+                        counts = ScanSummaryJson.engineOverviews[item].riskSummary.info;
+                        flaws += counts;
+                    }
+                }
+                if (ScanSummaryJson.engineOverviews[item].status != 'Completed') {
+                    flaws = -1;
+                }
+
+            }
+        } catch (err) {
+            gs.error(this.MSG + " getContainerScanSummaryInfo: Error while getting the kics scan summary Ids for scanId: " + scanId + "with error: " + err);
+            return -1;
+
+        }
+        return flaws;
+
+    },
+
+    //SecretDetection scan details of a given scanId
+    getSecretDetectionScanSummaryInfo: function(configId, scanId) {
+        try {
+            var request = new sn_ws.RESTMessageV2();
+            var config = this._getConfig(configId);
+            var accesscontrolbaseUrl = config.checkmarxone_server_url;
+            var apibaseurl = config.checkmarxone_api_base_url;
+            var method = "post";
+            var counts = 0;
+            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
+
+            var query = '/api/micro-engines/scans/' + scanId + '/scan-overview';
+            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+            var body = resp.getBody();
+            var ScanSummaryJson = JSON.parse(body);
+            var flaws = 0;
+            var ui_severity = config.severity;
+            var severityFilter = false;
+            if (null != ui_severity && '' != ui_severity) {
+                severityFilter = true;
+                var severity_array = this.getSeverityFromUI(configId);
+            }
+            for (var item in ScanSummaryJson.engineOverviews) {
+                if (ScanSummaryJson.engineOverviews[item].name == '2ms' && ScanSummaryJson.engineOverviews[item].totalRisks != 0) {
+
+                    if (severity_array.indexOf('CRITICAL') != -1) {
+                        counts = ScanSummaryJson.engineOverviews[item].riskSummary.critical;
+                        flaws += counts;
+                    }
+                    if (severity_array.indexOf('HIGH') != -1) {
+                        counts = ScanSummaryJson.engineOverviews[item].riskSummary.high;
+                        flaws += counts;
+                    }
+                    if (severity_array.indexOf('MEDIUM') != -1) {
+                        counts = ScanSummaryJson.engineOverviews[item].riskSummary.medium;
+                        flaws += counts;
+                    }
+                    if (severity_array.indexOf('LOW') != -1) {
+                        counts = ScanSummaryJson.engineOverviews[item].riskSummary.low;
+                        flaws += counts;
+                    }
+                    if (severity_array.indexOf('INFO') != -1) {
+                        counts = ScanSummaryJson.engineOverviews[item].riskSummary.info;
+                        flaws += counts;
+                    }
+                }
+                if (ScanSummaryJson.engineOverviews[item].status != 'Completed') {
+                    flaws = -1;
+                }
+
+            }
+        } catch (err) {
+            gs.error(this.MSG + " getContainerScanSummaryInfo: Error while getting the kics scan summary Ids for scanId: " + scanId + "with error: " + err);
             return -1;
 
         }
@@ -1208,6 +1462,9 @@ CheckmarxOneUtilBase.prototype = {
                     "import_kics": gr.getValue("import_kics") === "1",
                     "include_container_security": gr.getValue("include_container_security") === "1",
                     "include_only_similarity_id": gr.getValue("include_only_similarity_id") === "1",
+                    "include_api_security": gr.getValue("include_api_security") === "1",
+                    "include_ossf_scorecard": gr.getValue("include_ossf_scorecard") === "1",
+                    "include_secret_detection": gr.getValue("include_secret_detection") === "1",
                     "triaging_in_snow": gr.getValue("triaging_in_snow") === "1",
                     "access_token": gr.access_token.getDecryptedValue(),
                     "vulnerability_threshold_level": gr.getValue("vulnerability_threshold_level"),
@@ -1654,6 +1911,20 @@ CheckmarxOneUtilBase.prototype = {
     //value of Container Security checkbox
     importContainerSecurityFlaw: function(configId) {
         return this._getConfig(configId).include_container_security;
+    },
+    //value of API security checkbox
+    importApiSecurityFlaw: function(configId) {
+        return this._getConfig(configId).include_api_security;
+    },
+
+    //value of OSSF Scorecard	 checkbox
+    importScoreCardFlaw: function(configId) {
+        return this._getConfig(configId).include_ossf_scorecard;
+    },
+
+    //value of Secret Detection checkbox
+    importSecretDetectionFlaw: function(configId) {
+        return this._getConfig(configId).include_secret_detection;
     },
     //validate XML
     validateXML: function(body, errorNodeName) {
