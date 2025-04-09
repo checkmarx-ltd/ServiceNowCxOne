@@ -50,12 +50,19 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
             var sastScanSummaryAll = '';
             var kicsScanSummaryAll = '';
             var containerSecurityScanSummaryAll = '';
+            var apiSecurityScanSummaryAll = '';
+            var scoreCardScanSummaryAll = '';
+            var secretDetectionScanSummaryAll = '';
             var includescanSummaryAll = '';
             var newoffset = offsetId - 1;
             var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
             var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
             var includekics = this.UTIL.importKicsFlaw(this.IMPLEMENTATION);
             var includeContainerSecurity = this.UTIL.importContainerSecurityFlaw(this.IMPLEMENTATION);
+            var includeApiSecurity = this.UTIL.importApiSecurityFlaw(this.IMPLEMENTATION);
+
+            var includeSecretDetection = this.UTIL.importSecretDetectionFlaw(this.IMPLEMENTATION);
+            var includeScoreCard = this.UTIL.importScoreCardFlaw(this.IMPLEMENTATION);
             var config = this.UTIL._getConfig(this.IMPLEMENTATION);
             var scan_synchronization = config.scan_synchronization.toString();
             var primaryBranch = '';
@@ -86,19 +93,32 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
             var prvScaScanIdBranch = '';
             var prvKicsScanIdBranch = '';
             var prvConSecScanIdBranch = '';
+            var prvApiSecScanIdBranch = '';
+            var prvScoreCardScanIdBranch = '';
+            var prvSecretDetectionScanIdBranch = '';
             var sastPrvScanId = '';
             var scaPrvScanId = '';
             var kicsPrvScanId = '';
             var conSecPrvScanId = '';
+            var apiSecPrvScanId = '';
+            var scorecardPrvScanId = '';
+            var secretDetectionPrvScanId = '';
             var lastSastDate;
             var lastScaDate;
             var lastKicsDate;
             var lastConSecDate;
+            var lastApiSecDate;
+            var lastScoreCardDate;
+            var lastSecretDetectionDate;
             var prvBranch = '';
             var prvSastScanBranch = '';
             var prvScaScanBranch = '';
             var prvKicsScanBranch = '';
             var prvConSecScanBranch = '';
+            var prvApiSecScanBranch = '';
+            var prvScoreCardScanBranch = '';
+            var prvSecretDetectionScanBranch = '';
+
 
             while (scanSummary.hasNext()) {
                 scanSummary.next();
@@ -174,9 +194,47 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                             prvConSecScanIdBranch += prvBranch + ':::' + prvScanId + ':::' + lastUpdatedDate;
                         }
                     }
+                    if (prvScanId.indexOf('apisec') != -1 && isBranchMatched == 'true') {
+                        if ((null == lastApiSecDate || lastApiSecDate < lastUpdatedDate)) {
+                            apiSecPrvScanId = prvScanId;
+                            prvApiSecScanBranch = prvBranch;
+                            lastApiSecDate = lastUpdatedDate;
+                        }
+                        if (null != scan_synchronization && '' != scan_synchronization && 'undefined' != scan_synchronization && scan_synchronization == 'latest scan from each branch') {
+                            if (prvApiSecScanIdBranch != '')
+                                prvApiSecScanIdBranch += '|||';
+                            prvApiSecScanIdBranch += prvBranch + ':::' + prvScanId + ':::' + lastUpdatedDate;
+                        }
+                        //scorecard
+                        if (prvScanId.indexOf('ScoreCard') != -1 && isBranchMatched == 'true') {
+                            if ((null == lastScoreCardDate || '' == lastScoreCardDate || 'undefined' == lastScoreCardDate) || (lastScoreCardDate && lastUpdatedDate >= lastScoreCardDate)) {
+                                conSecPrvScanId = prvScanId;
+                                prvScoreCardScanBranch = prvBranch;
+                                lastScoreCardDate = lastUpdatedDate;
+                            }
+                            if (null != scan_synchronization && '' != scan_synchronization && 'undefined' != scan_synchronization && scan_synchronization == 'latest scan from each branch') {
+                                if (prvScoreCardScanIdBranch != '')
+                                    prvScoreCardScanIdBranch += '|||';
+                                prvScoreCardScanIdBranch += prvBranch + ':::' + prvScanId + ':::' + lastUpdatedDate;
+                            }
+                        }
+                        //secretDetection
+                        if (prvScanId.indexOf('SecretDetection') != -1 && isBranchMatched == 'true') {
+                            if ((null == lastSecretDetectionDate || '' == lastSecretDetectionDate || 'undefined' == lastSecretDetectionDate) || (lastSecretDetectionDate && lastUpdatedDate >= lastScoreCardDate)) {
+                                conSecPrvScanId = prvScanId;
+                                prvSecretDetectionScanBranch = prvBranch;
+                                lastSecretDetectionDate = lastUpdatedDate;
+                            }
+                            if (null != scan_synchronization && '' != scan_synchronization && 'undefined' != scan_synchronization && scan_synchronization == 'latest scan from each branch') {
+                                if (prvSecretDetectionScanIdBranch != '')
+                                    prvSecretDetectionScanIdBranch += '|||';
+                                prvSecretDetectionScanIdBranch += prvBranch + ':::' + prvScanId + ':::' + lastUpdatedDate;
+                            }
+                        }
+                    }
                 }
             }
-            
+
             var branch = [];
             var configScanType = config.scan_type.toString();
             for (var item in jsonLastScanSummResp.scans) {
@@ -215,10 +273,12 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                         if (isFastScan == 'true')
                             sastScanTypeToCheck = 'fastScanMode';
                     }
-                    if (sastScanTypeToCheck == '' && configScanType != 'fastScanMode') {
+                    if (sastScanTypeToCheck == '' && configScanType != 'fastScanMode' && jsonLastScanSummResp.scans[item].metadata.configs[0].value) {
                         sastScanTypeToCheck = jsonLastScanSummResp.scans[item].metadata.configs[0].value.incremental == "false" ? "fullScan" : "incrementalScan";
                     }
-                    var sastScanType = jsonLastScanSummResp.scans[item].metadata.configs[0].value.incremental == "false" ? "Full Scan" : "Incremental Scan";
+                    if (jsonLastScanSummResp.scans[item].metadata.configs[0].value) {
+                        var sastScanType = jsonLastScanSummResp.scans[item].metadata.configs[0].value.incremental == "false" ? "Full Scan" : "Incremental Scan";
+                    }
                     if (sastresponsevul != -1 && ((null == configScanType || '' == configScanType) || (sastScanTypeToCheck != '' && configScanType.indexOf(sastScanTypeToCheck) != -1))) {
                         if (null != scan_synchronization && '' != scan_synchronization && 'undefined' != scan_synchronization && scan_synchronization == 'latest scan from each branch') {
                             sastPrvScanId = this._getPrvScanIdForSpecificBranch(prvSastScanIdBranch, jsonLastScanSummResp.scans[item].branch);
@@ -274,13 +334,13 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                     var container_scanType = "Full Scan";
                     if (containerSecurityResponseVul != -1) {
 
-                       if (null != scan_synchronization && '' != scan_synchronization && 'undefined' != scan_synchronization && scan_synchronization == 'latest scan from each branch') {
+                        if (null != scan_synchronization && '' != scan_synchronization && 'undefined' != scan_synchronization && scan_synchronization == 'latest scan from each branch') {
                             conSecPrvScanId = this._getPrvScanIdForSpecificBranch(prvConSecScanIdBranch, jsonLastScanSummResp.scans[item].branch);
                             if (conSecPrvScanId == '')
                                 prvConSecScanBranch = '';
                             else
                                 prvConSecScanBranch = '' + jsonLastScanSummResp.scans[item].branch;
-                        } 
+                        }
                         containerSecurityScanSummaryAll += '<scan id="' + 'CS' + jsonLastScanSummResp.scans[item].id + '" app_id="' + appId +
                             '" last_scan_date="' + this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt) +
                             '" total_no_flaws="' + containerSecurityResponseVul +
@@ -293,6 +353,81 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                             '" app_name="' + appId + '"/>';
                     }
                 }
+
+                // API Security scan summary
+                if (includeApiSecurity && jsonLastScanSummResp.scans[item].engines.toString().indexOf("apisec") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
+                    var apiSecResponseVul = this.UTIL.getApiSecurityScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
+                    var api_scanType = "Full Scan";
+                    if (apiSecResponseVul != -1) {
+                        if (scan_synchronization == 'latest scan from each branch') {
+                            apiSecPrvScanId = this._getPrvScanIdForSpecificBranch(prvApiSecScanIdBranch, jsonLastScanSummResp.scans[item].branch);
+                            prvApiSecScanBranch = apiSecPrvScanId ? jsonLastScanSummResp.scans[item].branch : '';
+                        }
+                        apiSecurityScanSummaryAll += '<scan id="' + 'apisec' + jsonLastScanSummResp.scans[item].id + '" app_id="' + appId +
+                            '" last_scan_date="' + this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt) +
+                            '" total_no_flaws="' + apiSecResponseVul +
+                            '" branch="' + jsonLastScanSummResp.scans[item].branch +
+                            '" prvScanId="' + apiSecPrvScanId +
+                            '" scan_origin="' + jsonLastScanSummResp.scans[item].sourceOrigin +
+                            '" scan_source="' + jsonLastScanSummResp.scans[item].sourceType +
+                            '" scan_type="' + api_scanType +
+                            '" prvBranch="' + prvApiSecScanBranch +
+                            '" app_name="' + appId + '"/>';
+                    }
+                }
+                //OSSF Scorecard scan summary
+                if (includeScoreCard && jsonLastScanSummResp.scans[item].engines.toString().indexOf("microengines") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
+                    var scorecardResponseVul = this.UTIL.getScoreCardScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
+                    var scorecard_scanType = "Full Scan";
+                    if (scorecardResponseVul != -1) {
+
+                        if (null != scan_synchronization && '' != scan_synchronization && 'undefined' != scan_synchronization && scan_synchronization == 'latest scan from each branch') {
+                            scorecardPrvScanId = this._getPrvScanIdForSpecificBranch(prvScoreCardScanIdBranch, jsonLastScanSummResp.scans[item].branch);
+                            if (scorecardPrvScanId == '')
+                                prvScoreCardScanBranch = '';
+                            else
+                                prvScoreCardScanBranch = '' + jsonLastScanSummResp.scans[item].branch;
+                        }
+                        scoreCardScanSummaryAll += '<scan id="' + 'ScoreCard' + jsonLastScanSummResp.scans[item].id + '" app_id="' + appId +
+                            '" last_scan_date="' + this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt) +
+                            '" total_no_flaws="' + scorecardResponseVul +
+                            '" branch="' + jsonLastScanSummResp.scans[item].branch +
+                            '" prvScanId="' + scorecardPrvScanId +
+                            '" scan_origin="' + jsonLastScanSummResp.scans[item].sourceOrigin +
+                            '" scan_source="' + jsonLastScanSummResp.scans[item].sourceType +
+                            '" scan_type="' + scorecard_scanType +
+                            '" prvBranch="' + prvScoreCardScanBranch +
+                            '" app_name="' + appId + '"/>';
+                    }
+                }
+
+                //secretDetection scan summary
+                if (includeSecretDetection && jsonLastScanSummResp.scans[item].engines.toString().indexOf("microengines") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
+                    var secretDetectionResponseVul = this.UTIL.getSecretDetectionScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
+                    var secretDetection_scanType = "Full Scan";
+                    if (secretDetectionResponseVul != -1) {
+
+                        if (null != scan_synchronization && '' != scan_synchronization && 'undefined' != scan_synchronization && scan_synchronization == 'latest scan from each branch') {
+                            secretDetectionPrvScanId = this._getPrvScanIdForSpecificBranch(prvSecretDetectionScanIdBranch, jsonLastScanSummResp.scans[item].branch);
+                            if (secretDetectionPrvScanId == '')
+                                prvSecretDetectionScanBranch = '';
+
+                            else
+                                prvSecretDetectionScanBranch = '' + jsonLastScanSummResp.scans[item].branch;
+                        }
+                        secretDetectionScanSummaryAll += '<scan id="' + 'SecretDetection' + jsonLastScanSummResp.scans[item].id + '" app_id="' + appId +
+                            '" last_scan_date="' + this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt) +
+                            '" total_no_flaws="' + secretDetectionResponseVul +
+                            '" branch="' + jsonLastScanSummResp.scans[item].branch +
+                            '" prvScanId="' + secretDetectionPrvScanId +
+                            '" scan_origin="' + jsonLastScanSummResp.scans[item].sourceOrigin +
+                            '" scan_source="' + jsonLastScanSummResp.scans[item].sourceType +
+                            '" scan_type="' + secretDetection_scanType +
+                            '" prvBranch="' + prvSecretDetectionScanBranch +
+                            '" app_name="' + appId + '"/>';
+                    }
+                }
+
 
                 branch.push(jsonLastScanSummResp.scans[item].branch);
 
@@ -311,6 +446,15 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
             }
             if (includeContainerSecurity) {
                 includescanSummaryAll += "<conSecScanData><scans>" + containerSecurityScanSummaryAll + "</scans></conSecScanData>";
+            }
+            if (includeApiSecurity) {
+                includescanSummaryAll += "<apiSecScanData><scans>" + apiSecurityScanSummaryAll + "</scans></apiSecScanData>";
+            }
+            if (includeScoreCard) {
+                includescanSummaryAll += "<scoreCardScanData><scans>" + scoreCardScanSummaryAll + "</scans></scoreCardScanData>";
+            }
+            if (includeSecretDetection) {
+                includescanSummaryAll += "<secretDetectionScanData><scans>" + secretDetectionScanSummaryAll + "</scans></secretDetectionScanData>";
             }
 
             reportContent = scanSummaryRootNodeStart + includescanSummaryAll + scanSummaryRootNodeEnd;
