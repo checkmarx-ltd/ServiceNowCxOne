@@ -16,7 +16,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
             }
 
         } catch (err) {
-            gs.error(this.MSG + " retrieveData : Error while retrieving the data. Skipping appId: " + appId + ", scanId: " + offsetId + err);
+            gs.error(this.MSG + " retrieveData : Error while retrieving the data. Skipping appId: " + appId + err);
             response = '<scanData><scaScanData><scans></scans></scaScanData><sastScanData><scans></scans></sastScanData><kicsScanData><scans></scans></kicsScanData></scanData>';
         }
         if (response == "<null/>") {
@@ -66,24 +66,23 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
             var config = this.UTIL._getConfig(this.IMPLEMENTATION);
             var scan_synchronization = config.scan_synchronization.toString();
             var primaryBranch = '';
-            var responseLastScanSummary = '';
+            var jsonLastScanSummResp = '';
             var branches;
             if (scan_synchronization == 'latest scan of primary branch') {
                 primaryBranch = this.UTIL.getProjectById(this.IMPLEMENTATION, appId).mainBranch.toString();
                 if (null != primaryBranch && '' != primaryBranch) {
-                    responseLastScanSummary = this.UTIL.getScanListFilterByBranch(this.IMPLEMENTATION, appId, this._getCurrentDeltaStartTime(), primaryBranch);
+                    jsonLastScanSummResp = this.UTIL.getScanListFilterByBranch(this.IMPLEMENTATION, appId, this._getCurrentDeltaStartTime(), primaryBranch);
                     branches = this.UTIL.getProjectBranchList(this.IMPLEMENTATION, appId);
                 } else
-                    responseLastScanSummary = this.UTIL.getScanInfo(this.IMPLEMENTATION, appId, newoffset, this._getCurrentDeltaStartTime());
+                    jsonLastScanSummResp = this.UTIL.getScanInfo(this.IMPLEMENTATION, appId, newoffset, this._getCurrentDeltaStartTime());
             } else if (scan_synchronization == 'latest scan from each branch') {
                 branches = this.UTIL.getProjectBranchList(this.IMPLEMENTATION, appId);
                 if (null != branches && '' != branches) {
-                    responseLastScanSummary = this.UTIL.getScanListFilterByMultipleBranch(this.IMPLEMENTATION, appId, this._getCurrentDeltaStartTime(), branches);
+                    jsonLastScanSummResp = this.UTIL.getScanListFilterByMultipleBranch(this.IMPLEMENTATION, appId, this._getCurrentDeltaStartTime(), branches);
                 }
-            } else if (scan_synchronization == 'latest scan across all branches' || responseLastScanSummary == '' || responseLastScanSummary == null) {
-                responseLastScanSummary = this.UTIL.getScanInfo(this.IMPLEMENTATION, appId, newoffset, this._getCurrentDeltaStartTime());
+            } else if (scan_synchronization == 'latest scan across all branches' || jsonLastScanSummResp == '' || jsonLastScanSummResp == null || jsonLastScanSummResp == -1) {
+                jsonLastScanSummResp = this.UTIL.getScanInfo(this.IMPLEMENTATION, appId, newoffset, this._getCurrentDeltaStartTime());
             }
-            var jsonLastScanSummResp = JSON.parse(responseLastScanSummary.getBody());
             var scanSummary = new GlideRecord('sn_vul_app_vul_scan_summary');
             scanSummary.addQuery('application_release.source_app_id', appId);
             scanSummary.query();
