@@ -24,8 +24,18 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
             response = '<appInfoList><xml id="checkmarxone"><projects></projects></xml></appInfoList>';
 
         }
-        params = this._serializeParameters(this._nextParameters(params));
-        this.setNextRunParameters(params);
+
+        if (response == -1) {
+            params.run == false;
+            this.hasMoreData(false);
+            response = '<appInfoList><xml id="checkmarxone"><projects></projects></xml></appInfoList>';
+            var latest_date = new GlideDateTime();
+            this.INTEGRATION.setValue('delta_start_time', latest_date);
+            this.INTEGRATION.update();
+        } else {
+            params = this._serializeParameters(this._nextParameters(params));
+            this.setNextRunParameters(params);
+        }
 
         //Saving delta_start_time
         if (!params.run) {
@@ -46,6 +56,7 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
     //Creates XML summary for Projects
     getAppList: function(filteredCount, offset) {
         try {
+            
             var appListRootNodeStart = "<appInfoList><xml id=\"checkmarxone\"><projects>";
             var appListRootNodeEnd = "</projects></xml></appInfoList>";
             var appListAll = '';
@@ -86,6 +97,9 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
                             '![CDATA[' + projectTags + ']]' + '></projectTags><name><' +
                             '![CDATA[' + projects[item].name + ']]' + '></name></project>';
                     }
+                }
+                if (appListAll == '' && createdDate > projects[item].createdAt) {
+                    return -1;
                 }
             }
 
