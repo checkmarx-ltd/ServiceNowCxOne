@@ -69,9 +69,11 @@ CheckmarxOneUtilBase.prototype = {
             var method = "post";
             var save_token_flag = "true";
             var token = this.getNewToken(accesscontrolbaseUrl, config, method, request, config.client_id, config.client_secret, config.tenant, save_token_flag, configId);
-            var query = '/api/projects/?offset=0&limit=20000';
-            var response = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
-            projectJson = JSON.parse(response.getBody());
+
+            // Use the pagination helper
+            var baseQuery = '/api/projects/';
+            projectJson = this._makePaginatedApiCall(apibaseurl, configId, token, baseQuery, "get", 'projects');
+
         } catch (err) {
             gs.error(this.MSG + " getProjects: Error while getting projects." + err);
             throw err;
@@ -223,7 +225,7 @@ CheckmarxOneUtilBase.prototype = {
             gs.error(this.MSG + " getApiSecVulInfo: Error while getting the apisec vul Info: " + err);
             return -1;
         }
-        return this._makeRestApiCall(apibaseurl, configId, token, query, method);
+        return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
 
     },
 
@@ -446,7 +448,7 @@ CheckmarxOneUtilBase.prototype = {
             var apibaseurl = config.checkmarxone_api_base_url;
             var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
-            var query = '/api/projects/branches?offset=0&limit=10000&project-id=' + projectId;
+            var query = '/api/projects/branches?project-id=' + projectId;
             var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
             var body = resp.getBody();
             var projectJSON = JSON.parse(body);
@@ -495,54 +497,58 @@ CheckmarxOneUtilBase.prototype = {
             var apibaseurl = config.checkmarxone_api_base_url;
             var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
-            var query = '/api/scans/?offset=0&limit=20000&statuses=Completed&from-date=' + last_run_date + '&sort=-created_at&sort=%2Bstatus&field=scan-ids';
-            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
-            var scanJson = JSON.parse(resp.getBody());
 
-            for (var item in scanJson.scans) {
-                var projectId = scanJson.scans[item].projectId;
-                var includeProject = 'false';
-                if (projectId && projectId != '' && projectId != 'undefined' && projectIdsByLastScanDate.indexOf(projectId) == -1) {
-                    if (includesca) {
-                        if (scanJson.scans[item].engines.toString().indexOf("sca") != -1) {
-                            includeProject = 'true';
+            // Define base query without offset/limit
+            var baseQuery = '/api/scans/?statuses=Completed&from-date=' + last_run_date + '&sort=-created_at&sort=%2Bstatus&field=scan-ids';
+
+            // Use pagination helper
+            var scanJson = this._makePaginatedScansApiCall(apibaseurl, configId, token, baseQuery, "get", 'scans');
+
+            // Process the results from the helper function's response
+            if (scanJson && scanJson.scans) {
+                for (var item in scanJson.scans) {
+                    var projectId = scanJson.scans[item].projectId;
+                    var includeProject = 'false';
+                    if (projectId && projectId != '' && projectId != 'undefined' && projectIdsByLastScanDate.indexOf(projectId) == -1) {
+                        if (includesca) {
+                            if (scanJson.scans[item].engines && scanJson.scans[item].engines.toString().indexOf("sca") != -1) {
+                                includeProject = 'true';
+                            }
+                        }
+                        if (includesast) {
+                            if (scanJson.scans[item].engines && scanJson.scans[item].engines.toString().indexOf("sast") != -1) {
+                                includeProject = 'true';
+                            }
+                        }
+                        if (includekics) {
+                            if (scanJson.scans[item].engines && scanJson.scans[item].engines.toString().indexOf("kics") != -1) {
+                                includeProject = 'true';
+                            }
+                        }
+                        if (includeContainerSecurity) {
+                            if (scanJson.scans[item].engines && scanJson.scans[item].engines.toString().indexOf("containers") != -1) {
+                                includeProject = 'true';
+                            }
+                        }
+                        if (includeSecretDetection) {
+                            if (scanJson.scans[item].engines && scanJson.scans[item].engines.toString().indexOf("microengines") != -1) {
+                                includeProject = 'true';
+                            }
+                        }
+                        if (includeScoreCard) {
+                            if (scanJson.scans[item].engines && scanJson.scans[item].engines.toString().indexOf("microengines") != -1) {
+                                includeProject = 'true';
+                            }
                         }
                     }
-                    if (includesast) {
-                        if (scanJson.scans[item].engines.toString().indexOf("sast") != -1) {
-                            includeProject = 'true';
-                        }
-                    }
-                    if (includekics) {
-                        if (scanJson.scans[item].engines.toString().indexOf("kics") != -1) {
-                            includeProject = 'true';
-                        }
-                    }
-                    if (includeContainerSecurity) {
-                        if (scanJson.scans[item].engines.toString().indexOf("containers") != -1) {
-                            includeProject = 'true';
-                        }
-                    }
-                    if (includeSecretDetection) {
-                        if (scanJson.scans[item].engines.toString().indexOf("microengines") != -1) {
-                            includeProject = 'true';
-                        }
-                    }
-                    if (includeScoreCard) {
-                        if (scanJson.scans[item].engines.toString().indexOf("microengines") != -1) {
-                            includeProject = 'true';
-                        }
-                    }
+                    if (includeProject == 'true')
+                        projectIdsByLastScanDate.push(projectId);
                 }
-                if (includeProject == 'true')
-                    projectIdsByLastScanDate.push(projectId);
             }
         } catch (err) {
             gs.error(this.MSG + " :getprojectScanList :Error while getting Project list from last scan run date: " + err);
         }
-
         return projectIdsByLastScanDate;
-
     },
 
     //List of scans from last_run_date
@@ -554,9 +560,11 @@ CheckmarxOneUtilBase.prototype = {
             var apibaseurl = config.checkmarxone_api_base_url;
             var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
-            var query = '/api/scans/?offset=0&limit=20000&statuses=Completed&from-date=' + last_run_date + '&sort=-created_at&sort=%2Bstatus&field=scan-ids';
-            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
-            var scanJson = JSON.parse(resp.getBody());
+            // Define base query without offset/limit
+            var baseQuery = '/api/scans/?statuses=Completed&from-date=' + last_run_date + '&sort=-created_at&sort=%2Bstatus&field=scan-ids';
+
+            // Use pagination helper
+            scanJson = this._makePaginatedScansApiCall(apibaseurl, configId, token, baseQuery, "get", 'scans');
 
         } catch (err) {
             gs.error(this.MSG + " :getAllScanList :Error while getting scans from last run date." + err);
@@ -578,12 +586,13 @@ CheckmarxOneUtilBase.prototype = {
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
             var query = '/api/scans/?offset=0&limit=1&statuses=Completed&project-id=' + projectId + '&from-date=' + last_run_date + '&sort=-created_at&sort=%2Bstatus&field=scan-ids&branch=' + branch;
             var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+            var jsonLastScanSummResp = JSON.parse(resp.getBody());
         } catch (err) {
             gs.error(this.MSG + " :getScanListFilterByBranch :Error in getting the scan details with branch filter: " + err);
             return -1;
         }
 
-        return resp;
+        return jsonLastScanSummResp;
 
     },
 
@@ -600,13 +609,17 @@ CheckmarxOneUtilBase.prototype = {
             for (var item in branches) {
                 branch += '&branches=' + branches[item];
             }
-            var query = '/api/scans/?offset=0&limit=10000&statuses=Completed&project-id=' + projectId + '&from-date=' + last_run_date + '&sort=-created_at&sort=%2Bstatus&field=scan-ids' + branch;
-            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+
+            // Define base query without offset/limit
+            var baseQuery = '/api/scans/?statuses=Completed&project-id=' + projectId + '&from-date=' + last_run_date + '&sort=-created_at&sort=%2Bstatus&field=scan-ids' + branch;
+
+            // Use pagination helper
+            var scanJson = this._makePaginatedScansApiCall(apibaseurl, configId, token, baseQuery, "get", 'scans');
         } catch (err) {
             gs.error(this.MSG + " :getScanListFilterByMultipleBranch :Error in getting the scan details with branch filter: " + err);
             return -1;
         }
-        return resp;
+        return scanJson;
     },
 
 
@@ -654,11 +667,13 @@ CheckmarxOneUtilBase.prototype = {
             var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
             var query = '/api/scans/?offset=0&limit=1&statuses=Completed&project-id=' + appId + '&from-date=' + last_run_date + '&sort=-created_at&sort=%2Bstatus&field=scan-ids';
+            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+            var jsonLastScanSummResp = JSON.parse(resp.getBody());
         } catch (err) {
             gs.error(this.MSG + " getScanInfo: Error while getting the scan info: " + err);
             throw err;
         }
-        return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+        return jsonLastScanSummResp;
 
     },
 
@@ -795,75 +810,22 @@ CheckmarxOneUtilBase.prototype = {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
-            var includesca = this.importScaFlaw(configId);
-            var includesast = this.importSastFlaw(configId);
-            var includekics = this.importKicsFlaw(configId);
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
             var apibaseurl = config.checkmarxone_api_base_url;
             var ui_severity = config.severity;
             var severityFilter = false;
             if (null != ui_severity && '' != ui_severity) {
                 severityFilter = true;
-                var severity_array = this.getSeverityFromUI(configId);
+                var severity = config.severity;
             }
             var method = "post";
-            var count = 0;
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
 
-            var query = '/api/scan-summary/?scan-ids=' + scanId + '&include-severity-status=true&include-status-counters=true&include-queries=true&include-files=true&apply-predicates=false';
+            var query = '/api/results/?scan-id=' + scanId + '&severity=' + severity + '&offset=0&limit=1';
             var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
             var body = resp.getBody();
-            var ScanSummaryJson = JSON.parse(body);
-            for (var item in ScanSummaryJson.scansSummaries) {
-
-                for (var value in ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters) {
-                    var severity = ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters[value].severity;
-                    if (severity_array.indexOf(severity) != -1) {
-                        var counts = ScanSummaryJson.scansSummaries[item].sastCounters.severityCounters[value].counter;
-                        count += counts;
-                    }
-                }
-
-                for (var sca_value in ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters) {
-                    var sca_severity = ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters[sca_value].severity;
-                    if (severity_array.indexOf(sca_severity) != -1) {
-                        var sca_counts = ScanSummaryJson.scansSummaries[item].scaCounters.severityCounters[sca_value].counter;
-                        count += sca_counts;
-                    }
-                }
-                for (var sca_container_value in ScanSummaryJson.scansSummaries[item].scaContainersCounters.severityVulnerabilitiesCounters) {
-                    var sca_container_severity = ScanSummaryJson.scansSummaries[item].scaContainersCounters.severityVulnerabilitiesCounters[sca_container_value].severity;
-                    if (severity_array.indexOf(sca_container_severity) != -1) {
-                        var sca_container_counts = ScanSummaryJson.scansSummaries[item].scaContainersCounters.severityVulnerabilitiesCounters[sca_container_value].counter;
-                        count += sca_container_counts;
-                    }
-                }
-                for (var kics_value in ScanSummaryJson.scansSummaries[item].kicsCounters.severityCounters) {
-                    var kics_severity = ScanSummaryJson.scansSummaries[item].kicsCounters.severityCounters[kics_value].severity;
-
-                    if (severity_array.indexOf(kics_severity) != -1) {
-                        var kics_counts = ScanSummaryJson.scansSummaries[item].kicsCounters.severityCounters[kics_value].counter;
-                        count += kics_counts;
-                    }
-                }
-
-                for (var conSec_value in ScanSummaryJson.scansSummaries[item].containersCounters.severityCounters) {
-                    var conSec_severity = ScanSummaryJson.scansSummaries[item].containersCounters.severityCounters[conSec_value].severity;
-
-                    if (severity_array.indexOf(conSec_severity) != -1) {
-                        var conSec_counts = ScanSummaryJson.scansSummaries[item].containersCounters.severityCounters[conSec_value].counter;
-                        count += conSec_counts;
-                    }
-                }
-                for (var micro_value in ScanSummaryJson.scansSummaries[item].microEnginesCounters.severityCounters) {
-                    var micro_severity = ScanSummaryJson.scansSummaries[item].microEnginesCounters.severityCounters[micro_value].severity;
-
-                    if (severity_array.indexOf(micro_severity) != -1) {
-                        var micro_counts = ScanSummaryJson.scansSummaries[item].microEnginesCounters.severityCounters[micro_value].counter;
-                        count += micro_counts;
-                    }
-                }
-            }
+            var jsonLastScanReportResp = JSON.parse(body);
+            var count = jsonLastScanReportResp.totalCount;
         } catch (err) {
             gs.error(this.MSG + " getTotalVulcount: Error while getting the total vul count for scanId: " + scanId + " with error: " + err);
             return -1;
@@ -964,7 +926,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     // to get vulnerabilities information of scanId
-    getVulInfo: function(configId, scanId, offsetId, delta) {
+    getVulInfo: function(configId, scanId, offsetId, severity) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -973,7 +935,7 @@ CheckmarxOneUtilBase.prototype = {
             var includekics = this.importKicsFlaw(configId);
 
             var limit_val = config.limit;
-            var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val + '&sort=-severity';
+            var query = '/api/results/?scan-id=' + scanId + '&offset=' + offsetId + '&limit=' + limit_val + '&severity=' + severity + '&sort=-severity';
             var exclude_dev_and_test_dependencies = config.exclude_dev_and_test_dependencies;
             if (exclude_dev_and_test_dependencies) {
                 query += '&exclude-result-types=DEV_AND_TEST';
@@ -1009,7 +971,7 @@ CheckmarxOneUtilBase.prototype = {
             gs.error(this.MSG + " getApiSecVulInfo: Error while getting the apisec vul Info: " + err);
             return -1;
         }
-        return this._makeRestApiCall(apibaseurl, configId, token, query, method);
+        return this._makeRestApiCall(apibaseurl, configId, token, query, "get");
 
     },
 
@@ -1333,26 +1295,6 @@ CheckmarxOneUtilBase.prototype = {
 
     },
 
-    getDeltaScan: function(configId, appId, scanId, secondlastscan, offsetId) {
-        try {
-            var request = new sn_ws.RESTMessageV2();
-            var config = this._getConfig(configId);
-            var accesscontrolbaseUrl = config.checkmarxone_server_url;
-            var apibaseurl = config.checkmarxone_api_base_url;
-            var method = "post";
-            // var limit_val = config.limit;
-            var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
-            // var offset = offsetId * 50;
-            var query = '/api/sast-results/compare?scan-id=' + scanId + '&base-scan-id=' + secondlastscan + '&status=FIXED&offset=0&limit=10000'; /* + offset + '&limit=' + limit_val;*/
-            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
-        } catch (err) {
-            gs.error(this.MSG + " getDeltaScan: Error while getting the delta state for scanId: " + scanId + "with error: " + err);
-            return -1;
-        }
-        return resp;
-
-    },
-
     getSCADeltaVul: function(configId, appId, scanId, secondlastscan) {
         try {
             var request = new sn_ws.RESTMessageV2();
@@ -1511,7 +1453,7 @@ CheckmarxOneUtilBase.prototype = {
                 request.setRequestHeader('User-Agent', this.getUserAgentHeaderDetails());
                 //Convert the object to string and set it to Request Body-
                 request.setRequestBody(query);
-                var response = this._checkResponseStatus(request);
+                var response = this._checkResponseStatus(request, configId, method, false);
                 var responseBody = response.getBody();
                 var tokenResponse = JSON.parse(responseBody);
                 accessToken = tokenResponse.access_token;
@@ -1765,13 +1707,41 @@ CheckmarxOneUtilBase.prototype = {
             var log_level = config.log_level;
             r.setLogLevel(log_level);
         } catch (err) {
-            gs.error(this.MSG + " :setRequestParams :Error in setting the reuest params for REST API call");
+            gs.error(this.MSG + " :setRequestParams :Error in setting the reqest params for REST API call");
             throw err;
         }
         return r;
     },
 
-    _checkResponseStatus: function(request) {
+    setnewRequestParams: function(fullUrl, method, newtoken, configId, params) {
+        try {
+            var r = new sn_ws.RESTMessageV2();
+            r.setEndpoint(fullUrl);
+            r.setHttpMethod(method);
+
+            if (params) {
+                fullUrl += '/?';
+                Object.keys(params).forEach(function(key) {
+                    r.setQueryParameter(key, params[key]);
+                    fullUrl += key + '=' + gs.urlEncode(params[key]) + '&';
+                });
+                fullUrl = fullUrl.slice(0, fullUrl.length - 1);
+            }
+            var newHeader = "Bearer " + newtoken;
+            r.setRequestHeader('Authorization', newHeader);
+            r.setRequestHeader('User-Agent', this.getUserAgentHeaderDetails());
+            r.setHttpTimeout(30000);
+            var config = this._getConfig(configId);
+            var log_level = config.log_level;
+            r.setLogLevel(log_level);
+        } catch (err) {
+            gs.error(this.MSG + " :setnewRequestParams :Error in setting the reqest params for REST API call");
+            throw err;
+        }
+        return r;
+    },
+
+    _checkResponseStatus: function(request, configId, method, params) {
         try {
             var endpoint = request.getEndpoint();
             var response = request.execute();
@@ -1781,10 +1751,37 @@ CheckmarxOneUtilBase.prototype = {
 
             if (status <= 0)
                 throw gs.getMessage("Request could not be completed: {0} Reason : {1}", [endpoint, response.getErrorMessage()]);
-            if (status == 400)
+            if (status == 400) {
                 throw gs.getMessage("Bad request: {0} Reason : {1}", [endpoint, response.getErrorMessage()]);
-            if (status == 401)
-                throw gs.getMessage("Request not authorized: {0}", [endpoint, response.getErrorMessage()]);
+            }
+            if (status == -1 || status == 408 || status == 504 || status == 502) {
+                this.customSleep(5000);
+                var nextResponse = request.execute();
+                var nextStatus = nextResponse.getStatusCode();
+                if (newStatus == 200 || nextStatus == 202) {
+                    return nextResponse;
+                } else {
+                    throw gs.getMessage("Request timed out: {0} Reason : {1}", [endpoint, response.getErrorMessage()]);
+                }
+            }
+
+            if (status == 401) {
+                var tokenRequest = new sn_ws.RESTMessageV2();
+                var config = this._getConfig(configId);
+                var accesscontrolbaseUrl = config.checkmarxone_server_url;
+                var apibaseurl = config.checkmarxone_api_base_url;
+                var token_method = "post";
+                var save_token_flag = "true";
+                var token = this.getNewTokenForValidation(accesscontrolbaseUrl, config, token_method, tokenRequest, config.client_id, config.client_secret, config.tenant, save_token_flag, configId);
+                var newRequest = this.setnewRequestParams(endpoint, method, token, configId, params);
+                var newResponse = newRequest.execute();
+                var newStatus = newResponse.getStatusCode();
+                if (newStatus == 200 || newStatus == 202) {
+                    return newResponse;
+                } else {
+                    throw gs.getMessage("Request not authorized: {0}", [endpoint, response.getErrorMessage()]);
+                }
+            }
             if (status == 403)
                 throw gs.getMessage("Request forbidden: {0}", [endpoint, response.getErrorMessage()]);
             if (status == 404)
@@ -1792,8 +1789,15 @@ CheckmarxOneUtilBase.prototype = {
 
             throw gs.getMessage('Checkmarx responded with error code {0} on: {1}', [status, endpoint]);
         } catch (err) {
-            gs.error(this.MSG + " :_checkResponseStatus :Error in checking the response of the API call.");
-            throw err;
+            this.customSleep(5000);
+            var nextResponse = request.execute();
+            var nextStatus = nextResponse.getStatusCode();
+            if (newStatus == 200 || nextStatus == 202) {
+                return nextResponse;
+            } else {
+                gs.error(this.MSG + " :_checkResponseStatus :Error in checking the response of the API call." + err);
+                throw err;
+            }
         }
     },
 
@@ -1839,7 +1843,7 @@ CheckmarxOneUtilBase.prototype = {
             gs.error(this.MSG + " :_makeRestApiCall :Error in making API call.");
             throw err;
         }
-        return this._checkResponseStatus(r);
+        return this._checkResponseStatus(r, configId, method, params);
     },
     //For DevOps Integration
     _makeRestCallJSON: function(configId, token, name, params, pathParams, body) {
@@ -1872,8 +1876,184 @@ CheckmarxOneUtilBase.prototype = {
         r.setRequestHeader("Authorization", newHeader);
         r.setRequestHeader('User-Agent', this.getUserAgentHeaderDetails());
         r.setHttpTimeout(30000);
-        return this._checkResponseStatus(r);
+        return this._checkResponseStatus(r, configId, requestType, params);
     },
+
+    // Helper function to handle pagination for Project API calls potentially returning large datasets
+    _makePaginatedApiCall: function(apiurl, configId, token, baseQuery, method, resultKey) {
+        var MAX_LIMIT_WITHOUT_PAGINATION = 2000;
+        var PAGINATION_CHUNK_SIZE = 1000; // Default chunk size for pagination
+        var allResults = [];
+        var totalCount = 0;
+        var filteredTotalCount = 0;
+
+        try {
+            // Initial call to get the count
+            var countQuery = baseQuery + (baseQuery.indexOf('?') === -1 ? '?' : '&') + 'offset=0&limit=1';
+            var initialResponse = this._makeRestApiCall(apiurl, configId, token, countQuery, method);
+            var initialBody = initialResponse.getBody();
+            var initialJson = JSON.parse(initialBody);
+
+            filteredTotalCount = initialJson.filteredTotalCount || 0;
+            totalCount = initialJson.totalCount || 0; // Store totalCount if available
+
+            // If no results, return empty structure
+            if (filteredTotalCount === 0) {
+                var emptyResult = {};
+                emptyResult[resultKey] = [];
+                emptyResult.totalCount = totalCount;
+                emptyResult.filteredTotalCount = filteredTotalCount;
+                return emptyResult;
+            }
+
+            // If count is manageable (< MAX_LIMIT_WITHOUT_PAGINATION), fetch all at once
+            if (filteredTotalCount < MAX_LIMIT_WITHOUT_PAGINATION) {
+                var fetchAllQuery = baseQuery + (baseQuery.indexOf('?') === -1 ? '?' : '&') + 'offset=0&limit=' + filteredTotalCount;
+                var fetchAllResponse = this._makeRestApiCall(apiurl, configId, token, fetchAllQuery, method);
+                var fetchAllBody = fetchAllResponse.getBody();
+                // Return the parsed JSON directly
+                return JSON.parse(fetchAllBody);
+            }
+
+            // If count is large, paginate
+            var offset = 0;
+            while (offset < filteredTotalCount) {
+                var pageQuery = baseQuery + (baseQuery.indexOf('?') === -1 ? '?' : '&') + 'offset=' + offset + '&limit=' + PAGINATION_CHUNK_SIZE;
+                var pageResponse = this._makeRestApiCall(apiurl, configId, token, pageQuery, method);
+                var pageBody = pageResponse.getBody();
+                var pageJson = JSON.parse(pageBody);
+
+                if (pageJson && pageJson[resultKey] && pageJson[resultKey].length > 0) {
+                    allResults = allResults.concat(pageJson[resultKey]);
+                    offset += pageJson[resultKey].length; // More robust increment based on actual results returned
+                    // Break if the API returns fewer results than the limit, indicating the end
+                    if (pageJson[resultKey].length < PAGINATION_CHUNK_SIZE) {
+                        break;
+                    }
+                } else {
+                    gs.warn(this.MSG + ' Pagination query returned no results or unexpected format for key "' + resultKey + '". Stopping pagination.');
+                    break; // Stop if no results are returned or format is wrong
+                }
+                // Safety break in case offset doesn't advance properly
+                if (offset >= filteredTotalCount) {
+                    break;
+                }
+            }
+
+            // Construct the final aggregated result object
+            var finalResult = {};
+            finalResult[resultKey] = allResults;
+            finalResult.totalCount = totalCount; // Use totalCount from initial call
+            finalResult.filteredTotalCount = filteredTotalCount; // Use filteredTotalCount from initial call
+            return finalResult;
+
+        } catch (err) {
+            if (pageQuery && pageQuery != undefined && pageQuery != 'undefined') {
+                var query = pageQuery;
+            } else if (fetchAllQuery && fetchAllQuery != undefined && fetchAllQuery != 'undefined') {
+                query = fetchAllQuery;
+            }
+            gs.error(this.MSG + " _makePaginatedApiCall: Error during paginated API call for query starting with '" + query + "'. Error: " + err);
+            // throw err;
+        }
+    },
+
+
+    // Helper function to handle pagination for Scan API calls potentially returning large datasets
+    _makePaginatedScansApiCall: function(apiurl, configId, token, baseQuery, method, resultKey) {
+        var MAX_LIMIT_WITHOUT_PAGINATION = 1000;
+        var PAGINATION_CHUNK_SIZE = 500; // Default chunk size for pagination
+        var allResults = [];
+        var totalCount = 0;
+        var filteredTotalCount = 0;
+
+        try {
+            // Initial call to get the count
+            var countQuery = baseQuery + (baseQuery.indexOf('?') === -1 ? '?' : '&') + 'offset=0&limit=1';
+            var initialResponse = this._makeRestApiCall(apiurl, configId, token, countQuery, method);
+            var initialBody = initialResponse.getBody();
+            var initialJson = JSON.parse(initialBody);
+
+            filteredTotalCount = initialJson.filteredTotalCount || 0;
+            totalCount = initialJson.totalCount || 0; // Store totalCount if available
+
+            // If no results, return empty structure
+            if (filteredTotalCount === 0) {
+                var emptyResult = {};
+                emptyResult[resultKey] = [];
+                emptyResult.totalCount = totalCount;
+                emptyResult.filteredTotalCount = filteredTotalCount;
+                return emptyResult;
+            }
+
+            // If count is manageable (< MAX_LIMIT_WITHOUT_PAGINATION), fetch all at once
+            if (filteredTotalCount < MAX_LIMIT_WITHOUT_PAGINATION) {
+                var fetchAllQuery = baseQuery + (baseQuery.indexOf('?') === -1 ? '?' : '&') + 'offset=0&limit=' + filteredTotalCount;
+                var fetchAllResponse = this._makeRestApiCall(apiurl, configId, token, fetchAllQuery, method);
+                var fetchAllBody = fetchAllResponse.getBody();
+                // Return the parsed JSON directly
+                return JSON.parse(fetchAllBody);
+            }
+
+            // If count is large, paginate and sleep after 5th iteration
+            var offset = 0;
+            while (offset < filteredTotalCount) {
+                var pageQuery = baseQuery + (baseQuery.indexOf('?') === -1 ? '?' : '&') + 'offset=' + offset + '&limit=' + PAGINATION_CHUNK_SIZE;
+                var pageResponse = this._makeRestApiCall(apiurl, configId, token, pageQuery, method);
+                var pageBody = pageResponse.getBody();
+                var pageJson = JSON.parse(pageBody);
+                if (pageJson && pageJson[resultKey] && pageJson[resultKey].length > 0) {
+                    allResults = allResults.concat(pageJson[resultKey]);
+                    offset += pageJson[resultKey].length; // More robust increment based on actual results returned
+                    // Break if the API returns fewer results than the limit, indicating the end
+                    if (pageJson[resultKey].length < PAGINATION_CHUNK_SIZE) {
+                        break;
+                    }
+                } else {
+                    gs.warn(this.MSG + ' Pagination query returned no results or unexpected format for key "' + resultKey + '". Stopping pagination.');
+                    break; // Stop if no results are returned or format is wrong
+                }
+                // Safety break in case offset doesn't advance properly
+                if (offset >= filteredTotalCount) {
+                    break;
+                }
+                this.customSleep(300);
+
+            }
+
+            // Construct the final aggregated result object
+            var finalResult = {};
+            finalResult[resultKey] = allResults;
+            finalResult.totalCount = totalCount; // Use totalCount from initial call
+            finalResult.filteredTotalCount = filteredTotalCount; // Use filteredTotalCount from initial call
+            return finalResult;
+
+        } catch (err) {
+            if (pageQuery && pageQuery != undefined && pageQuery != 'undefined') {
+                var query = pageQuery;
+            } else if (fetchAllQuery && fetchAllQuery != undefined && fetchAllQuery != 'undefined') {
+                query = fetchAllQuery;
+            }
+
+            gs.error(this.MSG + " _makePaginatedScansApiCall: Error during paginated API call for query starting with '" + query + "'. Error: " + err);
+            // throw err;
+        }
+    },
+
+    //no system function for scoped application like this integration
+    customSleep: function(ms) {
+        try {
+            var endSleep = new GlideDuration().getNumericValue() + ms;
+            while (new GlideDuration().getNumericValue() < endSleep) {
+                //wait 
+            }
+        } catch (err) {
+            gs.error(this.MSG + " :customSleep :Error in customSleep().");
+            throw err;
+        }
+        return;
+    },
+
     // 2022-12-08T09:33:00.028555Z to 2022-12-08 09:33:00
     parseDate: function(str) {
         var a = str.replace('T', ' ');

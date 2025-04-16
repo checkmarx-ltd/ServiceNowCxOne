@@ -24,6 +24,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                 var engines = [];
                 var engine = '';
                 var scanDetailedRootNodeEnd = "</scanResults>";
+
                 var responseLastScanSummary = this.UTIL.getScanDetails(this.IMPLEMENTATION, Object.keys(params.run)[0]);
                 var jsonLastScanSummResp = JSON.parse(responseLastScanSummary.getBody());
                 //to map value of last_scan_date, project name and project Id in XML
@@ -43,7 +44,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 
                     if (engines.indexOf('microengines') != -1) {
                         for (var item in jsonLastScanSummResp.scans[value].metadata.configs) {
-                            if (jsonLastScanSummResp.scans[value].metadata.configs[item].type == 'microengines') {
+                           if (jsonLastScanSummResp.scans[value].metadata.configs[item].type == 'microengines') {
                                 var secretDetetction = jsonLastScanSummResp.scans[value].metadata.configs[item].value;
                                 if ('2ms' in secretDetetction) {
                                     engines.push('SecretDetection');
@@ -68,6 +69,16 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                     this.LATEST = date;
                 var isPrvScanEmpty = 'true';
                 var config = this.UTIL._getConfig(this.IMPLEMENTATION);
+                var resultState = config.result_states;
+                var resultStateFilter = false;
+                if (null != resultState && '' != resultState) {
+                    resultStateFilter = true;
+                    var result_state_array = this.UTIL.getResultStateFromUI(this.IMPLEMENTATION);
+                }
+                var ui_severity = config.severity;
+                if (null != ui_severity && '' != ui_severity) {
+                    var severity = config.severity;
+                }
                 var scan_synchronization = config.scan_synchronization.toString();
                 var scanSummary = new GlideRecord('sn_vul_app_vul_scan_summary');
                 scanSummary.addQuery('application_release.source_app_id', appId);
@@ -123,7 +134,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                 //   scanId, offset
                 var scanId = Object.keys(params.run)[0];
                 if (offset > 0) {
-                    response = this.getDetailedReport(scanId, params.run[Object.keys(params.run)[0]], lastscandate, appname, branch, prvScanBranch, appId, applicationIdsStr, engine);
+                    response = this.getDetailedReport(scanId, params.run[Object.keys(params.run)[0]], lastscandate, appname, branch, prvScanBranch, appId, applicationIdsStr, engine, severity, resultStateFilter, result_state_array);
                     if (response == "<null/>") {
                         xml_response = '<scanResults><Results></Results><ApiSecResults></ApiSecResults></scanResults>';
                     } else {
@@ -184,7 +195,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         };
     },
 
-    getDetailedReport: function(scanId, offset, lastscandate, appname, branch, prvScanBranch, appId, applicationIdsStr, engine) {
+    getDetailedReport: function(scanId, offset, lastscandate, appname, branch, prvScanBranch, appId, applicationIdsStr, engine, severity, resultStateFilter, result_state_array) {
         try {
             var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
             var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
@@ -195,7 +206,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             var includeApiSecurity = this.UTIL.importApiSecurityFlaw(this.IMPLEMENTATION);
             var config = this.UTIL._getConfig(this.IMPLEMENTATION);
             var apibaseurl = config.checkmarxone_api_base_url;
-            var basicContent = '<scanResults app_id="' + appId + '"  scan_id="' + scanId + '" last_scan_date="' + lastscandate + '" branch="' + branch +  '"  engine="' + engine + '" ><Results>';
+            var basicContent = '<scanResults app_id="' + appId + '"  scan_id="' + scanId + '" last_scan_date="' + lastscandate + '" branch="' + branch + '"  engine="' + engine + '" ><Results>';
             var SCAscanDetailedAll = '';
             var SASTscanDetailedAll = '';
             // var SASTDeltascanDetailedAll = '';
@@ -215,26 +226,15 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             var cvssVector = " ";
             var newoffset = offset - 1;
             var scan_type = "static";
-            var responseLastScanReport = this.UTIL.getVulInfo(this.IMPLEMENTATION, scanId, newoffset);
+            var responseLastScanReport = this.UTIL.getVulInfo(this.IMPLEMENTATION, scanId, newoffset, severity);
             var jsonLastScanReportResp = JSON.parse(responseLastScanReport.getBody());
             var configScanType = config.scan_type.toString();
 
-            var resultState = config.result_states;
-            var resultStateFilter = false;
-            if (null != resultState && '' != resultState) {
-                resultStateFilter = true;
-                var result_state_array = this.UTIL.getResultStateFromUI(this.IMPLEMENTATION);
-            }
-            var ui_severity = config.severity;
-            var severityFilter = false;
-            if (null != ui_severity && '' != ui_severity) {
-                var severity_array = this.UTIL.getSeverityFromUI(this.IMPLEMENTATION);
-            }
 
 
             for (item in jsonLastScanReportResp.results) {
                 if (((resultStateFilter == true && (result_state_array.indexOf(jsonLastScanReportResp.results[item].state) != -1)) ||
-                        resultStateFilter == false) && (severity_array.indexOf(jsonLastScanReportResp.results[item].severity.toUpperCase())) != -1) {
+                        resultStateFilter == false)) {
                     if (includesast == true && jsonLastScanReportResp.results[item].type == "sast") {
                         var isSastScanIncluded = 'false';
                         var scanTypeToCheck = '';
@@ -582,6 +582,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         return scanType;
     },
 
+    // To get information of process, if API security Scanner is selected.
     _getLatestProcessRecord: function() {
         var run = this.PROCESS.integration_run;
         var number_arr = [];
@@ -680,6 +681,9 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                         scan_app_list.push(scanJson.scans[k].projectId);
                 }
                 var scans = [];
+                if (scan_synchronization == 'latest scan of primary branch') {
+                    project_primary_branch_list = this.UTIL.getProjectPrimaryBranchList(this.IMPLEMENTATION);
+                }
                 for (var item in scan_app_list) {
                     var scanId = '';
                     var appId = scan_app_list[item];
@@ -688,7 +692,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 
                         if (includeProjectFlag == 'true') {
                             if (scan_synchronization == 'latest scan of primary branch') {
-                                scanId = this._getPrimaryBranchScanId(scanJson, appId);
+                                scanId = this._getPrimaryBranchScanId(scanJson, appId, project_primary_branch_list);
 
                                 if (scanId && scanId != '' && scanId != 'undefined') {
                                     scans.push(scanId);
@@ -780,7 +784,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
     },
 
     //get Scan ID for Primary Branch
-    _getPrimaryBranchScanId: function(scanJson, appId) {
+    _getPrimaryBranchScanId: function(scanJson, appId, project_primary_branch_list) {
         var scanId = '';
         var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
         var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
@@ -789,7 +793,6 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         var includeSecretDetection = this.UTIL.importSecretDetectionFlaw(this.IMPLEMENTATION);
         var includeScoreCard = this.UTIL.importScoreCardFlaw(this.IMPLEMENTATION);
         var includeApiSecurity = this.UTIL.importApiSecurityFlaw(this.IMPLEMENTATION);
-        var project_primary_branch_list = this.UTIL.getProjectPrimaryBranchList(this.IMPLEMENTATION);
         var primaryBranch = this.UTIL.getPrimaryBranchByProjectId(project_primary_branch_list, appId);
         if (null != primaryBranch && '' != primaryBranch) {
             for (var item in scanJson.scans) {
@@ -845,45 +848,42 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         var includeSecretDetection = this.UTIL.importSecretDetectionFlaw(this.IMPLEMENTATION);
         var includeScoreCard = this.UTIL.importScoreCardFlaw(this.IMPLEMENTATION);
         var includeApiSecurity = this.UTIL.importApiSecurityFlaw(this.IMPLEMENTATION);
-        var branches = this.UTIL.getProjectBranchList(this.IMPLEMENTATION, appId);
-        if (null != branches && '' != branches) {
-            for (var item in scanJson.scans) {
-                var projectId = scanJson.scans[item].projectId;
-                var projectScanId = scanJson.scans[item].id;
-                var scanIdBranch = scanJson.scans[item].branch;
-                var includeScan = 'false';
-                if (projectId && projectId != '' && projectId != 'undefined' && projectId == appId && branch.indexOf(scanIdBranch) == -1 && branches.indexOf(scanIdBranch) != -1) {
-                    if (includesca) {
-                        if (scanJson.scans[item].engines.toString().indexOf("sca") != -1)
-                            includeScan = 'true';
-                    }
-                    if (includesast) {
-                        if (scanJson.scans[item].engines.toString().indexOf("sast") != -1)
-                            includeScan = 'true';
-                    }
-                    if (includekics) {
-                        if (scanJson.scans[item].engines.toString().indexOf("kics") != -1)
-                            includeScan = 'true';
-                    }
-
-                    if (includeContainerSecurity) {
-                        if (scanJson.scans[item].engines.toString().indexOf("containers") != -1)
-                            includeScan = 'true';
-                    }
-                    if (includeSecretDetection) {
-                        if (scanJson.scans[item].engines.toString().indexOf("microengines") != -1)
-                            includeScan = 'true';
-                    }
-                    if (includeScoreCard) {
-                        if (scanJson.scans[item].engines.toString().indexOf("microengines") != -1)
-                            includeScan = 'true';
-                    }
+        for (var item in scanJson.scans) {
+            var projectId = scanJson.scans[item].projectId;
+            var projectScanId = scanJson.scans[item].id;
+            var scanIdBranch = scanJson.scans[item].branch;
+            var includeScan = 'false';
+            if (projectId && projectId != '' && projectId != 'undefined' && projectId == appId && branch.indexOf(scanIdBranch) == -1) {
+                if (includesca) {
+                    if (scanJson.scans[item].engines.toString().indexOf("sca") != -1)
+                        includeScan = 'true';
                 }
-                if (includeScan == 'true') {
-                    branch.push(scanJson.scans[item].branch);
-                    scanId.push(projectScanId);
-
+                if (includesast) {
+                    if (scanJson.scans[item].engines.toString().indexOf("sast") != -1)
+                        includeScan = 'true';
                 }
+                if (includekics) {
+                    if (scanJson.scans[item].engines.toString().indexOf("kics") != -1)
+                        includeScan = 'true';
+                }
+
+                if (includeContainerSecurity) {
+                    if (scanJson.scans[item].engines.toString().indexOf("containers") != -1)
+                        includeScan = 'true';
+                }
+                if (includeSecretDetection) {
+                    if (scanJson.scans[item].engines.toString().indexOf("microengines") != -1)
+                        includeScan = 'true';
+                }
+                if (includeScoreCard) {
+                    if (scanJson.scans[item].engines.toString().indexOf("microengines") != -1)
+                        includeScan = 'true';
+                }
+            }
+            if (includeScan == 'true') {
+                branch.push(scanJson.scans[item].branch);
+                scanId.push(projectScanId);
+
             }
         }
         return scanId;
@@ -923,16 +923,16 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             var pageNumber = 0;
             var apiSecLength = this.UTIL.getApiSecVulCount(this.IMPLEMENTATION, scanId);
             var apiSec_loopLength = apiSecLength / 50;
-			if(apiSecLength > 0){
-            for (var j = 0; j <= parseInt(apiSec_loopLength) + 1; j++) {
-                pageNumber = j * -1;
-                var finalOffset = this._getoffset(scanId, pageNumber);
-                if (finalOffset && pageNumber != 0) {
-                    offsets.push(finalOffset);
-                }
+            if (apiSecLength > 0) {
+                for (var j = 0; j <= parseInt(apiSec_loopLength) + 1; j++) {
+                    pageNumber = j * -1;
+                    var finalOffset = this._getoffset(scanId, pageNumber);
+                    if (finalOffset && pageNumber != 0) {
+                        offsets.push(finalOffset);
+                    }
 
+                }
             }
-			}
         }
         return offsets;
     },
