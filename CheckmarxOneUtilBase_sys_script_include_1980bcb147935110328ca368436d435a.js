@@ -218,7 +218,7 @@ CheckmarxOneUtilBase.prototype = {
             var query = '/api/apisec/static/api/risks/' + scanId + '?filtering=' + encodeURIComponent('[{"column":"sast_risk_id","values": "' + sastRiskId + '","operator":"eq"}]');
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
             var apibaseurl = config.checkmarxone_api_base_url;
-            var method = "get";
+            var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
 
         } catch (err) {
@@ -843,7 +843,7 @@ CheckmarxOneUtilBase.prototype = {
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
             var apibaseurl = config.checkmarxone_api_base_url;
             var ui_severity = config.severity;
-            var method = "get";
+            var method = "post";
             var count = 0;
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
             var query = '/api/apisec/static/api/risks/' + scanId + '/group/severity';
@@ -964,7 +964,7 @@ CheckmarxOneUtilBase.prototype = {
             var query = '/api/apisec/static/api/risks/' + scanId + '?page=' + offsetId + '&per_page=' + per_page;
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
             var apibaseurl = config.checkmarxone_api_base_url;
-            var method = "get";
+            var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
 
         } catch (err) {
@@ -1420,6 +1420,7 @@ CheckmarxOneUtilBase.prototype = {
                     "exclude_dev_and_test_dependencies": gr.getValue("exclude_dev_and_test_dependencies") === "1",
                     "scan_type": gr.getValue("scan_type"),
                     "severity": gr.getValue("severity"),
+					"auto_close_deleted_projects_avis_skipped": gr.getValue("auto_close_deleted_projects_avis_skipped") === "1",
                 };
             }
         } catch (err) {
