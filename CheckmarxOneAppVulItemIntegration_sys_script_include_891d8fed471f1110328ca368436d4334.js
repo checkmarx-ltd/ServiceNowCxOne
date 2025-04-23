@@ -687,6 +687,8 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 					var deltaStartGdt = new GlideDateTime(this.DELTA_START_TIME || '1970-01-01T10:16:06.17544Z');
 					var deletedProjectIds = this._getDeletedProjects(scan_app_list, deltaStartGdt);
 					if (deletedProjectIds.length > 0) {
+						this._handleAppReleaseForDeletedProjects(deletedProjectIds);
+						this._handleScanSummaryForDeletedProjects(deletedProjectIds);
                         this._closeSkippedAVIsForDeletedProjects(deletedProjectIds);
                     }
 				}
@@ -1016,6 +1018,34 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         return deletedProjectIds;
     },
 
+	// Updates the active field to false in discovered applications
+	_handleAppReleaseForDeletedProjects: function(projectIdsToSkip) {
+		var updatedCount = 0;
+        var avit = new sn_vul.PagedGlideRecord('sn_vul_app_release');
+		avit.addEncodedQuery('source=Checkmarx One^active=true' + '^source_app_idIN' + GlideStringUtil.escapeQueryTermSeparator(projectIdsToSkip.join(',')));
+		avit.setSortField("sys_id");
+
+        while (avit.next()) {
+			avit.gr.setValue('active', 'false');
+			avit.gr.update();
+			updatedCount++;
+        } 
+	},
+
+	// Updates the active field to false in scan summary
+	_handleScanSummaryForDeletedProjects: function(projectIdsToSkip) {
+		var updatedCount = 0;
+        var avit = new sn_vul.PagedGlideRecord('sn_vul_app_vul_scan_summary');
+		avit.addEncodedQuery('source=Checkmarx One^active=true' + '^application_release.source_app_idIN' + GlideStringUtil.escapeQueryTermSeparator(projectIdsToSkip.join(',')));
+		avit.setSortField("sys_id");
+
+        while (avit.next()) {
+			avit.gr.setValue('active', 'false');
+			avit.gr.update();
+			updatedCount++;
+        } 
+	},
+
 	// Close-Skipped AVIs for deleted projects
 	_closeSkippedAVIsForDeletedProjects: function(projectIdsToSkip) {
         var updatedCount = 0;
@@ -1028,7 +1058,8 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         while (avit.next()) {
 			avit.gr.setValue('source_remediation_status', 'SKIPPED');
 			avit.gr.setValue('state', 3); 
-			avit.gr.update('substate', 7);
+			avit.gr.setValue('substate', 7);
+			avit.gr.update();
 			updatedCount++;
         }
     },
