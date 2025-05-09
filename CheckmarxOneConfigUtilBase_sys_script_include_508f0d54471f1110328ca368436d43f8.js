@@ -77,6 +77,7 @@ CheckmarxOneConfigUtilBase.prototype = {
                 "filter_project": gr.getValue("filter_project"),
                 "severity": gr.getValue("severity"),
                 "scan_type": gs.nil(gr.getValue("scan_type")) ? "" : gr.getValue("scan_type"),
+				"auto_close_deleted_projects_avis_skipped": gr.getValue("auto_close_deleted_projects_avis_skipped") === "1",
             };
 
             new sn_sec_int.Implementation().setConfiguration(instance, newconfig);

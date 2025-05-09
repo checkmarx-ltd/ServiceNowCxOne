@@ -673,13 +673,26 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                 var list_projects_name = this.UTIL.getConfigProjectNameList(this.IMPLEMENTATION);
                 if (list_projects_name && list_projects_name.length > 0 && filter_project == 'by_name')
                     var projectIdsByNames = this.UTIL.getProjectIdsFromProjectNames(this.IMPLEMENTATION, list_projects_name);
-                for (var j in apps) {
+				for (var j in apps) {
                     app_list.push(apps[j].source_app_id);
                 }
+
                 for (var k in scanJson.scans) {
                     if (scan_app_list.indexOf(scanJson.scans[k].projectId) == -1)
                         scan_app_list.push(scanJson.scans[k].projectId);
                 }
+
+				// Handle Auto-Close for Deleted Projects (if enabled)
+				if (config.auto_close_deleted_projects_avis_skipped) {
+					var deltaStartGdt = new GlideDateTime(this.DELTA_START_TIME || '1970-01-01T10:16:06.17544Z');
+					var deletedProjectIds = this._getDeletedProjects(scan_app_list, deltaStartGdt);
+					if (deletedProjectIds.length > 0) {
+						this._handleAppReleaseForDeletedProjects(deletedProjectIds);
+						this._handleScanSummaryForDeletedProjects(deletedProjectIds);
+                        this._closeSkippedAVIsForDeletedProjects(deletedProjectIds);
+                    }
+				}
+
                 var scans = [];
                 if (scan_synchronization == 'latest scan of primary branch') {
                     project_primary_branch_list = this.UTIL.getProjectPrimaryBranchList(this.IMPLEMENTATION);
@@ -974,6 +987,81 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             return obj[e];
         });
         return values;
+    },
+
+	//Get deleted projects by comparing project IDs with
+	_getDeletedProjects: function(recentScanProjectIds, deltaStartGdt) {
+        var deletedProjectIds = [];
+        var descriptionPrefix = "created at";
+
+        var avit = new sn_vul.PagedGlideRecord('sn_vul_app_release');
+		avit.addEncodedQuery('source=Checkmarx One' + '^source_app_idNOT IN' + GlideStringUtil.escapeQueryTermSeparator(recentScanProjectIds.join(',')));
+		avit.setSortField("sys_id");
+
+        while (avit.next()) {
+            var sourceAppId = avit.gr.getValue('source_app_id');
+            var description = avit.gr.getValue('description');
+
+            try {
+                var dateStr = description.substring(descriptionPrefix.length).trim();
+                var createdAt = new GlideDateTime();
+                createdAt.setValue(this.UTIL.parseDate(dateStr));
+
+				// Use GlideDateTime comparison: deltaStartGdt <= createdAt
+				if (createdAt.onOrAfter(deltaStartGdt) && deletedProjectIds.indexOf(sourceAppId) === -1) {
+					deletedProjectIds.push(sourceAppId);
+				}
+			} catch (err) {
+                gs.error(this.MSG + " _getDeletedProjects: Error processing/checking deletion status for project ID: " + sourceAppId +  " : " + err);
+            }
+        }
+        return deletedProjectIds;
+    },
+
+	// Updates the active field to false in discovered applications
+	_handleAppReleaseForDeletedProjects: function(projectIdsToSkip) {
+		var updatedCount = 0;
+        var avit = new sn_vul.PagedGlideRecord('sn_vul_app_release');
+		avit.addEncodedQuery('source=Checkmarx One^active=true' + '^source_app_idIN' + GlideStringUtil.escapeQueryTermSeparator(projectIdsToSkip.join(',')));
+		avit.setSortField("sys_id");
+
+        while (avit.next()) {
+			avit.gr.setValue('active', 'false');
+			avit.gr.update();
+			updatedCount++;
+        } 
+	},
+
+	// Updates the active field to false in scan summary
+	_handleScanSummaryForDeletedProjects: function(projectIdsToSkip) {
+		var updatedCount = 0;
+        var avit = new sn_vul.PagedGlideRecord('sn_vul_app_vul_scan_summary');
+		avit.addEncodedQuery('source=Checkmarx One^active=true' + '^application_release.source_app_idIN' + GlideStringUtil.escapeQueryTermSeparator(projectIdsToSkip.join(',')));
+		avit.setSortField("sys_id");
+
+        while (avit.next()) {
+			avit.gr.setValue('active', 'false');
+			avit.gr.update();
+			updatedCount++;
+        } 
+	},
+
+	// Close-Skipped AVIs for deleted projects
+	_closeSkippedAVIsForDeletedProjects: function(projectIdsToSkip) {
+        var updatedCount = 0;
+        var avit = new sn_vul.PagedGlideRecord('sn_vul_app_vulnerable_item');
+		avit.addEncodedQuery('source=Checkmarx One' + 
+			'^application_release.source_app_idIN' + GlideStringUtil.escapeQueryTermSeparator(projectIdsToSkip.join(',')) + 
+			'^state!=3');
+		avit.setSortField("sys_id");
+
+        while (avit.next()) {
+			avit.gr.setValue('source_remediation_status', 'SKIPPED');
+			avit.gr.setValue('state', 3); 
+			avit.gr.setValue('substate', 7);
+			avit.gr.update();
+			updatedCount++;
+        }
     },
 
     type: 'CheckmarxOneAppVulItemIntegration'

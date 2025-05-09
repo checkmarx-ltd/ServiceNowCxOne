@@ -32,8 +32,14 @@ function clientValidation() {
         return false;
     }
 
-    if (g_form.getValue("import_sast") == "false" && g_form.getValue("import_sca") == "false" && g_form.getValue("import_kics") == "false") {
-        g_form.addWarningMessage(getMessage("Select SCA, SAST or IaC to proceed."));
+    if (g_form.getValue("import_sast") == "false" && g_form.getValue("import_sca") == "false" && g_form.getValue("import_kics") == "false" &&
+        g_form.getValue("include_ossf_scorecard") == "false" && g_form.getValue("include_secret_detection") == "false" && g_form.getValue("include_api_security") == "false") {
+        g_form.addWarningMessage(getMessage("Select SCA, SAST, IaC, OSSF Scorecard, API Security, Secret Detection to proceed."));
+        return false;
+    }
+
+    if (g_form.getValue("include_api_security") == 'true' && g_form.getValue("import_sast") == "false") {
+        g_form.addWarningMessage(getMessage('Select SAST also if API Security is Selected.'));
         return false;
     }
     gsftSubmit(null, g_form.getFormElement(), 'Checkmarxone_configuration_save');
