@@ -299,7 +299,7 @@ CheckmarxOneUtilBase.prototype = {
                         var not_exclude_project = this.getProjectById(configId, projectJSON.projects[item].id);
                         projects.push(not_exclude_project);
                     } catch (error) {
-                        gs.error(this.MSG + " getProjectById: Failed to get detail about project Id: " + projectJSON.projects[item].id + " with error: " + error);
+                        gs.error(this.MSG + " getNextProjectList: Failed to get detail about project Id: " + projectJSON.projects[item].id + " with error: " + error);
                         continue;
                     }
                 } else if (filter_project == 'by_Id' && list_projects && list_projects.length > 0 && list_projects.indexOf('exclude') == -1 && list_projects.indexOf(projectJSON.projects[item].id.toString()) != -1) {
@@ -307,7 +307,7 @@ CheckmarxOneUtilBase.prototype = {
                         var include_project = this.getProjectById(configId, projectJSON.projects[item].id);
                         projects.push(include_project);
                     } catch (error) {
-                        gs.error(this.MSG + " getProjectById: Failed to get detail about project Id: " + projectJSON.projects[item].id + " with error: " + error);
+                        gs.error(this.MSG + " getNextProjectList: Failed to get detail about project Id: " + projectJSON.projects[item].id + " with error: " + error);
                         continue;
                     }
                 } else if (filter_project == 'by_name' && list_projects_name && list_projects_name.length > 0 && list_projects_name.indexOf('exclude') != -1 && projectIdsByNames.indexOf(projectJSON.projects[item].id.toString()) == -1) {
@@ -315,7 +315,7 @@ CheckmarxOneUtilBase.prototype = {
                         var not_exclude_project_name = this.getProjectById(configId, projectJSON.projects[item].id);
                         projects.push(not_exclude_project_name);
                     } catch (error) {
-                        gs.error(this.MSG + " getProjectById: Failed to get detail about project Id: " + projectJSON.projects[item].id + " with error: " + error);
+                        gs.error(this.MSG + " getNextProjectList: Failed to get detail about project Id: " + projectJSON.projects[item].id + " with error: " + error);
                         continue;
                     }
                 } else if (filter_project == 'by_name' && list_projects_name && list_projects_name.length > 0 && list_projects_name.indexOf('exclude') == -1 && projectIdsByNames.indexOf(projectJSON.projects[item].id) != -1) {
@@ -323,7 +323,7 @@ CheckmarxOneUtilBase.prototype = {
                         var include_project_name = this.getProjectById(configId, projectJSON.projects[item].id);
                         projects.push(include_project_name);
                     } catch (error) {
-                        gs.error(this.MSG + " getProjectById: Failed to get detail about project Id: " + projectJSON.projects[item].id + " with error: " + error);
+                        gs.error(this.MSG + " getNextProjectList: Failed to get detail about project Id: " + projectJSON.projects[item].id + " with error: " + error);
                         continue;
                     }
                 } else if (filter_project == '' || filter_project == null || filter_project == 'none') {
@@ -331,7 +331,7 @@ CheckmarxOneUtilBase.prototype = {
                         var project = this.getProjectById(configId, projectJSON.projects[item].id);
                         projects.push(project);
                     } catch (error) {
-                        gs.error(this.MSG + " getProjectById: Failed to get detail about project Id: " + projectJSON.projects[item].id + " with error: " + error);
+                        gs.error(this.MSG + " getNextProjectList: Failed to get detail about project Id: " + projectJSON.projects[item].id + " with error: " + error);
                         continue;
                     }
                 }
@@ -499,7 +499,7 @@ CheckmarxOneUtilBase.prototype = {
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
 
             // Define base query without offset/limit
-            var baseQuery = '/api/scans/?statuses=Completed&from-date=' + last_run_date + '&sort=-created_at&sort=%2Bstatus&field=scan-ids';
+            var baseQuery = '/api/scans/scansBrief?statuses=Completed&from-date=' + last_run_date + '&sort=-created_at';
 
             // Use pagination helper
             var scanJson = this._makePaginatedScansApiCall(apibaseurl, configId, token, baseQuery, "get", 'scans');
@@ -508,41 +508,7 @@ CheckmarxOneUtilBase.prototype = {
             if (scanJson && scanJson.scans) {
                 for (var item in scanJson.scans) {
                     var projectId = scanJson.scans[item].projectId;
-                    var includeProject = 'false';
-                    if (projectId && projectId != '' && projectId != 'undefined' && projectIdsByLastScanDate.indexOf(projectId) == -1) {
-                        if (includesca) {
-                            if (scanJson.scans[item].engines && scanJson.scans[item].engines.toString().indexOf("sca") != -1) {
-                                includeProject = 'true';
-                            }
-                        }
-                        if (includesast) {
-                            if (scanJson.scans[item].engines && scanJson.scans[item].engines.toString().indexOf("sast") != -1) {
-                                includeProject = 'true';
-                            }
-                        }
-                        if (includekics) {
-                            if (scanJson.scans[item].engines && scanJson.scans[item].engines.toString().indexOf("kics") != -1) {
-                                includeProject = 'true';
-                            }
-                        }
-                        if (includeContainerSecurity) {
-                            if (scanJson.scans[item].engines && scanJson.scans[item].engines.toString().indexOf("containers") != -1) {
-                                includeProject = 'true';
-                            }
-                        }
-                        if (includeSecretDetection) {
-                            if (scanJson.scans[item].engines && scanJson.scans[item].engines.toString().indexOf("microengines") != -1) {
-                                includeProject = 'true';
-                            }
-                        }
-                        if (includeScoreCard) {
-                            if (scanJson.scans[item].engines && scanJson.scans[item].engines.toString().indexOf("microengines") != -1) {
-                                includeProject = 'true';
-                            }
-                        }
-                    }
-                    if (includeProject == 'true')
-                        projectIdsByLastScanDate.push(projectId);
+                    projectIdsByLastScanDate.push(projectId);
                 }
             }
         } catch (err) {
@@ -561,7 +527,7 @@ CheckmarxOneUtilBase.prototype = {
             var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
             // Define base query without offset/limit
-            var baseQuery = '/api/scans/?statuses=Completed&from-date=' + last_run_date + '&sort=-created_at&sort=%2Bstatus&field=scan-ids';
+            var baseQuery = '/api/scans/scansBrief?statuses=Completed&from-date=' + last_run_date + '&sort=-created_at';
 
             // Use pagination helper
             scanJson = this._makePaginatedScansApiCall(apibaseurl, configId, token, baseQuery, "get", 'scans');
@@ -607,19 +573,19 @@ CheckmarxOneUtilBase.prototype = {
             var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
             for (var item in branches) {
-                branch += '&branches=' + branches[item];
+                branch += '&branches=' + encodeURIComponent(branches[item]);
             }
 
-            // Define base query without offset/limit
-            var baseQuery = '/api/scans/?statuses=Completed&project-id=' + projectId + '&from-date=' + last_run_date + '&sort=-created_at&sort=%2Bstatus&field=scan-ids' + branch;
+            var query = '/api/scans/?statuses=Completed&project-id=' + projectId + '&from-date=' + last_run_date + '&sort=-created_at&sort=%2Bstatus&field=scan-ids' + branch;
 
-            // Use pagination helper
-            var scanJson = this._makePaginatedScansApiCall(apibaseurl, configId, token, baseQuery, "get", 'scans');
+            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+            var jsonLastScanSummResp = JSON.parse(resp.getBody());
         } catch (err) {
             gs.error(this.MSG + " :getScanListFilterByMultipleBranch :Error in getting the scan details with branch filter: " + err);
             return -1;
         }
-        return scanJson;
+
+        return jsonLastScanSummResp;
     },
 
 
@@ -1420,6 +1386,7 @@ CheckmarxOneUtilBase.prototype = {
                     "exclude_dev_and_test_dependencies": gr.getValue("exclude_dev_and_test_dependencies") === "1",
                     "scan_type": gr.getValue("scan_type"),
                     "severity": gr.getValue("severity"),
+                    "close_findings_of_deleted_projects": gr.getValue("close_findings_of_deleted_projects") === "1",
                 };
             }
         } catch (err) {
@@ -1754,7 +1721,7 @@ CheckmarxOneUtilBase.prototype = {
             if (status == 400) {
                 throw gs.getMessage("Bad request: {0} Reason : {1}", [endpoint, response.getErrorMessage()]);
             }
-            if (status == -1 || status == 408 || status == 504 || status == 502) {
+            if (status == -1 || status == 408 || status == 504 || status == 502 || status == 500) {
                 this.customSleep(5000);
                 var nextResponse = request.execute();
                 var nextStatus = nextResponse.getStatusCode();
@@ -1790,10 +1757,10 @@ CheckmarxOneUtilBase.prototype = {
             throw gs.getMessage('Checkmarx responded with error code {0} on: {1}', [status, endpoint]);
         } catch (err) {
             this.customSleep(5000);
-            var nextResponse = request.execute();
-            var nextStatus = nextResponse.getStatusCode();
+            var catchResponse = request.execute();
+            var catchStatus = catchResponse.getStatusCode();
             if (newStatus == 200 || nextStatus == 202) {
-                return nextResponse;
+                return catchResponse;
             } else {
                 gs.error(this.MSG + " :_checkResponseStatus :Error in checking the response of the API call." + err);
                 throw err;
@@ -2061,6 +2028,12 @@ CheckmarxOneUtilBase.prototype = {
         var c = b.split('.')[0];
         var date = new GlideDateTime(c);
         return date;
+    },
+
+    //2022-12-08 09:33:00 to 2022-12-08,09:33:00
+    parseDateWithComma: function(str) {
+        var a = str.replace(/ /g, ',');
+        return a;
     },
 
     //2022-12-08 09:33:00 to 2022-12-08T09:33:00.028555Z
