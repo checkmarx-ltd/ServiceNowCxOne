@@ -243,8 +243,8 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         resultObj['location'] = node.getAttribute('location');
                         resultObj['source_sdlc_status'] = 'Not Applicable';
                         resultObj['source_link'] = node.getAttribute('sourcefile');
-                        if (node.getAttribute('line_no') != '') {
-                            resultObj['line_number'] = parseInt(node.getAttribute('line_no'));
+                        if (node.getAttribute('line_no') && node.getAttribute('line_no') != '' && node.getAttribute('line_no') != null && parseInt(node.getAttribute('line_no'), 10) > -1) {
+                            resultObj['line_number'] = parseInt(node.getAttribute('line_no'), 10);
                         }
                         resultObj['source_scan_id'] = reportData['source_scan_id'];
                         resultObj['last_scan_date'] = reportData['last_scan_date'];
@@ -271,7 +271,6 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         resultObj['source_entry_id'] = queryData['source_entry_id'];
                         resultObj['category_name'] = queryData['category_name'];
                         resultObj['project_branch'] = node.getAttribute('branch');
-                        project_branch = resultObj['project_branch'];
                         if (reportData['scan_type'] != 'static') {
                             nvdData['cvss_base_score'] = node.getAttribute('cvssScore');
                             nvdData['cvss_vector'] = node.getAttribute('cvssVector');
