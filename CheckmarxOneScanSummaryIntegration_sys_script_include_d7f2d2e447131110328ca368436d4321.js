@@ -249,17 +249,17 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                             else
                                 prvScaScanBranch = '' + jsonLastScanSummResp.scans[item].branch;
                         }
-						scaScanSummaryAll += '<scan id="' + this.UTIL.escapeXmlChars('sca' + jsonLastScanSummResp.scans[item].id) + '"' +
-							' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
-							' last_scan_date="' + this.UTIL.escapeXmlChars(this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt)) + '"' +
-							' total_no_flaws="' + this.UTIL.escapeXmlChars(scaresponsevul) + '"' +
-							' branch="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].branch) + '"' +
-							' prvScanId="' + this.UTIL.escapeXmlChars(scaPrvScanId) + '"' +
-							' scan_origin="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceOrigin) + '"' +
-							' scan_source="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceType) + '"' +
-							' scan_type="' + this.UTIL.escapeXmlChars(scaScanType) + '"' +
-							' prvBranch="' + this.UTIL.escapeXmlChars(prvScaScanBranch) + '"' +
-							' app_name="' + this.UTIL.escapeXmlChars(appId) + '"/>';
+                        scaScanSummaryAll += '<scan id="' + this.UTIL.escapeXmlChars('sca' + jsonLastScanSummResp.scans[item].id) + '"' +
+                            ' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
+                            ' last_scan_date="' + this.UTIL.escapeXmlChars(this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt)) + '"' +
+                            ' total_no_flaws="' + this.UTIL.escapeXmlChars(scaresponsevul) + '"' +
+                            ' branch="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].branch) + '"' +
+                            ' prvScanId="' + this.UTIL.escapeXmlChars(scaPrvScanId) + '"' +
+                            ' scan_origin="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceOrigin) + '"' +
+                            ' scan_source="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceType) + '"' +
+                            ' scan_type="' + this.UTIL.escapeXmlChars(scaScanType) + '"' +
+                            ' prvBranch="' + this.UTIL.escapeXmlChars(prvScaScanBranch) + '"' +
+                            ' app_name="' + this.UTIL.escapeXmlChars(appId) + '"/>';
                     }
                 }
 
@@ -289,17 +289,17 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                         }
                         var loc = this._getLOCforSAST(jsonLastScanSummResp.scans[item].statusDetails);
                         sastScanSummaryAll += '<scan id="' + this.UTIL.escapeXmlChars('sast' + jsonLastScanSummResp.scans[item].id) + '"' +
-							' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
-							' last_scan_date="' + this.UTIL.escapeXmlChars(this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt)) + '"' +
-							' total_no_flaws="' + this.UTIL.escapeXmlChars(sastresponsevul) + '"' +
-							' loc="' + this.UTIL.escapeXmlChars(loc) + '"' +
-							' branch="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].branch) + '"' +
-							' prvScanId="' + this.UTIL.escapeXmlChars(sastPrvScanId) + '"' +
-							' scan_origin="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceOrigin) + '"' +
-							' scan_source="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceType) + '"' +
-							' scan_type="' + this.UTIL.escapeXmlChars(sastScanType) + '"' +
-							' prvBranch="' + this.UTIL.escapeXmlChars(prvSastScanBranch) + '"' +
-							' app_name="' + this.UTIL.escapeXmlChars(appId) + '"/>';
+                            ' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
+                            ' last_scan_date="' + this.UTIL.escapeXmlChars(this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt)) + '"' +
+                            ' total_no_flaws="' + this.UTIL.escapeXmlChars(sastresponsevul) + '"' +
+                            ' loc="' + this.UTIL.escapeXmlChars(loc) + '"' +
+                            ' branch="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].branch) + '"' +
+                            ' prvScanId="' + this.UTIL.escapeXmlChars(sastPrvScanId) + '"' +
+                            ' scan_origin="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceOrigin) + '"' +
+                            ' scan_source="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceType) + '"' +
+                            ' scan_type="' + this.UTIL.escapeXmlChars(sastScanType) + '"' +
+                            ' prvBranch="' + this.UTIL.escapeXmlChars(prvSastScanBranch) + '"' +
+                            ' app_name="' + this.UTIL.escapeXmlChars(appId) + '"/>';
                     }
                 }
 
@@ -317,16 +317,16 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                                 prvKicsScanBranch = '' + jsonLastScanSummResp.scans[item].branch;
                         }
                         kicsScanSummaryAll += '<scan id="' + this.UTIL.escapeXmlChars('IaC' + jsonLastScanSummResp.scans[item].id) + '"' +
-							' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
-							' last_scan_date="' + this.UTIL.escapeXmlChars(this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt)) + '"' +
-							' total_no_flaws="' + this.UTIL.escapeXmlChars(kicsresponsevul) + '"' +
-							' branch="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].branch) + '"' +
-							' prvScanId="' + this.UTIL.escapeXmlChars(kicsPrvScanId) + '"' +
-							' scan_origin="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceOrigin) + '"' +
-							' scan_source="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceType) + '"' +
-							' scan_type="' + this.UTIL.escapeXmlChars(scanType) + '"' +
-							' prvBranch="' + this.UTIL.escapeXmlChars(prvKicsScanBranch) + '"' +
-							' app_name="' + this.UTIL.escapeXmlChars(appId) + '"/>';
+                            ' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
+                            ' last_scan_date="' + this.UTIL.escapeXmlChars(this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt)) + '"' +
+                            ' total_no_flaws="' + this.UTIL.escapeXmlChars(kicsresponsevul) + '"' +
+                            ' branch="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].branch) + '"' +
+                            ' prvScanId="' + this.UTIL.escapeXmlChars(kicsPrvScanId) + '"' +
+                            ' scan_origin="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceOrigin) + '"' +
+                            ' scan_source="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceType) + '"' +
+                            ' scan_type="' + this.UTIL.escapeXmlChars(scanType) + '"' +
+                            ' prvBranch="' + this.UTIL.escapeXmlChars(prvKicsScanBranch) + '"' +
+                            ' app_name="' + this.UTIL.escapeXmlChars(appId) + '"/>';
                     }
                 }
 
@@ -344,16 +344,16 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                                 prvConSecScanBranch = '' + jsonLastScanSummResp.scans[item].branch;
                         }
                         containerSecurityScanSummaryAll += '<scan id="' + this.UTIL.escapeXmlChars('CS' + jsonLastScanSummResp.scans[item].id) + '"' +
-							' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
-							' last_scan_date="' + this.UTIL.escapeXmlChars(this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt)) + '"' +
-							' total_no_flaws="' + this.UTIL.escapeXmlChars(containerSecurityResponseVul) + '"' +
-							' branch="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].branch) + '"' +
-							' prvScanId="' + this.UTIL.escapeXmlChars(conSecPrvScanId) + '"' +
-							' scan_origin="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceOrigin) + '"' +
-							' scan_source="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceType) + '"' +
-							' scan_type="' + this.UTIL.escapeXmlChars(container_scanType) + '"' +
-							' prvBranch="' + this.UTIL.escapeXmlChars(prvConSecScanBranch) + '"' +
-							' app_name="' + this.UTIL.escapeXmlChars(appId) + '"/>';
+                            ' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
+                            ' last_scan_date="' + this.UTIL.escapeXmlChars(this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt)) + '"' +
+                            ' total_no_flaws="' + this.UTIL.escapeXmlChars(containerSecurityResponseVul) + '"' +
+                            ' branch="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].branch) + '"' +
+                            ' prvScanId="' + this.UTIL.escapeXmlChars(conSecPrvScanId) + '"' +
+                            ' scan_origin="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceOrigin) + '"' +
+                            ' scan_source="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceType) + '"' +
+                            ' scan_type="' + this.UTIL.escapeXmlChars(container_scanType) + '"' +
+                            ' prvBranch="' + this.UTIL.escapeXmlChars(prvConSecScanBranch) + '"' +
+                            ' app_name="' + this.UTIL.escapeXmlChars(appId) + '"/>';
                     }
                 }
 
@@ -367,16 +367,16 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                             prvApiSecScanBranch = apiSecPrvScanId ? jsonLastScanSummResp.scans[item].branch : '';
                         }
                         apiSecurityScanSummaryAll += '<scan id="' + this.UTIL.escapeXmlChars('apisec' + jsonLastScanSummResp.scans[item].id) + '"' +
-							' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
-							' last_scan_date="' + this.UTIL.escapeXmlChars(this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt)) + '"' +
-							' total_no_flaws="' + this.UTIL.escapeXmlChars(apiSecResponseVul) + '"' +
-							' branch="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].branch) + '"' +
-							' prvScanId="' + this.UTIL.escapeXmlChars(apiSecPrvScanId) + '"' +
-							' scan_origin="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceOrigin) + '"' +
-							' scan_source="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceType) + '"' +
-							' scan_type="' + this.UTIL.escapeXmlChars(api_scanType) + '"' +
-							' prvBranch="' + this.UTIL.escapeXmlChars(prvApiSecScanBranch) + '"' +
-							' app_name="' + this.UTIL.escapeXmlChars(appId) + '"/>';
+                            ' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
+                            ' last_scan_date="' + this.UTIL.escapeXmlChars(this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt)) + '"' +
+                            ' total_no_flaws="' + this.UTIL.escapeXmlChars(apiSecResponseVul) + '"' +
+                            ' branch="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].branch) + '"' +
+                            ' prvScanId="' + this.UTIL.escapeXmlChars(apiSecPrvScanId) + '"' +
+                            ' scan_origin="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceOrigin) + '"' +
+                            ' scan_source="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceType) + '"' +
+                            ' scan_type="' + this.UTIL.escapeXmlChars(api_scanType) + '"' +
+                            ' prvBranch="' + this.UTIL.escapeXmlChars(prvApiSecScanBranch) + '"' +
+                            ' app_name="' + this.UTIL.escapeXmlChars(appId) + '"/>';
                     }
                 }
                 //OSSF Scorecard scan summary
@@ -393,16 +393,16 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                                 prvScoreCardScanBranch = '' + jsonLastScanSummResp.scans[item].branch;
                         }
                         scoreCardScanSummaryAll += '<scan id="' + this.UTIL.escapeXmlChars('ScoreCard' + jsonLastScanSummResp.scans[item].id) + '"' +
-							' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
-							' last_scan_date="' + this.UTIL.escapeXmlChars(this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt)) + '"' +
-							' total_no_flaws="' + this.UTIL.escapeXmlChars(scorecardResponseVul) + '"' +
-							' branch="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].branch) + '"' +
-							' prvScanId="' + this.UTIL.escapeXmlChars(scorecardPrvScanId) + '"' +
-							' scan_origin="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceOrigin) + '"' +
-							' scan_source="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceType) + '"' +
-							' scan_type="' + this.UTIL.escapeXmlChars(scorecard_scanType) + '"' +
-							' prvBranch="' + this.UTIL.escapeXmlChars(prvScoreCardScanBranch) + '"' +
-							' app_name="' + this.UTIL.escapeXmlChars(appId) + '"/>';
+                            ' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
+                            ' last_scan_date="' + this.UTIL.escapeXmlChars(this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt)) + '"' +
+                            ' total_no_flaws="' + this.UTIL.escapeXmlChars(scorecardResponseVul) + '"' +
+                            ' branch="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].branch) + '"' +
+                            ' prvScanId="' + this.UTIL.escapeXmlChars(scorecardPrvScanId) + '"' +
+                            ' scan_origin="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceOrigin) + '"' +
+                            ' scan_source="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceType) + '"' +
+                            ' scan_type="' + this.UTIL.escapeXmlChars(scorecard_scanType) + '"' +
+                            ' prvBranch="' + this.UTIL.escapeXmlChars(prvScoreCardScanBranch) + '"' +
+                            ' app_name="' + this.UTIL.escapeXmlChars(appId) + '"/>';
                     }
                 }
 
@@ -421,16 +421,16 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                                 prvSecretDetectionScanBranch = '' + jsonLastScanSummResp.scans[item].branch;
                         }
                         secretDetectionScanSummaryAll += '<scan id="' + this.UTIL.escapeXmlChars('SecretDetection' + jsonLastScanSummResp.scans[item].id) + '"' +
-							' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
-							' last_scan_date="' + this.UTIL.escapeXmlChars(this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt)) + '"' +
-							' total_no_flaws="' + this.UTIL.escapeXmlChars(secretDetectionResponseVul) + '"' +
-							' branch="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].branch) + '"' +
-							' prvScanId="' + this.UTIL.escapeXmlChars(secretDetectionPrvScanId) + '"' +
-							' scan_origin="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceOrigin) + '"' +
-							' scan_source="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceType) + '"' +
-							' scan_type="' + this.UTIL.escapeXmlChars(secretDetection_scanType) + '"' +
-							' prvBranch="' + this.UTIL.escapeXmlChars(prvSecretDetectionScanBranch) + '"' +
-							' app_name="' + this.UTIL.escapeXmlChars(appId) + '"/>';
+                            ' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
+                            ' last_scan_date="' + this.UTIL.escapeXmlChars(this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt)) + '"' +
+                            ' total_no_flaws="' + this.UTIL.escapeXmlChars(secretDetectionResponseVul) + '"' +
+                            ' branch="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].branch) + '"' +
+                            ' prvScanId="' + this.UTIL.escapeXmlChars(secretDetectionPrvScanId) + '"' +
+                            ' scan_origin="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceOrigin) + '"' +
+                            ' scan_source="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceType) + '"' +
+                            ' scan_type="' + this.UTIL.escapeXmlChars(secretDetection_scanType) + '"' +
+                            ' prvBranch="' + this.UTIL.escapeXmlChars(prvSecretDetectionScanBranch) + '"' +
+                            ' app_name="' + this.UTIL.escapeXmlChars(appId) + '"/>';
                     }
                 }
 

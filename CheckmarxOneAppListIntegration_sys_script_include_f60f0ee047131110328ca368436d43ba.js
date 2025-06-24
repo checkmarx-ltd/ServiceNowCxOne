@@ -79,16 +79,16 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
                     if (null != projects[item].mainBranch && projects[item].mainBranch.length > 0)
                         primaryBranch = projects[item].mainBranch.toString();
 
-					var currentGroupVal = (groups.length == 0) ? groupval : projects[item].groups.toString();
+                    var currentGroupVal = (groups.length == 0) ? groupval : projects[item].groups.toString();
 
-					appListAll += '<project id="' + this.UTIL.escapeXmlChars(projects[item].id) + '"' +
-						' createdAt="' + this.UTIL.escapeXmlChars(projects[item].createdAt) + '"' +
-						' applicationIds="' + this.UTIL.escapeXmlChars(applicationIds) + '"' +
-						' groups="' + this.UTIL.escapeXmlChars(currentGroupVal) + '">' +
-						'<primaryBranch>' + this.UTIL.escapeCDATA(primaryBranch) + '</primaryBranch>' +
-						'<projectTags>' + this.UTIL.escapeCDATA(projectTags) + '</projectTags>' +
-						'<name>' + this.UTIL.escapeCDATA(projects[item].name) + '</name>' +
-						'</project>';
+                    appListAll += '<project id="' + this.UTIL.escapeXmlChars(projects[item].id) + '"' +
+                        ' createdAt="' + this.UTIL.escapeXmlChars(projects[item].createdAt) + '"' +
+                        ' applicationIds="' + this.UTIL.escapeXmlChars(applicationIds) + '"' +
+                        ' groups="' + this.UTIL.escapeXmlChars(currentGroupVal) + '">' +
+                        '<primaryBranch>' + this.UTIL.escapeCDATA(primaryBranch) + '</primaryBranch>' +
+                        '<projectTags>' + this.UTIL.escapeCDATA(projectTags) + '</projectTags>' +
+                        '<name>' + this.UTIL.escapeCDATA(projects[item].name) + '</name>' +
+                        '</project>';
 
                 }
                 if (appListAll == '' && createdDate > projects[item].createdAt) {

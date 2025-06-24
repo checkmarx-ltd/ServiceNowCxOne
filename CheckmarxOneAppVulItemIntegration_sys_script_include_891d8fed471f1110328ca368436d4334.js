@@ -774,8 +774,8 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                                     include_scan = 'true';
                                 }
                                 if (include_scan == 'true') {
-
-                                    if (jsonLastScanSummResp.scans[item].engines.toString().indexOf("microengines") != -1 &&
+                                    if (jsonLastScanSummResp.scans[item].engines.toString().indexOf("microengines") != -1 && jsonLastScanSummResp.scans[item].metadata && jsonLastScanSummResp.scans[item].metadata.length > 0 &&
+                                        jsonLastScanSummResp.scans[item].metadata.configs &&
                                         jsonLastScanSummResp.scans[item].metadata.configs[item].type == 'microengines') {
                                         var secretDetetction = jsonLastScanSummResp.scans[item].metadata.configs[item].value;
                                         if ('2ms' in secretDetetction && engineList.indexOf('SecretDetection') == -1) {
