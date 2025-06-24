@@ -2051,7 +2051,9 @@ CheckmarxOneUtilBase.prototype = {
 
 	// Helper function to escape CDATA content
     escapeCDATA: function(str) {
-        if (!str) return '';
+        if (str === null || typeof str === 'undefined' || str == '') {
+			return '';
+		}
         // When ]]> appears in content, replace it with ]]]]><![CDATA[>
         var escaped = str.toString().replace(/]]>/g, ']]]]><![CDATA[>');
         return '<![CDATA[' + escaped + ']]>';
@@ -2059,7 +2061,7 @@ CheckmarxOneUtilBase.prototype = {
 
 	// Helper function to escape xml special characters
 	escapeXmlChars: function(str) {
-		if (str === null || typeof str === 'undefined') {
+		if (str === null || typeof str === 'undefined' || str == '') {
 			return '';
 		}
 		str = String(str); 
