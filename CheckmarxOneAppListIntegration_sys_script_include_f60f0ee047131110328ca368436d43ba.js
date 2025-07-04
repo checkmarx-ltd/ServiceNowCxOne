@@ -4,7 +4,7 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
 
     UTIL: new CheckmarxOneUtil(),
     MSG: 'CheckmarxOne AppListIntegration:',
-    retrieveData: function() {
+    retrieveData: function () {
         gs.debug(this.MSG + 'retrieveData');
         var response = "<null/>";
         try {
@@ -54,9 +54,9 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
     },
 
     //Creates XML summary for Projects
-    getAppList: function(filteredCount, offset) {
+    getAppList: function (filteredCount, offset) {
         try {
-            
+
             var appListRootNodeStart = "<appInfoList><xml id=\"checkmarxone\"><projects>";
             var appListRootNodeEnd = "</projects></xml></appInfoList>";
             var appListAll = '';
@@ -79,24 +79,17 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
                     if (null != projects[item].mainBranch && projects[item].mainBranch.length > 0)
                         primaryBranch = projects[item].mainBranch.toString();
 
-                    if (groups == 0) {
-                        appListAll += '<project id="' + projects[item].id +
-                            '" createdAt="' + projects[item].createdAt +
-                            '" applicationIds="' + applicationIds +
-                            '" groups="' + groupval + '"><primaryBranch><' +
-                            '![CDATA[' + primaryBranch + ']]' + '></primaryBranch><projectTags><' +
-                            '![CDATA[' + projectTags + ']]' + '></projectTags><name><' +
-                            '![CDATA[' + projects[item].name + ']]' + '></name></project>';
+                    var currentGroupVal = (groups.length == 0) ? groupval : projects[item].groups.toString();
 
-                    } else {
-                        appListAll += '<project id="' + projects[item].id +
-                            '" createdAt="' + projects[item].createdAt +
-                            '" applicationIds="' + applicationIds +
-                            '" groups="' + projects[item].groups.toString() + '"><primaryBranch><' +
-                            '![CDATA[' + primaryBranch + ']]' + '></primaryBranch><projectTags><' +
-                            '![CDATA[' + projectTags + ']]' + '></projectTags><name><' +
-                            '![CDATA[' + projects[item].name + ']]' + '></name></project>';
-                    }
+                    appListAll += '<project id="' + this.UTIL.escapeXmlChars(projects[item].id) + '"' +
+                        ' createdAt="' + this.UTIL.escapeXmlChars(projects[item].createdAt) + '"' +
+                        ' applicationIds="' + this.UTIL.escapeXmlChars(applicationIds) + '"' +
+                        ' groups="' + this.UTIL.escapeXmlChars(currentGroupVal) + '">' +
+                        '<primaryBranch>' + this.UTIL.escapeCDATA(primaryBranch) + '</primaryBranch>' +
+                        '<projectTags>' + this.UTIL.escapeCDATA(projectTags) + '</projectTags>' +
+                        '<name>' + this.UTIL.escapeCDATA(projects[item].name) + '</name>' +
+                        '</project>';
+
                 }
                 if (appListAll == '' && createdDate > projects[item].createdAt) {
                     return -1;
@@ -111,14 +104,14 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
         return reportContent;
     },
 
-    _getProjectTags: function(tags) {
+    _getProjectTags: function (tags) {
         if (tags == null || tags.length < 3)
             return '';
         return tags.substring(1, tags.length - 1);
     },
 
     // Gets the integration parameters as a map
-    _getParameters: function(parameters) {
+    _getParameters: function (parameters) {
         var params = {
             run: null,
             remaining: {}
@@ -165,7 +158,7 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
         return params;
     },
     //to get offset value from total length
-    _getoffsets: function(filteredCount, totalCount) {
+    _getoffsets: function (filteredCount, totalCount) {
         var offsets = [];
         var loopLength = totalCount / 50;
         var offset = 0;
@@ -181,11 +174,11 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
         return offsets;
     },
 
-    _getoffset: function(config, offsetId) {
+    _getoffset: function (config, offsetId) {
         return offsetId;
     },
     // Gets the start time of the integration
-    _getCurrentDeltaStartTime: function() {
+    _getCurrentDeltaStartTime: function () {
         try {
             var delta = this.UTIL.parseTZDate(this.DELTA_START_TIME) || '1970-01-01T10:16:06.17544Z';
         } catch (err) {
@@ -194,7 +187,7 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
         }
         return delta;
     },
-    _serializeParameters: function(params) {
+    _serializeParameters: function (params) {
         if (params.latest)
             params.latest = params.latest.getValue();
         else
@@ -202,7 +195,7 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
         return params;
     },
 
-    _nextParameters: function(params) {
+    _nextParameters: function (params) {
         params.run = null;
         var keys = Object.keys(params.remaining);
         if (keys.length) {
@@ -219,7 +212,7 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
         return params;
     },
 
-    shouldRetry: function(process) {
+    shouldRetry: function (process) {
         return true;
     },
     type: 'CheckmarxOneAppListIntegration'

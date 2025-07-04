@@ -4,7 +4,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
     UTIL: new x_chec3_chexone.CheckmarxOneUtil(),
     MSG: "CheckmarxOneAppVulItemIntegration",
 
-    retrieveData: function() {
+    retrieveData: function () {
         var response = "<null/>";
         var apiSecResponse = "<null/>";
         try {
@@ -21,8 +21,8 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                 var scans = Object.keys(params.run)[0];
 
                 // Ensure input is a string and split on `;`
-                scans.toString().split(';').forEach(function(pair) {
-                    var parts = pair.split('=').map(function(part) {
+                scans.toString().split(';').forEach(function (pair) {
+                    var parts = pair.split('=').map(function (part) {
                         return String(part || '').trim();
                     });
 
@@ -171,7 +171,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         };
     },
 
-    getDetailedReport: function(scanId, offset, lastscandate, appname, branch, prvScanBranch, appId, applicationIdsStr, engines, severity, resultStateFilter, result_state_array) {
+    getDetailedReport: function (scanId, offset, lastscandate, appname, branch, prvScanBranch, appId, applicationIdsStr, engines, severity, resultStateFilter, result_state_array) {
         try {
             var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
             var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
@@ -182,7 +182,12 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             var includeApiSecurity = this.UTIL.importApiSecurityFlaw(this.IMPLEMENTATION);
             var config = this.UTIL._getConfig(this.IMPLEMENTATION);
             var apibaseurl = config.checkmarxone_api_base_url;
-            var basicContent = '<scanResults app_id="' + appId + '"  scan_id="' + scanId + '" last_scan_date="' + lastscandate + '" branch="' + branch + '"  engine="' + engines + '" ><Results>';
+            var basicContent = '<scanResults app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
+                ' scan_id="' + this.UTIL.escapeXmlChars(scanId) + '"' +
+                ' last_scan_date="' + this.UTIL.escapeXmlChars(lastscandate) + '"' +
+                ' branch="' + this.UTIL.escapeXmlChars(branch) + '"' +
+                ' engine="' + this.UTIL.escapeXmlChars(engines) + '"' +
+                '><Results>';
             var SCAscanDetailedAll = '';
             var SASTscanDetailedAll = '';
             // var SASTDeltascanDetailedAll = '';
@@ -210,7 +215,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 
             for (item in jsonLastScanReportResp.results) {
                 if (((resultStateFilter == true && (result_state_array.indexOf(jsonLastScanReportResp.results[item].state.toUpperCase()) != -1)) ||
-                        resultStateFilter == false)) {
+                    resultStateFilter == false)) {
                     if (includesast == true && jsonLastScanReportResp.results[item].type == "sast") {
                         var isSastScanIncluded = 'false';
                         var scanTypeToCheck = '';
@@ -232,32 +237,34 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             sastScanUrl = apibaseurl + '/results/' + scanId + '/' + appId + '/sast';
                         }
                         var sastId = jsonLastScanReportResp.results[item].id;
-                        SASTscanDetailedAll += '<result id="' + jsonLastScanReportResp.results[item].similarityId + '" scan_type="' + scan_type +
-                            '" sast_id="' + sastId +
-                            '" cweId="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId +
-                            '" cweName="' + jsonLastScanReportResp.results[item].data.queryName +
-                            '" category_name="' + jsonLastScanReportResp.results[item].data.queryName +
-                            '" source_severity="' + jsonLastScanReportResp.results[item].severity +
-                            '" package_unique_id="' + package_unique_id +
-                            '" package_name="' + package_name +
-                            '" location="' + jsonLastScanReportResp.results[item].data.nodes[0].fileName +
-                            '" line_no="' + jsonLastScanReportResp.results[item].data.nodes[0].line +
-                            '" cvssScore="' + cvssScore +
-                            '" recommendation="' + recommendedVersion +
-                            '" sourcefile="' + apibaseurl + '/results/' + scanId + '/' + appId + '/sast' +
-                            '" cvssVector="' + cvssVector +
-                            '" first_found_date="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt) +
-                            '" state="' + jsonLastScanReportResp.results[item].state +
-                            '" status="' + jsonLastScanReportResp.results[item].status +
-                            '" app_id="' + appId +
-                            '" branch="' + branch +
-                            '" prvBranch="' + prvScanBranch +
-                            '" last_scan_date="' + lastscandate +
-                            '" application_ids="' + applicationIdsStr +
-                            '" scan_id="' + 'sast' + scanId + '">' +
-                            '<references><' + '![CDATA[' + sast_path + ']]' + '></references>' +
-                            '<resultHash><' + '![CDATA[' + jsonLastScanReportResp.results[item].data.resultHash + ']]' + '></resultHash>' +
-                            '<description><' + '![CDATA[' + jsonLastScanReportResp.results[item].description + ']]' + '></description></result>';
+                        SASTscanDetailedAll += '<result id="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].similarityId) + '"' +
+                            ' scan_type="' + this.UTIL.escapeXmlChars(scan_type) + '"' +
+                            ' sast_id="' + this.UTIL.escapeXmlChars(sastId) + '"' +
+                            ' cweId="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId) + '"' +
+                            ' cweName="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].data.queryName) + '"' +
+                            ' category_name="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].data.queryName) + '"' +
+                            ' source_severity="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].severity) + '"' +
+                            ' package_unique_id="' + this.UTIL.escapeXmlChars(package_unique_id) + '"' +
+                            ' package_name="' + this.UTIL.escapeXmlChars(package_name) + '"' +
+                            ' location="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].data.nodes[0].fileName) + '"' +
+                            ' line_no="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].data.nodes[0].line) + '"' +
+                            ' cvssScore="' + this.UTIL.escapeXmlChars(cvssScore) + '"' +
+                            ' recommendation="' + this.UTIL.escapeXmlChars(recommendedVersion) + '"' +
+                            ' sourcefile="' + this.UTIL.escapeXmlChars(apibaseurl + '/results/' + scanId + '/' + appId + '/sast') + '"' +
+                            ' cvssVector="' + this.UTIL.escapeXmlChars(cvssVector) + '"' +
+                            ' first_found_date="' + this.UTIL.escapeXmlChars(this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt)) + '"' +
+                            ' state="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].state) + '"' +
+                            ' status="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].status) + '"' +
+                            ' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
+                            ' branch="' + this.UTIL.escapeXmlChars(branch) + '"' +
+                            ' prvBranch="' + this.UTIL.escapeXmlChars(prvScanBranch) + '"' +
+                            ' last_scan_date="' + this.UTIL.escapeXmlChars(lastscandate) + '"' +
+                            ' application_ids="' + this.UTIL.escapeXmlChars(applicationIdsStr) + '"' +
+                            ' scan_id="' + this.UTIL.escapeXmlChars('sast' + scanId) + '">' +
+                            '<references>' + this.UTIL.escapeCDATA(sast_path) + '</references>' +
+                            '<resultHash>' + this.UTIL.escapeCDATA(jsonLastScanReportResp.results[item].data.resultHash) + '</resultHash>' +
+                            '<description>' + this.UTIL.escapeCDATA(jsonLastScanReportResp.results[item].description) + '</description>' +
+                            '</result>';
                     }
 
                     if (includesca == true && jsonLastScanReportResp.results[item].type == "sca") {
@@ -279,64 +286,67 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             exploitable_method = 'Exploitable methods: ' + exp_path;
                         }
                         var scaseverity = jsonLastScanReportResp.results[item].severity;
-                        SCAscanDetailedAll += '<result id="' + jsonLastScanReportResp.results[item].id +
-                            '" scan_type="' + 'sca' +
-                            '" cweId="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId +
-                            '" cweName="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cveName +
-                            '" cvssScore="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cvssScore +
-                            '" cvssVector="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cvss.attackVector +
-                            '" category_name="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId +
-                            '" source_severity="' + jsonLastScanReportResp.results[item].severity +
-                            '" first_found_date="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt) +
-                            '" state="' + jsonLastScanReportResp.results[item].state +
-                            '" status="' + jsonLastScanReportResp.results[item].status +
-                            '" package_unique_id="' + sca_packageID +
-                            '" recommendation="' + recommendedVersion +
-                            '" package_name="' + sca_packageID +
-                            '" sourcefile="' + apibaseurl + '/results/' + appId + '/' + scanId + '/sca' +
-                            '" line_no="' + line +
-                            '" location="' + location +
-                            '" app_id="' + appId +
-                            '" branch="' + branch +
-                            '" prvBranch="' + prvScanBranch +
-                            '" exploitable_method="' + exploitable_method +
-                            '" last_scan_date="' + lastscandate +
-                            '" application_ids="' + applicationIdsStr +
-                            '" scan_id="' + 'sca' + scanId + '">' +
-                            '<references><' + '![CDATA[' + ref + ']]' + '></references>' +
-                            '<description><' + '![CDATA[' + jsonLastScanReportResp.results[item].description + ']]' + '></description></result>';
+                        SCAscanDetailedAll += '<result id="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].id) + '"' +
+                            ' scan_type="sca"' +
+                            ' cweId="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId) + '"' +
+                            ' cweName="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].vulnerabilityDetails.cveName) + '"' +
+                            ' cvssScore="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].vulnerabilityDetails.cvssScore) + '"' +
+                            ' cvssVector="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].vulnerabilityDetails.cvss.attackVector) + '"' +
+                            ' category_name="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId) + '"' +
+                            ' source_severity="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].severity) + '"' +
+                            ' first_found_date="' + this.UTIL.escapeXmlChars(this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt)) + '"' +
+                            ' state="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].state) + '"' +
+                            ' status="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].status) + '"' +
+                            ' package_unique_id="' + this.UTIL.escapeXmlChars(sca_packageID) + '"' +
+                            ' recommendation="' + this.UTIL.escapeXmlChars(recommendedVersion) + '"' +
+                            ' package_name="' + this.UTIL.escapeXmlChars(sca_packageID) + '"' +
+                            ' sourcefile="' + this.UTIL.escapeXmlChars(apibaseurl + '/results/' + appId + '/' + scanId + '/sca') + '"' +
+                            ' line_no="' + this.UTIL.escapeXmlChars(line) + '"' +
+                            ' location="' + this.UTIL.escapeXmlChars(location) + '"' +
+                            ' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
+                            ' branch="' + this.UTIL.escapeXmlChars(branch) + '"' +
+                            ' prvBranch="' + this.UTIL.escapeXmlChars(prvScanBranch) + '"' +
+                            ' exploitable_method="' + this.UTIL.escapeXmlChars(exploitable_method) + '"' +
+                            ' last_scan_date="' + this.UTIL.escapeXmlChars(lastscandate) + '"' +
+                            ' application_ids="' + this.UTIL.escapeXmlChars(applicationIdsStr) + '"' +
+                            ' scan_id="' + this.UTIL.escapeXmlChars('sca' + scanId) + '">' +
+                            '<references>' + this.UTIL.escapeCDATA(ref) + '</references>' +
+                            '<description>' + this.UTIL.escapeCDATA(jsonLastScanReportResp.results[item].description) + '</description>' +
+                            '</result>';
                     }
                     if (includekics == true && jsonLastScanReportResp.results[item].type == "kics") {
                         var kicsseverity = jsonLastScanReportResp.results[item].severity;
 
                         var kicsowasp = this._getOWASPTop10(jsonLastScanReportResp.results[item].vulnerabilityDetails.compliances);
                         var kicssans = this._getSANSTop25(jsonLastScanReportResp.results[item].vulnerabilityDetails.compliances);
-                        KICSscanDetailedAll += '<result id="' + jsonLastScanReportResp.results[item].similarityId + '" scan_type="' + 'kics' +
-                            '" cweId="' + jsonLastScanReportResp.results[item].data.queryId +
-                            '" cweName="' + jsonLastScanReportResp.results[item].data.queryName +
-                            '" category_name="' + jsonLastScanReportResp.results[item].data.queryName +
-                            '" source_severity="' + jsonLastScanReportResp.results[item].severity +
-                            '" package_unique_id="' + package_unique_id +
-                            '" package_name="' + package_name +
-                            '" location="' + jsonLastScanReportResp.results[item].data.fileName +
-                            '" line_no="' + jsonLastScanReportResp.results[item].data.line +
-                            '" cvssScore="' + cvssScore +
-                            '" recommendation="' + recommendedVersion +
-                            '" sourcefile="' + apibaseurl + '/results/' + scanId + '/' + appId + '/kics' +
-                            '" cvssVector="' + cvssVector +
-                            '" first_found_date="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt) +
-                            '" state="' + jsonLastScanReportResp.results[item].state +
-                            '" status="' + jsonLastScanReportResp.results[item].status +
-                            '" app_id="' + appId +
-                            '" branch="' + branch +
-                            '" prvBranch="' + prvScanBranch +
-                            '" last_scan_date="' + lastscandate +
-                            '" OWASPTop10="' + kicsowasp +
-                            '" SANSTop25="' + kicssans +
-                            '" application_ids="' + applicationIdsStr +
-                            '" scan_id="' + 'IaC' + scanId + '">' +
-                            '<references><' + '![CDATA[' + notes + ']]' + '></references>' +
-                            '<description><' + '![CDATA[' + jsonLastScanReportResp.results[item].description + ']]' + '></description></result>';
+                        KICSscanDetailedAll += '<result id="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].similarityId) + '"' +
+                            ' scan_type="kics"' +
+                            ' cweId="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].data.queryId) + '"' +
+                            ' cweName="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].data.queryName) + '"' +
+                            ' category_name="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].data.queryName) + '"' +
+                            ' source_severity="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].severity) + '"' +
+                            ' package_unique_id="' + this.UTIL.escapeXmlChars(package_unique_id) + '"' +
+                            ' package_name="' + this.UTIL.escapeXmlChars(package_name) + '"' +
+                            ' location="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].data.fileName) + '"' +
+                            ' line_no="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].data.line) + '"' +
+                            ' cvssScore="' + this.UTIL.escapeXmlChars(cvssScore) + '"' +
+                            ' recommendation="' + this.UTIL.escapeXmlChars(recommendedVersion) + '"' +
+                            ' sourcefile="' + this.UTIL.escapeXmlChars(apibaseurl + '/results/' + scanId + '/' + appId + '/kics') + '"' +
+                            ' cvssVector="' + this.UTIL.escapeXmlChars(cvssVector) + '"' +
+                            ' first_found_date="' + this.UTIL.escapeXmlChars(this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt)) + '"' +
+                            ' state="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].state) + '"' +
+                            ' status="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].status) + '"' +
+                            ' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
+                            ' branch="' + this.UTIL.escapeXmlChars(branch) + '"' +
+                            ' prvBranch="' + this.UTIL.escapeXmlChars(prvScanBranch) + '"' +
+                            ' last_scan_date="' + this.UTIL.escapeXmlChars(lastscandate) + '"' +
+                            ' OWASPTop10="' + this.UTIL.escapeXmlChars(kicsowasp) + '"' +
+                            ' SANSTop25="' + this.UTIL.escapeXmlChars(kicssans) + '"' +
+                            ' application_ids="' + this.UTIL.escapeXmlChars(applicationIdsStr) + '"' +
+                            ' scan_id="' + this.UTIL.escapeXmlChars('IaC' + scanId) + '">' +
+                            '<references>' + this.UTIL.escapeCDATA(notes) + '</references>' +
+                            '<description>' + this.UTIL.escapeCDATA(jsonLastScanReportResp.results[item].description) + '</description>' +
+                            '</result>';
                     }
 
                     if (includeContainerSecurity == true && jsonLastScanReportResp.results[item].type == "containers") {
@@ -349,97 +359,107 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                         if (jsonLastScanReportResp.results[item].vulnerabilityDetails.cvss != null && jsonLastScanReportResp.results[item].vulnerabilityDetails.cvss != '') {
                             access_vector = jsonLastScanReportResp.results[item].vulnerabilityDetails.cvss.access_vector;
                         }
-                        conSecScanDetailedAll += '<result id="' + jsonLastScanReportResp.results[item].similarityId + '" scan_type="' + 'containers' +
-                            '" cweId="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId +
-                            '" cweName="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cveName +
-                            '" category_name="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId +
-                            '" source_severity="' + jsonLastScanReportResp.results[item].severity +
-                            '" package_unique_id="' + packageName +
-                            '" package_name="' + packageName +
-                            '" location="' + jsonLastScanReportResp.results[item].data.imageFilePath +
-                            '" line_no="' + line +
-                            '" cvssScore="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cvssScore +
-                            '" recommendation="' + recommendedVersion +
-                            '" sourcefile="' + apibaseurl + '/container-security-results/' + appId + '/' + scanId + '/results/' +
-                            '" cvssVector="' + access_vector +
-                            '" first_found_date="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt) +
-                            '" state="' + jsonLastScanReportResp.results[item].state +
-                            '" status="' + jsonLastScanReportResp.results[item].status +
-                            '" app_id="' + appId +
-                            '" branch="' + branch +
-                            '" prvBranch="' + prvScanBranch +
-                            '" last_scan_date="' + lastscandate +
-                            '" application_ids="' + applicationIdsStr +
-                            '" result_hash="' + result_hash +
-                            '" scan_id="' + 'CS' + scanId + '">' +
-                            '<references><' + '![CDATA[' + notes + ']]' + '></references>' +
-                            '<description><' + '![CDATA[' + jsonLastScanReportResp.results[item].description + ']]' + '></description></result>';
+                        conSecScanDetailedAll += '<result id="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].similarityId) + '"' +
+                            ' scan_type="containers"' +
+                            ' cweId="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId) + '"' +
+                            ' cweName="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].vulnerabilityDetails.cveName) + '"' +
+                            ' category_name="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId) + '"' +
+                            ' source_severity="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].severity) + '"' +
+                            ' package_unique_id="' + this.UTIL.escapeXmlChars(packageName) + '"' +
+                            ' package_name="' + this.UTIL.escapeXmlChars(packageName) + '"' +
+                            ' location="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].data.imageFilePath) + '"' +
+                            ' line_no="' + this.UTIL.escapeXmlChars(line) + '"' +
+                            ' cvssScore="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].vulnerabilityDetails.cvssScore) + '"' +
+                            ' recommendation="' + this.UTIL.escapeXmlChars(recommendedVersion) + '"' +
+                            ' sourcefile="' + this.UTIL.escapeXmlChars(apibaseurl + '/container-security-results/' + appId + '/' + scanId + '/results/') + '"' +
+                            ' cvssVector="' + this.UTIL.escapeXmlChars(access_vector) + '"' +
+                            ' first_found_date="' + this.UTIL.escapeXmlChars(this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt)) + '"' +
+                            ' state="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].state) + '"' +
+                            ' status="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].status) + '"' +
+                            ' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
+                            ' branch="' + this.UTIL.escapeXmlChars(branch) + '"' +
+                            ' prvBranch="' + this.UTIL.escapeXmlChars(prvScanBranch) + '"' +
+                            ' last_scan_date="' + this.UTIL.escapeXmlChars(lastscandate) + '"' +
+                            ' application_ids="' + this.UTIL.escapeXmlChars(applicationIdsStr) + '"' +
+                            ' result_hash="' + this.UTIL.escapeXmlChars(result_hash) + '"' +
+                            ' scan_id="' + this.UTIL.escapeXmlChars('CS' + scanId) + '">' +
+                            '<references>' + this.UTIL.escapeCDATA(notes) + '</references>' +
+                            '<description>' + this.UTIL.escapeCDATA(jsonLastScanReportResp.results[item].description) + '</description>' +
+                            '</result>';
                     }
                     // secret detection
                     if (includeSecretDetection == true && jsonLastScanReportResp.results[item].type == "sscs-secret-detection") {
                         var secretDetectionSeverity = jsonLastScanReportResp.results[item].severity;
-                        secretDetectionScanDetailedAll += '<result id="' + jsonLastScanReportResp.results[item].similarityId + '_' + jsonLastScanReportResp.results[item].id +
-                            '" scan_type="' + 'SecretDetection' +
-                            '" cweId="' + jsonLastScanReportResp.results[item].id +
-                            '" cweName="' + '' +
-                            '" category_name="' + jsonLastScanReportResp.results[item].data.ruleName +
-                            '" source_severity="' + jsonLastScanReportResp.results[item].severity +
-                            '" package_unique_id="' + package_unique_id +
-                            '" package_name="' + package_name +
-                            '" location="' + jsonLastScanReportResp.results[item].data.fileName +
-                            '" line_no="' + jsonLastScanReportResp.results[item].data.line +
-                            '" cvssScore="' + cvssScore +
-                            '" recommendation="' + recommendedVersion +
-                            '" sourcefile="' + apibaseurl + '/results/' + scanId + '/' + appId + '/kics' +
-                            '" cvssVector="' + cvssVector +
-                            '" first_found_date="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt) +
-                            '" state="' + jsonLastScanReportResp.results[item].state +
-                            '" status="' + jsonLastScanReportResp.results[item].status +
-                            '" app_id="' + appId +
-                            '" branch="' + branch +
-                            '" prvBranch="' + prvScanBranch +
-                            '" last_scan_date="' + lastscandate +
-                            '" application_ids="' + applicationIdsStr +
-                            '" scan_id="' + 'SecretDetection' + scanId + '">' +
-                            '<source_notes><' + '![CDATA[' + jsonLastScanReportResp.results[item].data.ruleDescription + ']]' + '></source_notes>' +
-                            '<remediation><' + '![CDATA[' + 'Remediation: ' + jsonLastScanReportResp.results[item].data.remediation + ', Remediation link:' +
-                            jsonLastScanReportResp.results[item].data.remediationLink +
-                            ', Remediation Additional= ' + jsonLastScanReportResp.results[item].data.remediationAdditional + ']]' + '></remediation>' +
-                            '<description><' + '![CDATA[' + jsonLastScanReportResp.results[item].description + ']]' + '></description></result>';
+                        secretDetectionScanDetailedAll += '<result id="' +
+                            this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].similarityId + '_' + jsonLastScanReportResp.results[item].id) + '"' +
+                            ' scan_type="SecretDetection"' +
+                            ' cweId="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].id) + '"' +
+                            ' cweName=""' +
+                            ' category_name="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].data.ruleName) + '"' +
+                            ' source_severity="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].severity) + '"' +
+                            ' package_unique_id="' + this.UTIL.escapeXmlChars(package_unique_id) + '"' +
+                            ' package_name="' + this.UTIL.escapeXmlChars(package_name) + '"' +
+                            ' location="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].data.fileName) + '"' +
+                            ' line_no="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].data.line) + '"' +
+                            ' cvssScore="' + this.UTIL.escapeXmlChars(cvssScore) + '"' +
+                            ' recommendation="' + this.UTIL.escapeXmlChars(recommendedVersion) + '"' +
+                            ' sourcefile="' + this.UTIL.escapeXmlChars(apibaseurl + '/results/' + scanId + '/' + appId + '/kics') + '"' +
+                            ' cvssVector="' + this.UTIL.escapeXmlChars(cvssVector) + '"' +
+                            ' first_found_date="' + this.UTIL.escapeXmlChars(this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt)) + '"' +
+                            ' state="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].state) + '"' +
+                            ' status="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].status) + '"' +
+                            ' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
+                            ' branch="' + this.UTIL.escapeXmlChars(branch) + '"' +
+                            ' prvBranch="' + this.UTIL.escapeXmlChars(prvScanBranch) + '"' +
+                            ' last_scan_date="' + this.UTIL.escapeXmlChars(lastscandate) + '"' +
+                            ' application_ids="' + this.UTIL.escapeXmlChars(applicationIdsStr) + '"' +
+                            ' scan_id="' + this.UTIL.escapeXmlChars('SecretDetection' + scanId) + '">' +
+                            '<source_notes>' + this.UTIL.escapeCDATA(jsonLastScanReportResp.results[item].data.ruleDescription) + '</source_notes>' +
+                            '<remediation>' + this.UTIL.escapeCDATA(
+                                'Remediation: ' + jsonLastScanReportResp.results[item].data.remediation +
+                                ', Remediation link:' + jsonLastScanReportResp.results[item].data.remediationLink +
+                                ', Remediation Additional= ' + jsonLastScanReportResp.results[item].data.remediationAdditional
+                            ) + '</remediation>' +
+                            '<description>' + this.UTIL.escapeCDATA(jsonLastScanReportResp.results[item].description) + '</description>' +
+                            '</result>';
                     }
 
 
                     // scorecard detection
                     if (includeScoreCard == true && jsonLastScanReportResp.results[item].type == "sscs-scorecard") {
                         var scorecardSeverity = jsonLastScanReportResp.results[item].severity;
-                        scorecardScanDetailedAll += '<result id="' + jsonLastScanReportResp.results[item].similarityId + '_' + jsonLastScanReportResp.results[item].id +
-                            '" scan_type="' + 'ScoreCard' +
-                            '" cweId="' + jsonLastScanReportResp.results[item].id +
-                            '" cweName="' + '' +
-                            '" category_name="' + jsonLastScanReportResp.results[item].data.ruleName +
-                            '" source_severity="' + jsonLastScanReportResp.results[item].severity +
-                            '" package_unique_id="' + package_unique_id +
-                            '" package_name="' + package_name +
-                            '" location="' + jsonLastScanReportResp.results[item].data.fileName +
-                            '" line_no="' + jsonLastScanReportResp.results[item].data.line +
-                            '" cvssScore="' + cvssScore +
-                            '" recommendation="' + recommendedVersion +
-                            '" sourcefile="' + apibaseurl + '/results/' + scanId + '/' + appId + '/kics' +
-                            '" cvssVector="' + cvssVector +
-                            '" first_found_date="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt) +
-                            '" state="' + jsonLastScanReportResp.results[item].state +
-                            '" status="' + jsonLastScanReportResp.results[item].status +
-                            '" app_id="' + appId +
-                            '" branch="' + branch +
-                            '" prvBranch="' + prvScanBranch +
-                            '" last_scan_date="' + lastscandate +
-                            '" application_ids="' + applicationIdsStr +
-                            '" scan_id="' + 'ScoreCard' + scanId + '">' +
-                            '<source_notes><' + '![CDATA[' + jsonLastScanReportResp.results[item].data.ruleDescription + ']]' + '></source_notes>' +
-                            '<remediation><' + '![CDATA[' + 'Remediation: ' + jsonLastScanReportResp.results[item].data.remediation + ', Remediation link:' +
-                            jsonLastScanReportResp.results[item].data.remediationLink +
-                            ', Remediation Additional= ' + jsonLastScanReportResp.results[item].data.remediationAdditional + ']]' + '></remediation>' +
-                            '<description><' + '![CDATA[' + jsonLastScanReportResp.results[item].description + ']]' + '></description></result>';
+                        scorecardScanDetailedAll += '<result id="' +
+                            this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].similarityId + '_' + jsonLastScanReportResp.results[item].id) + '"' +
+                            ' scan_type="ScoreCard"' +
+                            ' cweId="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].id) + '"' +
+                            ' cweName=""' +
+                            ' category_name="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].data.ruleName) + '"' +
+                            ' source_severity="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].severity) + '"' +
+                            ' package_unique_id="' + this.UTIL.escapeXmlChars(package_unique_id) + '"' +
+                            ' package_name="' + this.UTIL.escapeXmlChars(package_name) + '"' +
+                            ' location="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].data.fileName) + '"' +
+                            ' line_no="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].data.line) + '"' +
+                            ' cvssScore="' + this.UTIL.escapeXmlChars(cvssScore) + '"' +
+                            ' recommendation="' + this.UTIL.escapeXmlChars(recommendedVersion) + '"' +
+                            ' sourcefile="' + this.UTIL.escapeXmlChars(apibaseurl + '/results/' + scanId + '/' + appId + '/kics') + '"' +
+                            ' cvssVector="' + this.UTIL.escapeXmlChars(cvssVector) + '"' +
+                            ' first_found_date="' + this.UTIL.escapeXmlChars(this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt)) + '"' +
+                            ' state="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].state) + '"' +
+                            ' status="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].status) + '"' +
+                            ' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
+                            ' branch="' + this.UTIL.escapeXmlChars(branch) + '"' +
+                            ' prvBranch="' + this.UTIL.escapeXmlChars(prvScanBranch) + '"' +
+                            ' last_scan_date="' + this.UTIL.escapeXmlChars(lastscandate) + '"' +
+                            ' application_ids="' + this.UTIL.escapeXmlChars(applicationIdsStr) + '"' +
+                            ' scan_id="' + this.UTIL.escapeXmlChars('ScoreCard' + scanId) + '">' +
+                            '<source_notes>' + this.UTIL.escapeCDATA(jsonLastScanReportResp.results[item].data.ruleDescription) + '</source_notes>' +
+                            '<remediation>' + this.UTIL.escapeCDATA(
+                                'Remediation: ' + jsonLastScanReportResp.results[item].data.remediation +
+                                ', Remediation link:' + jsonLastScanReportResp.results[item].data.remediationLink +
+                                ', Remediation Additional= ' + jsonLastScanReportResp.results[item].data.remediationAdditional
+                            ) + '</remediation>' +
+                            '<description>' + this.UTIL.escapeCDATA(jsonLastScanReportResp.results[item].description) + '</description>' +
+                            '</result>';
                     }
 
                 }
@@ -471,10 +491,14 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         return reportcontent;
     },
 
-    getApiSecReport: function(scanId, offset, lastscandate, appname, branch, prvScanBranch, appId, applicationIdsStr, engines) {
+    getApiSecReport: function (scanId, offset, lastscandate, appname, branch, prvScanBranch, appId, applicationIdsStr, engines) {
         try {
             var newoffset = offset - offset * 2;
-            var basicContent = '<scanResults app_id="' + appId + '"  scan_id="' + scanId + '" last_scan_date="' + lastscandate + '" branch="' + branch + '"><Results></Results><ApiSecResults>';
+            var basicContent = '<scanResults app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
+                ' scan_id="' + this.UTIL.escapeXmlChars(scanId) + '"' +
+                ' last_scan_date="' + this.UTIL.escapeXmlChars(lastscandate) + '"' +
+                ' branch="' + this.UTIL.escapeXmlChars(branch) + '"' +
+                '><Results></Results><ApiSecResults>';
             var apiSecScanDetailedAll = '';
             var responseApiSecScanReport = this.UTIL.getApiSecVulInfo(this.IMPLEMENTATION, scanId, newoffset);
             var jsonApiSecScanReportResp = JSON.parse(responseApiSecScanReport.getBody());
@@ -489,14 +513,14 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 
             for (var entry in jsonApiSecScanReportResp.entries) {
                 if (((resultStateFilter && result_state_array.includes(jsonApiSecScanReportResp.entries[entry].state)) ||
-                        !resultStateFilter) &&
+                    !resultStateFilter) &&
                     severity_array.includes(jsonApiSecScanReportResp.entries[entry].severity.toUpperCase())) {
 
                     var affectedUrl = jsonApiSecScanReportResp.entries[entry].http_method + " " + jsonApiSecScanReportResp.entries[entry].url;
-                    apiSecScanDetailedAll += '<apisec appId="' + appId +
-                        '" scanId="' + scanId +
-                        '" sast_risk_id="' + jsonApiSecScanReportResp.entries[entry].sast_risk_id +
-                        '" affected_url="' + affectedUrl + '"/>';
+                    apiSecScanDetailedAll += '<apisec appId="' + this.UTIL.escapeXmlChars(appId) + '"' +
+                        ' scanId="' + this.UTIL.escapeXmlChars(scanId) + '"' +
+                        ' sast_risk_id="' + this.UTIL.escapeXmlChars(jsonApiSecScanReportResp.entries[entry].sast_risk_id) + '"' +
+                        ' affected_url="' + this.UTIL.escapeXmlChars(affectedUrl) + '"/>';
                 }
             }
             var reportcontent = basicContent + apiSecScanDetailedAll + '</ApiSecResults>';
@@ -510,7 +534,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 
 
     //no system function for scoped application like this integration
-    customSleep: function(ms) {
+    customSleep: function (ms) {
         try {
             var endSleep = new GlideDuration().getNumericValue() + ms;
             while (new GlideDuration().getNumericValue() < endSleep) {
@@ -525,7 +549,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 
 
     //get Fast Scan Mode value
-    _getScanType: function(configId, appId, scanId) {
+    _getScanType: function (configId, appId, scanId) {
         var scanResponse = this.UTIL.getScanConfigInfo(configId, appId, scanId);
         var scanType = '';
         for (var item in scanResponse) {
@@ -551,7 +575,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
     },
 
     // To get information of process, if API security Scanner is selected.
-    _getLatestProcessRecord: function() {
+    _getLatestProcessRecord: function () {
         var run = this.PROCESS.integration_run;
         var number_arr = [];
         var state = "complete";
@@ -573,7 +597,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
     },
 
     // Get all the OWASP Top 10 compliances as a concatenated string with comma.
-    _getOWASPTop10: function(compliances) {
+    _getOWASPTop10: function (compliances) {
         var owasp = '';
         if (compliances != null) {
             for (var value in compliances) {
@@ -592,7 +616,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
     },
 
     // Get all the SANS Top 25 compliances as a concatenated string with comma.
-    _getSANSTop25: function(compliances) {
+    _getSANSTop25: function (compliances) {
         var sans = '';
         if (compliances != null) {
             for (var value in compliances) {
@@ -611,7 +635,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
     },
 
     // Gets the integration parameters as a map
-    _getParameters: function(parameters) {
+    _getParameters: function (parameters) {
         var params = {
             run: null,
             remaining: {}
@@ -627,6 +651,22 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                     this.LATEST = latest;
                 }
             } else {
+                //Updating delta start time value in Integration Instance
+                var parameterName = 'delta_start_time';
+                var newValue = new GlideDateTime(this.DELTA_START_TIME || '1970-01-01T10:16:06.17544Z');
+                var gr = new GlideRecord("x_chec3_chexone_checkmarxone_configuration");
+                gr.get('a981cec29721a510026f72021153afa6');
+                var instance = gr.getValue("integration_instance");
+                var implConfig = new GlideRecord("sn_sec_int_impl_config");
+                implConfig.addQuery("implementation", instance);
+                implConfig.query();
+                while (implConfig.next()) {
+                    var configName = implConfig.getDisplayValue("configuration");
+                    if (configName == parameterName) {
+                        implConfig.setValue("value", newValue);
+                        implConfig.update();
+                    }
+                }
                 var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
                 var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
                 var includekics = this.UTIL.importKicsFlaw(this.IMPLEMENTATION);
@@ -638,6 +678,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                 var scan_app_list = [];
                 var project_primary_branch_list = [];
                 this.LATEST = new GlideDateTime(this.DELTA_START_TIME || '1970-01-01T10:16:06.17544Z').getDate();
+
                 var apps = this.AVR_API.getAppReleases();
                 var scanJson = this.UTIL.getAllScanList(this.IMPLEMENTATION, this._getCurrentDeltaStartTime());
                 var offsetId = '';
@@ -718,11 +759,11 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                                 var include_scan = false;
                                 //sca scan summary
                                 if (includesca && jsonLastScanSummResp.scans[item].engines.toString().indexOf("sca") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
-                                    include_scan = true;
+                                    include_scan = 'true';
                                 }
 
                                 //sast scan summary
-                                if (includesast && isSastScanIncluded && jsonLastScanSummResp.scans[item].engines.toString().indexOf("sast") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
+                                if (includesast && isSastScanIncluded == 'true' && jsonLastScanSummResp.scans[item].engines.toString().indexOf("sast") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
                                     include_scan = 'true';
                                 }
 
@@ -750,8 +791,8 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                                     include_scan = 'true';
                                 }
                                 if (include_scan == 'true') {
-
-                                    if (jsonLastScanSummResp.scans[item].engines.toString().indexOf("microengines") != -1 &&
+                                    if (jsonLastScanSummResp.scans[item].engines.toString().indexOf("microengines") != -1 && jsonLastScanSummResp.scans[item].metadata && jsonLastScanSummResp.scans[item].metadata.length > 0 &&
+                                        jsonLastScanSummResp.scans[item].metadata.configs &&
                                         jsonLastScanSummResp.scans[item].metadata.configs[item].type == 'microengines') {
                                         var secretDetetction = jsonLastScanSummResp.scans[item].metadata.configs[item].value;
                                         if ('2ms' in secretDetetction && engineList.indexOf('SecretDetection') == -1) {
@@ -804,8 +845,8 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                         var result = {};
 
                         // Ensure input is a string and split on `;`
-                        scans[id].split(';').forEach(function(pair) {
-                            var parts = pair.split('=').map(function(part) {
+                        scans[id].split(';').forEach(function (pair) {
+                            var parts = pair.split('=').map(function (part) {
                                 return String(part || '').trim();
                             });
 
@@ -837,7 +878,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
     },
 
     //get Scan IDs from JSON
-    _getScanIdFromJSON: function(scanJson, appId) {
+    _getScanIdFromJSON: function (scanJson, appId) {
         var scanId = '';
         var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
         var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
@@ -884,7 +925,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
     },
 
     //get Scan ID for Primary Branch
-    _getPrimaryBranchScanId: function(scanJson, appId, project_primary_branch_list) {
+    _getPrimaryBranchScanId: function (scanJson, appId, project_primary_branch_list) {
         var scanId = '';
         var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
         var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
@@ -947,7 +988,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 
 
     //get Scan ID for Each Branch
-    _getLastScanIdFromBranch: function(scanJson, appId) {
+    _getLastScanIdFromBranch: function (scanJson, appId) {
         var scanId = [];
         var branch = [];
         var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
@@ -1002,7 +1043,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 
 
     // Gets the start time of the integration
-    _getCurrentDeltaStartTime: function() {
+    _getCurrentDeltaStartTime: function () {
         try {
             var delta = this.UTIL.parseTZDate(this.DELTA_START_TIME) || '1970-01-01T10:16:06.17544Z';
         } catch (err) {
@@ -1013,7 +1054,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
     },
 
     //to get offset (50 items at a time)
-    _getoffsets: function(appId, scans) {
+    _getoffsets: function (appId, scans) {
         var offsets = [];
         var offset = 0;
         var includeApiSecurity = this.UTIL.importApiSecurityFlaw(this.IMPLEMENTATION);
@@ -1046,11 +1087,11 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         return offsets;
     },
 
-    _getoffset: function(scanId, offsetId) {
+    _getoffset: function (scanId, offsetId) {
         return offsetId;
     },
 
-    _serializeParameters: function(params) {
+    _serializeParameters: function (params) {
         if (params.latest)
             params.latest = params.latest.getValue();
         else
@@ -1058,7 +1099,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         return params;
     },
 
-    _nextParameters: function(params) {
+    _nextParameters: function (params) {
         params.run = null;
         var keys = Object.keys(params.remaining);
         if (keys.length) {
@@ -1074,19 +1115,19 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         return params;
     },
 
-    shouldRetry: function(process) {
+    shouldRetry: function (process) {
         return true;
     },
 
-    _getObjValues: function(obj) {
-        var values = Object.keys(obj).map(function(e) {
+    _getObjValues: function (obj) {
+        var values = Object.keys(obj).map(function (e) {
             return obj[e];
         });
         return values;
     },
 
     //Get deleted projects by comparing project IDs with
-    _getDeletedProjects: function(recentScanProjectIds, deltaStartGdt) {
+    _getDeletedProjects: function (recentScanProjectIds, deltaStartGdt) {
         var deletedProjectIds = [];
         var descriptionPrefix = "created at";
 
@@ -1115,7 +1156,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
     },
 
     // Close-Skipped AVIs for deleted projects
-    _closeSkippedAVIsForDeletedProjects: function(projectIdsToSkip) {
+    _closeSkippedAVIsForDeletedProjects: function (projectIdsToSkip) {
         var updatedCount = 0;
         var avit = new sn_vul.PagedGlideRecord('sn_vul_app_vulnerable_item');
         avit.addEncodedQuery('source=Checkmarx One' +
