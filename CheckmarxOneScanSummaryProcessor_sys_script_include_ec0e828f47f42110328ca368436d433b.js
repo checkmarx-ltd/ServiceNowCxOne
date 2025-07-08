@@ -46,8 +46,6 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                     try {
                         var SastappNode = iteration.next();
                         var Sastattributes = SastappNode.getAttributes();
-                        var prvScanId = Sastattributes.prvScanId;
-                        var prvBranch = Sastattributes.prvBranch;
                         //map attributes from CheckmarxOne into the servicenow scan summary table
                         sastdata['source_app_id'] = Sastattributes.app_id;
                         sastdata['source_scan_id'] = Sastattributes.id;
@@ -57,7 +55,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         sastdata['scan_analysis_size'] = +Sastattributes.loc;
                         sastdata['policy'] = Sastattributes.engine;
                         sastdata['source_sdlc_status'] = Sastattributes.scan_id;
-                        sastdata['tags'] = "Branch: " + Sastattributes.branch + " | Old ScanId: " + prvScanId + " | Old Branch: " + prvBranch;
+                        sastdata['tags'] = "Branch: " + Sastattributes.branch;
                         sastdata['scan_submitted_by'] = 'Scan Origin: ' + Sastattributes.scan_origin + '\n' + 'Scan Source: ' + Sastattributes.scan_source + '\n' + 'Scan Type: ' + Sastattributes.scan_type + '\n';
                         this._upsert(sastdata);
                     } catch (ex) {
@@ -75,7 +73,6 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                     try {
                         var appNode = iter.next();
                         var attributes = appNode.getAttributes();
-                        var scaPrvScanId = attributes.prvScanId;
                         //map attributes from Checkmarx into the servicenow scan summary table
                         data['source_app_id'] = attributes.app_id;
                         data['source_scan_id'] = attributes.id;
@@ -84,7 +81,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         data['scan_summary_name'] = attributes.id + ' ' + data['last_scan_date'];
                         data['policy'] = attributes.engine;
                         data['source_sdlc_status'] = attributes.scan_id;
-                        data['tags'] = "Branch: " + attributes.branch + " | Old ScanId: " + scaPrvScanId + " | Old Branch: " + prvBranch;
+                        data['tags'] = "Branch: " + attributes.branch;
                         data['scan_submitted_by'] = 'Scan Origin: ' + attributes.scan_origin + '\n' + 'Scan Source: ' + attributes.scan_source + '\n' + 'Scan Type: ' + attributes.scan_type + '\n';
                         this._upsert(data);
                     } catch (ex) {
@@ -102,7 +99,6 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                     try {
                         var kicsappNode = kicsiteration.next();
                         var kicsattributes = kicsappNode.getAttributes();
-                        var kicsPrvScanId = kicsattributes.prvScanId;
                         //map attributes from CheckmarxOne into the servicenow scan summary table
                         kicsdata['source_app_id'] = kicsattributes.app_id;
                         kicsdata['source_scan_id'] = kicsattributes.id;
@@ -111,7 +107,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         kicsdata['scan_summary_name'] = kicsattributes.id + ' ' + kicsdata['last_scan_date'];
                         kicsdata['policy'] = kicsattributes.engine;
                         kicsdata['source_sdlc_status'] = kicsattributes.scan_id;
-                        kicsdata['tags'] = "Branch: " + kicsattributes.branch + " | Old ScanId: " + kicsPrvScanId + " | Old Branch: " + prvBranch;
+                        kicsdata['tags'] = "Branch: " + kicsattributes.branch;
                         kicsdata['scan_submitted_by'] = 'Scan Origin: ' + kicsattributes.scan_origin + '\n' + 'Scan Source: ' + kicsattributes.scan_source + '\n' + 'Scan Type: ' + kicsattributes.scan_type + '\n';
                         this._upsert(kicsdata);
                     } catch (ex) {
@@ -129,7 +125,6 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                     try {
                         var conSecAppNode = conSecIteration.next();
                         var conSecAttributes = conSecAppNode.getAttributes();
-                        var conSecPrvScanId = conSecAttributes.prvScanId;
                         //map attributes from CheckmarxOne into the servicenow scan summary table
                         conSecData['source_app_id'] = conSecAttributes.app_id;
                         conSecData['source_scan_id'] = conSecAttributes.id;
@@ -138,7 +133,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         conSecData['scan_summary_name'] = conSecAttributes.id + ' ' + conSecData['last_scan_date'];
                         conSecData['policy'] = conSecAttributes.engine;
                         conSecData['source_sdlc_status'] = conSecAttributes.scan_id;
-                        conSecData['tags'] = "Branch: " + conSecAttributes.branch + " | Old ScanId: " + conSecPrvScanId + " | Old Branch: " + prvBranch;
+                        conSecData['tags'] = "Branch: " + conSecAttributes.branch;
                         conSecData['scan_submitted_by'] = 'Scan Origin: ' + conSecAttributes.scan_origin + '\n' + 'Scan Source: ' + conSecAttributes.scan_source + '\n' + 'Scan Type: ' + conSecAttributes.scan_type + '\n';
                         this._upsert(conSecData);
                     } catch (ex) {
@@ -156,7 +151,6 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                     try {
                         var apiSecAppNode = apiSecIteration.next();
                         var apiSecAttributes = apiSecAppNode.getAttributes();
-                        var apiSecPrvScanId = apiSecAttributes.prvScanId;
                         // Map API Security attributes
                         apiSecData['source_app_id'] = apiSecAttributes.app_id;
                         apiSecData['source_scan_id'] = apiSecAttributes.id;
@@ -165,7 +159,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         apiSecData['scan_summary_name'] = apiSecAttributes.id + ' ' + apiSecData['last_scan_date'];
                         apiSecData['policy'] = apiSecAttributes.engine;
                         apiSecData['source_sdlc_status'] = apiSecAttributes.scan_id;
-                        apiSecData['tags'] = "Branch: " + apiSecAttributes.branch + " | Old ScanId: " + apiSecPrvScanId + " | Old Branch: " + prvBranch;
+                        apiSecData['tags'] = "Branch: " + apiSecAttributes.branch;
                         apiSecData['scan_submitted_by'] = 'Scan Origin: ' + apiSecAttributes.scan_origin + '\n' + 'Scan Source: ' + apiSecAttributes.scan_source + '\n' + 'Scan Type: ' + apiSecAttributes.scan_type + '\n';
                         this._upsert(apiSecData);
                     } catch (ex) {
@@ -182,7 +176,6 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                     try {
                         var scoreCardAppNode = scoreCardIteration.next();
                         var scoreCardAttributes = scoreCardAppNode.getAttributes();
-                        var scoreCardcPrvScanId = scoreCardAttributes.prvScanId;
                         //map attributes from CheckmarxOne into the servicenow scan summary table
                         scoreCardData['source_app_id'] = scoreCardAttributes.app_id;
                         scoreCardData['source_scan_id'] = scoreCardAttributes.id;
@@ -191,7 +184,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         scoreCardData['scan_summary_name'] = scoreCardAttributes.id + ' ' + scoreCardData['last_scan_date'];
                         scoreCardData['policy'] = scoreCardAttributes.engine;
                         scoreCardData['source_sdlc_status'] = scoreCardAttributes.scan_id;
-                        scoreCardData['tags'] = "Branch: " + scoreCardAttributes.branch + " | Old ScanId: " + scoreCardcPrvScanId + " | Old Branch: " + prvBranch;
+                        scoreCardData['tags'] = "Branch: " + scoreCardAttributes.branch;
                         scoreCardData['scan_submitted_by'] = 'Scan Origin: ' + scoreCardAttributes.scan_origin + '\n' + 'Scan Source: ' +
                             scoreCardAttributes.scan_source + '\n' + 'Scan Type: ' + scoreCardAttributes.scan_type + '\n';
                         this._upsert(scoreCardData);
@@ -210,7 +203,6 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                     try {
                         var secretDetectionAppNode = secretDetectionIteration.next();
                         var secretDetectionAttributes = secretDetectionAppNode.getAttributes();
-                        var secretDetectionPrvScanId = secretDetectionAttributes.prvScanId;
                         //map attributes from CheckmarxOne into the servicenow scan summary table
                         secretDetectionData['source_app_id'] = secretDetectionAttributes.app_id;
                         secretDetectionData['source_scan_id'] = secretDetectionAttributes.id;
@@ -219,7 +211,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         secretDetectionData['scan_summary_name'] = secretDetectionAttributes.id + ' ' + secretDetectionAttributes['last_scan_date'];
                         secretDetectionData['policy'] = secretDetectionAttributes.engine;
                         secretDetectionData['source_sdlc_status'] = secretDetectionAttributes.scan_id;
-                        secretDetectionData['tags'] = "Branch: " + secretDetectionAttributes.branch + " | Old ScanId: " + secretDetectionAttributes + " | Old Branch: " + prvBranch;
+                        secretDetectionData['tags'] = "Branch: " + secretDetectionAttributes.branch;
                         secretDetectionData['scan_submitted_by'] = 'Scan Origin: ' + secretDetectionAttributes.scan_origin + '\n' + 'Scan Source: ' +
                             secretDetectionAttributes.scan_source + '\n' + 'Scan Type: ' + secretDetectionAttributes.scan_type + '\n';
                         this._upsert(secretDetectionData);

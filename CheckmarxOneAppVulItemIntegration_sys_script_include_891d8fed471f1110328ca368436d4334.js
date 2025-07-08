@@ -43,8 +43,6 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                 engines = result.engines;
                 applicationIds += result["applicationIds"];
                 var primaryBranch = result["primaryBranch"];
-
-                var isPrvScanEmpty = 'true';
                 var config = this.UTIL._getConfig(this.IMPLEMENTATION);
                 var resultState = config.result_states;
                 var resultStateFilter = false;
@@ -55,49 +53,6 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                 var ui_severity = config.severity;
                 if (null != ui_severity && '' != ui_severity) {
                     var severity = config.severity;
-                }
-                var scan_synchronization = config.scan_synchronization.toString();
-                var scanSummary = new GlideRecord('sn_vul_app_vul_scan_summary');
-                scanSummary.addQuery('application_release.source_app_id', appId);
-                scanSummary.query();
-                var lastSastDate;
-                var lastScaDate;
-                var prvScanBranch = '';
-                var lastDate;
-                while (scanSummary.hasNext()) {
-                    scanSummary.next();
-                    var tags = scanSummary.getValue('tags');
-                    if (null != tags && '' != tags && 'undefined' != tags) {
-                        isPrvScanEmpty = 'false';
-                        var tagArr = tags.split('|', -1);
-                        if (tagArr && tagArr.length > 1) {
-                            var record1 = String(tagArr[0] || '').trim();
-                            var record2 = String(tagArr[1] || '').trim();
-                            var record3 = String(tagArr[2] || '').trim();
-                            var prvScanSummaryBranch = '';
-                            var prvScanId = '';
-                            var isBranchMatched = 'false';
-                            var lastScanSummaryDate = scanSummary.getValue('sys_updated_on');
-                            // if (record1.length > 8)
-                            //     prvScanSummaryBranch = record1.substring(8);
-                            if (record2.length > 12)
-                                prvScanId = record2.substring(12);
-                            if (record3.length > 12 && record3.substring(12) != undefined && record3.substring(12) != 'undefined' && record3.substring(12) != null)
-                                prvScanSummaryBranch = record3.substring(12);
-                            if (scan_synchronization == 'latest scan from each branch' && branch == prvScanSummaryBranch) {
-                                isBranchMatched = 'true';
-                            } else if ((scan_synchronization == 'latest scan of primary branch' || scan_synchronization == 'latest scan across all branches') && null != prvScanSummaryBranch && '' != prvScanSummaryBranch && 'undefined' != prvScanSummaryBranch) {
-                                isBranchMatched = 'true';
-                            }
-                            if (isBranchMatched == 'true') {
-                                if ((null == lastDate || '' == lastDate || 'undefined' == lastDate) || (lastDate && lastScanSummaryDate >= lastDate)) {
-                                    prvScanBranch = prvScanSummaryBranch;
-                                    lastDate = lastScanSummaryDate;
-                                }
-                            }
-
-                        }
-                    }
                 }
 
                 if (applicationIds && applicationIds.length > 0) {
@@ -110,7 +65,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             if (params.run) {
                 //   scanId, offset
                 if (offset > 0) {
-                    response = this.getDetailedReport(scanId, params.run[Object.keys(params.run)[0]], lastscandate, appname, branch, prvScanBranch, appId, applicationIdsStr, engines, severity, resultStateFilter, result_state_array);
+                    response = this.getDetailedReport(scanId, params.run[Object.keys(params.run)[0]], lastscandate, appname, branch, appId, applicationIdsStr, engines, severity, resultStateFilter, result_state_array);
                     if (response == "<null/>") {
                         xml_response = '<scanResults><Results></Results><ApiSecResults></ApiSecResults></scanResults>';
                     } else {
@@ -135,7 +90,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                         }
                     }
 
-                    apiSecResponse = this.getApiSecReport(scanId, params.run[Object.keys(params.run)[0]], lastscandate, appname, branch, prvScanBranch, appId, applicationIdsStr, engines);
+                    apiSecResponse = this.getApiSecReport(scanId, params.run[Object.keys(params.run)[0]], lastscandate, appname, branch, appId, applicationIdsStr, engines);
 
                     if (apiSecResponse == "<null/>") {
                         xml_response = '<scanResults><Results></Results><ApiSecResults></ApiSecResults></scanResults>';
@@ -171,7 +126,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         };
     },
 
-    getDetailedReport: function (scanId, offset, lastscandate, appname, branch, prvScanBranch, appId, applicationIdsStr, engines, severity, resultStateFilter, result_state_array) {
+    getDetailedReport: function (scanId, offset, lastscandate, appname, branch, appId, applicationIdsStr, engines, severity, resultStateFilter, result_state_array) {
         try {
             var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
             var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
@@ -257,7 +212,6 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             ' status="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].status) + '"' +
                             ' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
                             ' branch="' + this.UTIL.escapeXmlChars(branch) + '"' +
-                            ' prvBranch="' + this.UTIL.escapeXmlChars(prvScanBranch) + '"' +
                             ' last_scan_date="' + this.UTIL.escapeXmlChars(lastscandate) + '"' +
                             ' application_ids="' + this.UTIL.escapeXmlChars(applicationIdsStr) + '"' +
                             ' scan_id="' + this.UTIL.escapeXmlChars('sast' + scanId) + '">' +
@@ -305,7 +259,6 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             ' location="' + this.UTIL.escapeXmlChars(location) + '"' +
                             ' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
                             ' branch="' + this.UTIL.escapeXmlChars(branch) + '"' +
-                            ' prvBranch="' + this.UTIL.escapeXmlChars(prvScanBranch) + '"' +
                             ' exploitable_method="' + this.UTIL.escapeXmlChars(exploitable_method) + '"' +
                             ' last_scan_date="' + this.UTIL.escapeXmlChars(lastscandate) + '"' +
                             ' application_ids="' + this.UTIL.escapeXmlChars(applicationIdsStr) + '"' +
@@ -338,7 +291,6 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             ' status="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].status) + '"' +
                             ' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
                             ' branch="' + this.UTIL.escapeXmlChars(branch) + '"' +
-                            ' prvBranch="' + this.UTIL.escapeXmlChars(prvScanBranch) + '"' +
                             ' last_scan_date="' + this.UTIL.escapeXmlChars(lastscandate) + '"' +
                             ' OWASPTop10="' + this.UTIL.escapeXmlChars(kicsowasp) + '"' +
                             ' SANSTop25="' + this.UTIL.escapeXmlChars(kicssans) + '"' +
@@ -378,7 +330,6 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             ' status="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].status) + '"' +
                             ' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
                             ' branch="' + this.UTIL.escapeXmlChars(branch) + '"' +
-                            ' prvBranch="' + this.UTIL.escapeXmlChars(prvScanBranch) + '"' +
                             ' last_scan_date="' + this.UTIL.escapeXmlChars(lastscandate) + '"' +
                             ' application_ids="' + this.UTIL.escapeXmlChars(applicationIdsStr) + '"' +
                             ' result_hash="' + this.UTIL.escapeXmlChars(result_hash) + '"' +
@@ -410,7 +361,6 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             ' status="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].status) + '"' +
                             ' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
                             ' branch="' + this.UTIL.escapeXmlChars(branch) + '"' +
-                            ' prvBranch="' + this.UTIL.escapeXmlChars(prvScanBranch) + '"' +
                             ' last_scan_date="' + this.UTIL.escapeXmlChars(lastscandate) + '"' +
                             ' application_ids="' + this.UTIL.escapeXmlChars(applicationIdsStr) + '"' +
                             ' scan_id="' + this.UTIL.escapeXmlChars('SecretDetection' + scanId) + '">' +
@@ -448,7 +398,6 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             ' status="' + this.UTIL.escapeXmlChars(jsonLastScanReportResp.results[item].status) + '"' +
                             ' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
                             ' branch="' + this.UTIL.escapeXmlChars(branch) + '"' +
-                            ' prvBranch="' + this.UTIL.escapeXmlChars(prvScanBranch) + '"' +
                             ' last_scan_date="' + this.UTIL.escapeXmlChars(lastscandate) + '"' +
                             ' application_ids="' + this.UTIL.escapeXmlChars(applicationIdsStr) + '"' +
                             ' scan_id="' + this.UTIL.escapeXmlChars('ScoreCard' + scanId) + '">' +
@@ -491,7 +440,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         return reportcontent;
     },
 
-    getApiSecReport: function (scanId, offset, lastscandate, appname, branch, prvScanBranch, appId, applicationIdsStr, engines) {
+    getApiSecReport: function (scanId, offset, lastscandate, appname, branch, appId, applicationIdsStr, engines) {
         try {
             var newoffset = offset - offset * 2;
             var basicContent = '<scanResults app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
