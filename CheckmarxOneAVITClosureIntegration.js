@@ -5,7 +5,7 @@ CheckmarxOneAVITClosureIntegration.prototype = Object.extendsObject(sn_vul.Appli
     MSG: "CheckmarxOneAVITClosureIntegration",
     INTEGRATION_ID: 'e5dffb5c47575110328ca368436d436b', // constant integration filter for Scan Summary Table
 
-    retrieveData: function () {
+    retrieveData: function() {
         var params = this._getParameters(this.PROCESS.getValue('parameters'));
         var response = ""; // Initialize response variable
 
@@ -56,7 +56,7 @@ CheckmarxOneAVITClosureIntegration.prototype = Object.extendsObject(sn_vul.Appli
     //Creates XML summary for given scan Id
 
 
-    getLatestScanReport: function (appId, scanbranch, scanId, engines) {
+    getLatestScanReport: function(appId, scanbranch, scanId, engines) {
         try {
             var latestScanRootNodeStart = '<latestscanreport><xml id="checkmarx"><scans>';
             var latestScanRootNodeEnd = '</scans></xml></latestscanreport>';
@@ -80,7 +80,7 @@ CheckmarxOneAVITClosureIntegration.prototype = Object.extendsObject(sn_vul.Appli
 
 
     // Gets the integration parameters as a map
-    _getParameters: function (parameters) {
+    _getParameters: function(parameters) {
         var params = {
             run: null,
             remaining: {}
@@ -130,7 +130,7 @@ CheckmarxOneAVITClosureIntegration.prototype = Object.extendsObject(sn_vul.Appli
     /**
      * Parses the branch name from the Tags field
      */
-    getBranchFromTags: function (tags) {
+    getBranchFromTags: function(tags) {
         var match = tags.match(/Branch:\s*([^|]*)/);
         return match ? match[1].trim() : '.unknown';
     },
@@ -138,7 +138,7 @@ CheckmarxOneAVITClosureIntegration.prototype = Object.extendsObject(sn_vul.Appli
     /**
      * Builds a standardized scan object from the scan summary record
      */
-    buildScanObject: function (gr) {
+    buildScanObject: function(gr) {
         var appReleaseGr = gr.application_release.getRefRecord();
 
         // REASON: All data points are now sourced from the two local ServiceNow records.
@@ -156,7 +156,7 @@ CheckmarxOneAVITClosureIntegration.prototype = Object.extendsObject(sn_vul.Appli
      * Retrieves all unique application_release.source_app_id values since deltaStartTime
      * Filters only those belonging to a specific integration
      */
-    getUniqueAppIds: function (deltaStartTime) {
+    getUniqueAppIds: function(deltaStartTime) {
         var appSet = {};
         var apps = [];
         var gr = new GlideRecord('sn_vul_app_vul_scan_summary');
@@ -175,7 +175,7 @@ CheckmarxOneAVITClosureIntegration.prototype = Object.extendsObject(sn_vul.Appli
     /**
      * Placeholder: Simulates a lookup to get primary branch for an app
      */
-    getPrimaryBranchFromAPI: function (appId) {
+    getPrimaryBranchFromAPI: function(appId) {
         // Replace this with actual external call if needed
         return "main";
     },
@@ -183,7 +183,7 @@ CheckmarxOneAVITClosureIntegration.prototype = Object.extendsObject(sn_vul.Appli
     /**
      * Scenario 1: Latest scan across all branches per project
      */
-    _getLatestScanAcrossBranches: function (deltaStartTime) {
+    _getLatestScanAcrossBranches: function(deltaStartTime) {
         var results = [];
         var appIds = this.getUniqueAppIds(deltaStartTime);
 
@@ -205,14 +205,14 @@ CheckmarxOneAVITClosureIntegration.prototype = Object.extendsObject(sn_vul.Appli
     /**
      * Scenario 2: Latest scan from primary branch per project; fallback to latest if none found
      */
-    _getLatestScanFromPrimaryBranch: function (deltaStartTime) {
+    _getLatestScanFromPrimaryBranch: function(deltaStartTime) {
         var results = [];
         var appIds = this.getUniqueAppIds(deltaStartTime);
 
         for (var i = 0; i < appIds.length; i++) {
             var appId = appIds[i];
             var matched = false;
-
+            var gr = new GlideRecord('sn_vul_app_vul_scan_summary');
             gr.addEncodedQuery('application_release=' + appId + '^integration=' + this.INTEGRATION_ID + '^last_scan_date>=javascript:gs.dateGenerate' + deltaStartTime);
             gr.orderByDesc('last_scan_date');
             gr.query();
@@ -247,14 +247,14 @@ CheckmarxOneAVITClosureIntegration.prototype = Object.extendsObject(sn_vul.Appli
     /**
      * Scenario 3: Latest scan from each unique branch per project
      */
-    _getLatestScanFromEachBranch: function (deltaStartTime) {
+    _getLatestScanFromEachBranch: function(deltaStartTime) {
         var results = [];
         var appIds = this.getUniqueAppIds(deltaStartTime);
 
         for (var i = 0; i < appIds.length; i++) {
             var appId = appIds[i];
             var seenBranches = {};
-
+            var gr = new GlideRecord('sn_vul_app_vul_scan_summary');
             gr.addEncodedQuery('application_release=' + appId + '^integration=' + this.INTEGRATION_ID + '^last_scan_date>=javascript:gs.dateGenerate' + deltaStartTime);
             gr.orderByDesc('last_scan_date');
             gr.query();
@@ -272,7 +272,7 @@ CheckmarxOneAVITClosureIntegration.prototype = Object.extendsObject(sn_vul.Appli
         return results;
     },
 
-    _serializeParameters: function (params) {
+    _serializeParameters: function(params) {
         if (params.latest)
             params.latest = params.latest.getValue();
         else
@@ -281,7 +281,7 @@ CheckmarxOneAVITClosureIntegration.prototype = Object.extendsObject(sn_vul.Appli
     },
 
 
-    _nextParameters: function (params) {
+    _nextParameters: function(params) {
         params.run = null;
         var keys = Object.keys(params.remaining);
         if (keys.length) {
@@ -297,7 +297,7 @@ CheckmarxOneAVITClosureIntegration.prototype = Object.extendsObject(sn_vul.Appli
 
 
     //To get Delta Date from third Integration
-    getDeltaDate: function () {
+    getDeltaDate: function() {
 
         var config = this.UTIL._getConfig(this.IMPLEMENTATION);
         var apibaseurl = config.checkmarxone_api_base_url;
