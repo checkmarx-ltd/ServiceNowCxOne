@@ -272,9 +272,10 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                         for (var k in jsonLastScanReportResp.results[item].data.packageData) {
                             var url = jsonLastScanReportResp.results[item].data.packageData[k].url;
                             ref += url + ',  ';
-                            var sca_packageID = jsonLastScanReportResp.results[item].data.packageIdentifier;
-                            recommendedVersion = jsonLastScanReportResp.results[item].data.recommendedVersion;
                         }
+                        
+						var sca_packageID = jsonLastScanReportResp.results[item].data.packageIdentifier;
+						recommendedVersion = jsonLastScanReportResp.results[item].data.recommendedVersion;
 
                         if (jsonLastScanReportResp.results[item].data.exploitableMethods != null) {
 
@@ -634,396 +635,398 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         return sans;
     },
 
-    // Gets the integration parameters as a map
-    _getParameters: function(parameters) {
-        var params = {
-            run: null,
-            remaining: {}
-        };
+	// Gets the integration parameters for vulnerability processing
+	_getParameters: function(parameters) {
+		var params = {
+			run: null,
+			remaining: {}
+		};
+		try {
+			// Handle continuation of multi-part job
+			if (parameters) {
+				params = JSON.parse(parameters);
+				if (params.latest) {
+					var latest = new GlideDateTime();
+					latest.setValue(params.latest);
+					params.latest = latest;
+					this.LATEST = latest;
+				}
+				return params;
+			}
 
-        try {
-            if (parameters) {
-                params = JSON.parse(parameters);
-                if (params.latest) {
-                    var latest = new GlideDateTime();
-                    latest.setValue(params.latest);
-                    params.latest = latest;
-                    this.LATEST = latest;
-                }
-            } else {
-                var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
-                var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
-                var includekics = this.UTIL.importKicsFlaw(this.IMPLEMENTATION);
-                var includeContainerSecurity = this.UTIL.importContainerSecurityFlaw(this.IMPLEMENTATION);
-                var includeSecretDetection = this.UTIL.importSecretDetectionFlaw(this.IMPLEMENTATION);
-                var includeScoreCard = this.UTIL.importScoreCardFlaw(this.IMPLEMENTATION);
-                var includeApiSecurity = this.UTIL.importApiSecurityFlaw(this.IMPLEMENTATION);
-                var app_list = [];
+			// Initialize delta load timestamp
+			this.LATEST = new GlideDateTime(this.DELTA_START_TIME || '1970-01-01 00:00:00');
+			var config = this.UTIL._getConfig(this.IMPLEMENTATION);
+
+			// Use the new functions to get filtered projects and scans
+			var projects = this._getFilteredProjects(config, this.LATEST);
+			var scans = this._getFilteredScans(projects, config, this.LATEST);
+
+			// Handle Auto-Close for Deleted Projects (if enabled)
+            if (config.close_findings_of_deleted_projects) {
                 var scan_app_list = [];
-                var project_primary_branch_list = [];
-                this.LATEST = new GlideDateTime(this.DELTA_START_TIME || '1970-01-01T10:16:06.17544Z').getDate();
-                var apps = this.AVR_API.getAppReleases();
                 var scanJson = this.UTIL.getAllScanList(this.IMPLEMENTATION, this._getCurrentDeltaStartTime());
-                var offsetId = '';
-                var config = this.UTIL._getConfig(this.IMPLEMENTATION);
-                var scan_synchronization = config.scan_synchronization.toString();
-                var filter_project = config.filter_project;
-                var list_projects = this.UTIL.getConfigProjectList(this.IMPLEMENTATION);
-                var list_projects_name = this.UTIL.getConfigProjectNameList(this.IMPLEMENTATION);
-                if (list_projects_name && list_projects_name.length > 0 && filter_project == 'by_name')
-                    var projectIdsByNames = this.UTIL.getProjectIdsFromProjectNames(this.IMPLEMENTATION, list_projects_name);
-                for (var j in apps) {
-                    app_list.push(apps[j].source_app_id);
-                }
-
                 for (var k in scanJson.scans) {
                     if (scan_app_list.indexOf(scanJson.scans[k].projectId) == -1)
                         scan_app_list.push(scanJson.scans[k].projectId);
                 }
-
-                // Handle Auto-Close for Deleted Projects (if enabled)
-                if (config.close_findings_of_deleted_projects) {
-                    var deltaStartGdt = new GlideDateTime(this.DELTA_START_TIME || '1970-01-01T10:16:06.17544Z');
-                    var deletedProjectIds = this._getDeletedProjects(scan_app_list, deltaStartGdt);
-                    if (deletedProjectIds.length > 0) {
-                        this._closeSkippedAVIsForDeletedProjects(deletedProjectIds);
-                    }
-                }
-
-                var scans = [];
-                var newoffset = 0;
-                for (var app in scan_app_list) {
-                    var scanId = '';
-                    var appId = scan_app_list[app];
-                    if (appId !== "undefined" && app_list.indexOf(appId) != -1) {
-                        var includeProjectFlag = this.UTIL.isProjectIncluded(this.IMPLEMENTATION, filter_project, list_projects, list_projects_name, projectIdsByNames, appId);
-
-                        if (includeProjectFlag == 'true') {
-                            var primaryBranch = '';
-                            var jsonLastScanSummResp = '';
-                            var branches;
-                            var appname = '';
-                            var lastscandate = '';
-                            var scanbranch = '';
-                            var applicationIds = [];
-                            var engine = '';
-                            var engineList = [];
-                            var projectResponse = this.UTIL.getProjectById(this.IMPLEMENTATION, appId);
-                            if (null != projectResponse.applicationIds && projectResponse.applicationIds.length > 0)
-                                applicationIds = applicationIds.concat(projectResponse.applicationIds);
-                            if (null != projectResponse.mainBranch && '' != projectResponse.mainBranch)
-                                primaryBranch = projectResponse.mainBranch.toString();
-                            if (scan_synchronization == 'latest scan of primary branch') {
-                                if (null != primaryBranch && '' != primaryBranch) {
-                                    jsonLastScanSummResp = this.UTIL.getScanListFilterByBranch(this.IMPLEMENTATION, appId, this._getCurrentDeltaStartTime(), primaryBranch);
-                                    branches = this.UTIL.getProjectBranchList(this.IMPLEMENTATION, appId);
-                                } else
-                                    jsonLastScanSummResp = this.UTIL.getScanInfo(this.IMPLEMENTATION, appId, newoffset, this._getCurrentDeltaStartTime());
-                            } else if (scan_synchronization == 'latest scan from each branch') {
-                                branches = this.UTIL.getProjectBranchList(this.IMPLEMENTATION, appId);
-                                if (null != branches && '' != branches) {
-                                    jsonLastScanSummResp = this.UTIL.getScanListFilterByMultipleBranch(this.IMPLEMENTATION, appId, this._getCurrentDeltaStartTime(), branches);
-                                }
-                            } else if (scan_synchronization == 'latest scan across all branches' || jsonLastScanSummResp == '' || jsonLastScanSummResp == null || jsonLastScanSummResp == -1) {
-                                jsonLastScanSummResp = this.UTIL.getScanInfo(this.IMPLEMENTATION, appId, newoffset, this._getCurrentDeltaStartTime());
-                            }
-                            var branch = [];
-                            var configScanType = config.scan_type.toString();
-                            for (var item in jsonLastScanSummResp.scans) {
-                                var isSastScanIncluded = 'false';
-                                var scanTypeToCheck = '';
-                                if (null == configScanType || '' == configScanType)
-                                    isSastScanIncluded = 'true';
-                                else if (null != configScanType && '' != configScanType) {
-                                    scanTypeToCheck = this._getScanType(this.IMPLEMENTATION, appId, jsonLastScanSummResp.scans[item].id);
-                                    if (configScanType.indexOf(scanTypeToCheck) != -1)
-                                        isSastScanIncluded = 'true';
-                                }
-                                var include_scan = false;
-                                //sca scan summary
-                                if (includesca && jsonLastScanSummResp.scans[item].engines.toString().indexOf("sca") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
-                                    include_scan = true;
-                                }
-
-                                //sast scan summary
-                                if (includesast && isSastScanIncluded && jsonLastScanSummResp.scans[item].engines.toString().indexOf("sast") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
-                                    include_scan = 'true';
-                                }
-
-                                //kics scan summary
-                                if (includekics && jsonLastScanSummResp.scans[item].engines.toString().indexOf("kics") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
-                                    include_scan = 'true';
-                                }
-
-                                //Container Security scan summary
-                                if (includeContainerSecurity && jsonLastScanSummResp.scans[item].engines.toString().indexOf("containers") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
-                                    include_scan = 'true';
-                                }
-
-                                // API Security scan summary
-                                if (includeApiSecurity && jsonLastScanSummResp.scans[item].engines.toString().indexOf("apisec") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
-                                    include_scan = 'true';
-                                }
-                                //OSSF Scorecard scan summary
-                                if (includeScoreCard && jsonLastScanSummResp.scans[item].engines.toString().indexOf("microengines") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
-                                    include_scan = 'true';
-                                }
-
-                                //secretDetection scan summary
-                                if (includeSecretDetection && jsonLastScanSummResp.scans[item].engines.toString().indexOf("microengines") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
-                                    include_scan = 'true';
-                                }
-                                if (include_scan == 'true') {
-
-                                    if (jsonLastScanSummResp.scans[item].engines.toString().indexOf("microengines") != -1 &&
-                                        jsonLastScanSummResp.scans[item].metadata.configs[item].type == 'microengines') {
-                                        var secretDetetction = jsonLastScanSummResp.scans[item].metadata.configs[item].value;
-                                        if ('2ms' in secretDetetction && engineList.indexOf('SecretDetection') == -1) {
-                                            engine += 'SecretDetection,';
-                                        }
-                                        if ('Scorecard' in secretDetetction && engineList.indexOf('Scorecard') == -1) {
-                                            engine += 'Scorecard,';
-                                        }
-                                    }
-
-                                    if (jsonLastScanSummResp.scans[item].engines.toString().indexOf('containers') != -1 && engineList.indexOf('CS') == -1) {
-                                        engine += 'CS,';
-                                    }
-                                    if (jsonLastScanSummResp.scans[item].engines.toString().indexOf('kics') != -1 && engineList.indexOf('IaC') == -1) {
-                                        engine += 'IaC,';
-                                    }
-                                    var start = 0;
-
-                                    for (var i = 0; i < engine.length; i++) {
-                                        if (engine[i] === ",") {
-                                            engineList.push(engine.slice(start, i));
-                                            start = i + 1;
-                                        }
-                                    }
-                                    engineList.push(engine.slice(start));
-                                    scans.push(
-                                        "scanId= " + jsonLastScanSummResp.scans[item].id +
-                                        "; last_scan_date= " + this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt) +
-                                        "; appname= " + jsonLastScanSummResp.scans[item].projectName +
-                                        "; scanbranch= " + jsonLastScanSummResp.scans[item].branch +
-                                        "; appId= " + jsonLastScanSummResp.scans[item].projectId +
-                                        "; engines= " + engine + jsonLastScanSummResp.scans[item].engines +
-                                        "; applicationIds= " + applicationIds +
-                                        "; primaryBranch= " + primaryBranch
-                                    );
-
-                                    var date = new GlideDateTime(this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt));
-                                    if (!this.LATEST || date > this.LATEST)
-                                        this.LATEST = date;
-                                    branch.push(jsonLastScanSummResp.scans[item].branch);
-
-                                }
-
-                            }
-                        }
-                    }
-                }
-                if (scans.length > 0) {
-                    for (var id in scans) {
-                        var result = {};
-
-                        // Ensure input is a string and split on `;`
-                        scans[id].split(';').forEach(function(pair) {
-                            var parts = pair.split('=').map(function(part) {
-                                return String(part || '').trim();
-                            });
-
-                            // Make sure there's a key-value pair
-                            if (parts.length === 2) {
-                                var key = parts[0];
-                                var value = parts[1];
-                                result[key] = value;
-                            }
-                        });
-                        // Extract individual values
-                        var scan = result["scanId"];
-                        offsetId = this._getoffsets(appId, scan);
-                        params.remaining[scans[id]] = offsetId;
-
-                    }
-                }
-                params = this._nextParameters(params);
-                if (params.run) {
-                    this.PROCESS.setValue('parameters', JSON.stringify(this._serializeParameters(params)));
-                    this.PROCESS.update();
+                var deltaStartGdt = new GlideDateTime(this.DELTA_START_TIME || '1970-01-01T10:16:06.17544Z');
+                var deletedProjectIds = this._getDeletedProjects(scan_app_list, deltaStartGdt);
+                if (deletedProjectIds.length > 0) {
+                    this._handleAppReleaseForDeletedProjects(deletedProjectIds);
+                    this._handleScanSummaryForDeletedProjects(deletedProjectIds);
+                    this._closeSkippedAVIsForDeletedProjects(deletedProjectIds);
                 }
             }
-        } catch (err) {
-            gs.error(this.MSG + " _getParameters : Error while getting the integration parameters: " + err);
-            throw err;
-        }
-        return params;
-    },
 
-    //get Scan IDs from JSON
-    _getScanIdFromJSON: function(scanJson, appId) {
-        var scanId = '';
-        var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
-        var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
-        var includekics = this.UTIL.importKicsFlaw(this.IMPLEMENTATION);
-        var includeContainerSecurity = this.UTIL.importContainerSecurityFlaw(this.IMPLEMENTATION);
-        var includeSecretDetection = this.UTIL.importSecretDetectionFlaw(this.IMPLEMENTATION);
-        var includeScoreCard = this.UTIL.importScoreCardFlaw(this.IMPLEMENTATION);
-        for (var item in scanJson.scans) {
-            var projectId = scanJson.scans[item].projectId;
-            var projectScanId = scanJson.scans[item].id;
-            var includeScan = 'false';
-            if (projectId && projectId != '' && projectId != 'undefined' && projectId == appId) {
-                if (includesca) {
-                    if (scanJson.scans[item].engines.toString().indexOf("sca") != -1)
-                        includeScan = 'true';
-                }
-                if (includesast) {
-                    if (scanJson.scans[item].engines.toString().indexOf("sast") != -1)
-                        includeScan = 'true';
-                }
-                if (includekics) {
-                    if (scanJson.scans[item].engines.toString().indexOf("kics") != -1)
-                        includeScan = 'true';
-                }
-                if (includeContainerSecurity) {
-                    if (scanJson.scans[item].engines.toString().indexOf("containers") != -1)
-                        includeScan = 'true';
-                }
-                if (includeSecretDetection) {
-                    if (scanJson.scans[item].engines.toString().indexOf("microengines") != -1)
-                        includeScan = 'true';
-                }
-                if (includeScoreCard) {
-                    if (scanJson.scans[item].engines.toString().indexOf("microengines") != -1)
-                        includeScan = 'true';
-                }
-            }
-            if (includeScan == 'true') {
-                scanId = projectScanId;
-                break;
-            }
-        }
-        return scanId;
-    },
+			// Build params.remaining from filtered scans
+			for (var scanId in scans) {
+				var scan = scans[scanId];
+				var project = projects[scan.project_sys_id];
+				
+				if (!project) continue;
 
-    //get Scan ID for Primary Branch
-    _getPrimaryBranchScanId: function(scanJson, appId, project_primary_branch_list) {
-        var scanId = '';
-        var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
-        var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
-        var includekics = this.UTIL.importKicsFlaw(this.IMPLEMENTATION);
-        var includeContainerSecurity = this.UTIL.importContainerSecurityFlaw(this.IMPLEMENTATION);
-        var includeSecretDetection = this.UTIL.importSecretDetectionFlaw(this.IMPLEMENTATION);
-        var includeScoreCard = this.UTIL.importScoreCardFlaw(this.IMPLEMENTATION);
-        var includeApiSecurity = this.UTIL.importApiSecurityFlaw(this.IMPLEMENTATION);
-        var primaryBranch = this.UTIL.getPrimaryBranchByProjectId(project_primary_branch_list, appId);
-        if (null != primaryBranch && '' != primaryBranch) {
-            var date = '1970-01-01T10:16:06.17544Z';
-            var jsonLastScanSummResp = this.UTIL.getScanListFilterByBranch(this.IMPLEMENTATION, appId, date, primaryBranch);
-            for (var val in jsonLastScanSummResp.scans) {
-                var primaryScanId = jsonLastScanSummResp.scans[val].id;
-            }
-            for (var item in scanJson.scans) {
-                var projectId = scanJson.scans[item].projectId;
-                var projectScanId = scanJson.scans[item].id;
-                var branch = scanJson.scans[item].branch;
-                var includeScan = 'false';
-                if (projectId && projectId != '' && projectId != 'undefined' && projectId == appId && primaryBranch == branch && primaryScanId == projectScanId) {
-                    if (includesca) {
-                        if (scanJson.scans[item].engines.toString().indexOf("sca") != -1)
-                            includeScan = 'true';
-                    }
-                    if (includesast) {
-                        if (scanJson.scans[item].engines.toString().indexOf("sast") != -1)
-                            includeScan = 'true';
-                    }
-                    if (includekics) {
-                        if (scanJson.scans[item].engines.toString().indexOf("kics") != -1)
-                            includeScan = 'true';
-                    }
+				// Build scan object from filtered data
+				var scanObject = {
+					scanId: scanId,
+					last_scan_date: scan.last_scan_date,
+					appname: project.app_name || '',
+					scanbranch: scan.scan_branch || '',
+					appId: project.source_app_id || '',
+					applicationIds: project.application_ids || '',
+					primaryBranch: project.primary_branch || ''
+				};
 
-                    if (includeContainerSecurity) {
-                        if (scanJson.scans[item].engines.toString().indexOf("containers") != -1)
-                            includeScan = 'true';
-                    }
-                    if (includeSecretDetection) {
-                        if (scanJson.scans[item].engines.toString().indexOf("microengines") != -1)
-                            includeScan = 'true';
-                    }
-                    if (includeScoreCard) {
-                        if (scanJson.scans[item].engines.toString().indexOf("microengines") != -1)
-                            includeScan = 'true';
-                    }
-                }
-                if (includeScan == 'true') {
-                    scanId = projectScanId;
-                    break;
-                }
-                if (scanId == '' && primaryScanId) {
-                    scanId = -1;
-                }
-            }
+				// Build parameter string from scan object
+				var parameterString = this._buildScanParameterString(scanObject);
+				if (!parameterString) continue;
+
+				// Get offsets
+				var offsetArray = this._getoffsets(scanObject.appId, scanObject.scanId);
+				if (!offsetArray || offsetArray.length === 0) continue;
+
+				// Add string parameter to remaining (not JSON)
+				params.remaining[parameterString] = offsetArray;
+			}
+
+			// Prepare first processing item and save state
+			params = this._nextParameters(params);
+			if (params.run) {
+				this.PROCESS.setValue('parameters', JSON.stringify(this._serializeParameters(params)));
+				this.PROCESS.update();
+			}
+
+		} catch (err) {
+			gs.error(this.MSG + " _getParameters: " + err);
+			throw err;
+		}
+
+		return params;
+	},
+
+
+	// Build parameter string from scan object (converts object to semicolon-separated string)
+    _buildScanParameterString: function(scanObject) {
+        if (!scanObject || !scanObject.scanId) {
+            return null;
         }
 
-        return scanId;
+        // Build semicolon-separated parameter string (without engines)
+        var parameterString =
+            'scanId=' + (scanObject.scanId || '') +
+            '; last_scan_date=' + (scanObject.last_scan_date || '') +
+            '; appname=' + (scanObject.appname || '') +
+            '; scanbranch=' + (scanObject.scanbranch || '') +
+            '; appId=' + (scanObject.appId || '') +
+            '; applicationIds=' + (scanObject.applicationIds || '') +
+            '; primaryBranch=' + (scanObject.primaryBranch || '');
+
+        return parameterString;
     },
 
+	// Retrieves filtered projects based on delta start time and user-configured filters (ID or name/regex)
+	_getFilteredProjects: function(config, deltaStartTime) {
+		var projectsMap = {};
+		var projectGr = new GlideRecord('sn_vul_app_release');
+		
+		// Build query conditions as array for better structure
+		var queryConditions = [];
+		queryConditions.push('source=Checkmarx One');
+		queryConditions.push('active=true');
+		queryConditions.push('sys_updated_on>=' + deltaStartTime.getDisplayValueInternal());
+		
+		var filterType = config.filter_project;
+		
+		// Apply project filtering based on configuration type
+		if (filterType == 'by_Id') {
+			var projectIdsRaw = (config.list_of_project_id_s || '').split(';');
+			var isExcludeMode = projectIdsRaw.indexOf('exclude') > -1;
+			var projectIds = projectIdsRaw.filter(function(id) {
+				return id && id !== 'exclude';
+			});
 
-    //get Scan ID for Each Branch
-    _getLastScanIdFromBranch: function(scanJson, appId) {
-        var scanId = [];
-        var branch = [];
-        var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
-        var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
-        var includekics = this.UTIL.importKicsFlaw(this.IMPLEMENTATION);
-        var includeContainerSecurity = this.UTIL.importContainerSecurityFlaw(this.IMPLEMENTATION);
-        var includeSecretDetection = this.UTIL.importSecretDetectionFlaw(this.IMPLEMENTATION);
-        var includeScoreCard = this.UTIL.importScoreCardFlaw(this.IMPLEMENTATION);
-        var includeApiSecurity = this.UTIL.importApiSecurityFlaw(this.IMPLEMENTATION);
-        for (var item in scanJson.scans) {
-            var projectId = scanJson.scans[item].projectId;
-            var projectScanId = scanJson.scans[item].id;
-            var scanIdBranch = scanJson.scans[item].branch;
-            var includeScan = 'false';
-            if (projectId && projectId != '' && projectId != 'undefined' && projectId == appId && branch.indexOf(scanIdBranch) == -1) {
-                if (includesca) {
-                    if (scanJson.scans[item].engines.toString().indexOf("sca") != -1)
-                        includeScan = 'true';
-                }
-                if (includesast) {
-                    if (scanJson.scans[item].engines.toString().indexOf("sast") != -1)
-                        includeScan = 'true';
-                }
-                if (includekics) {
-                    if (scanJson.scans[item].engines.toString().indexOf("kics") != -1)
-                        includeScan = 'true';
-                }
+			if (projectIds.length > 0) {
+				var operator = isExcludeMode ? 'NOT IN' : 'IN';
+				queryConditions.push('source_app_id' + operator + projectIds.join(','));
+			}
+		} else if (filterType == 'by_name') {
+			var projectNamesRaw = (config.project_filter_by_name || '').split(';');
+			var isExcludeModeNames = projectNamesRaw.indexOf('exclude') > -1;
+			var projectNames = projectNamesRaw.filter(function(name) {
+				return name && name !== 'exclude';
+			});
 
-                if (includeContainerSecurity) {
-                    if (scanJson.scans[item].engines.toString().indexOf("containers") != -1)
-                        includeScan = 'true';
-                }
-                if (includeSecretDetection) {
-                    if (scanJson.scans[item].engines.toString().indexOf("microengines") != -1)
-                        includeScan = 'true';
-                }
-                if (includeScoreCard) {
-                    if (scanJson.scans[item].engines.toString().indexOf("microengines") != -1)
-                        includeScan = 'true';
-                }
-            }
-            if (includeScan == 'true') {
-                branch.push(scanJson.scans[item].branch);
-                scanId.push(projectScanId);
+			if (projectNames.length > 0) {
+				var regexPattern = projectNames.join('|');
+				var operator = isExcludeModeNames ? 'NOT MATCH_REGEX' : 'MATCH_REGEX';
+				queryConditions.push('app_name' + operator + regexPattern);
+			}
+		}
 
-            }
-        }
-        return scanId;
-    },
+		// Join all conditions with '^' to create final encoded query
+		projectGr.addEncodedQuery(queryConditions.join('^'));
+		projectGr.query();
 
+		while (projectGr.next()) {
+			var projectSysId = projectGr.getUniqueValue();
+			var projectData = {};
 
+			projectData.source_app_id = projectGr.getValue('source_app_id');
+			projectData.app_name = projectGr.getValue('app_name');
+			projectData.primary_branch = projectGr.getValue('source_app_guid');
+			projectData.source_assigned_teams = projectGr.getValue('source_assigned_teams');
 
+			// Parse project creation date from description field (format: "...created at<ISO_DATE>")
+			try {
+				var description = projectGr.getValue('description') || '';
+				var dateString = description.split('created at')[1];
+				if (dateString) {
+					// Remove microseconds if present and clean the date string
+					var cleanDateString = dateString.trim().replace(/\.\d{6}Z$/, 'Z');
+					var parsedDate = new GlideDateTime();
+					parsedDate.setValue(cleanDateString);
+					projectData.project_created_at = parsedDate.getDisplayValue();
+				} else {
+					projectData.project_created_at = '';
+				}
+			} catch (e) {
+				gs.warn(this.MSG + " _getFilteredProjects: Could not parse project_created_at from description for project: " + projectSysId);
+				projectData.project_created_at = '';
+			}
+
+			// Parse Application IDs from source_additional_info JSON (note: key has trailing space)
+			try {
+				var additionalInfoStr = projectGr.getValue('source_additional_info');
+				if (additionalInfoStr) {
+					var additionalInfo = JSON.parse(additionalInfoStr);
+					// Key "Application Id " has intentional trailing space from original integration
+					projectData.application_ids = additionalInfo["Application Id "] || '';
+				} else {
+					projectData.application_ids = '';
+				}
+			} catch (e) {
+				gs.warn(this.MSG + " _getFilteredProjects: Could not parse application_ids from source_additional_info for project: " + projectSysId);
+				projectData.application_ids = '';
+			}
+
+			projectsMap[projectSysId] = projectData;
+		}
+		return projectsMap;
+	},
+
+	// Retrieves filtered scan summaries based on project scope, delta time, and synchronization rules
+	_getFilteredScans: function(projectsMap, config, deltaStartTime) {
+		var scansMap = {};
+		var projectSysIds = Object.keys(projectsMap);
+		
+		// Early return if no projects are in scope
+		if (projectSysIds.length === 0) {
+			return scansMap;
+		}
+		
+		// Build query conditions as array for better structure
+		var queryConditions = [];
+		queryConditions.push('application_releaseIN' + projectSysIds.join(','));
+		queryConditions.push('last_scan_date>=' + deltaStartTime.getDisplayValueInternal());
+		queryConditions.push('active=true');
+		
+		// Build engine filter based on configuration
+		var enginePolicyFilters = [];
+		if (config.import_sast) enginePolicyFilters.push('policyCONTAINSsast');
+		if (config.import_sca) enginePolicyFilters.push('policyCONTAINSsca');
+		if (config.import_kics) enginePolicyFilters.push('policyCONTAINSkics');
+		if (config.include_container_security) enginePolicyFilters.push('policyCONTAINScontainers');
+		if (config.include_api_security) enginePolicyFilters.push('policyCONTAINSapisec');
+		if (config.include_ossf_scorecard) enginePolicyFilters.push('policyCONTAINSScoreCard');
+		if (config.include_secret_detection) enginePolicyFilters.push('policyCONTAINSSecretDetection');
+		
+		if (enginePolicyFilters.length > 0) {
+			queryConditions.push('^' + enginePolicyFilters.join('^OR'));
+		} else {
+			gs.warn(this.MSG + " _getFilteredScans: No scan engines are enabled in the configuration.");
+			return scansMap;
+		}
+		
+		// Apply scan type filter if configured
+		if (config.scan_type) {
+			queryConditions.push('scan_submitted_byLIKE' + config.scan_type);
+		}
+		
+		// Join all conditions with '^' to create final encoded query
+		var scanSummaryGr = new GlideRecord('sn_vul_app_vul_scan_summary');
+		scanSummaryGr.addEncodedQuery(queryConditions.join('^'));
+		scanSummaryGr.orderByDesc('last_scan_date');
+		scanSummaryGr.query();
+		
+		while (scanSummaryGr.next()) {
+			var rawScanId = scanSummaryGr.getValue('source_sdlc_status');
+			var projectSysId = scanSummaryGr.getValue('application_release');
+			
+			// Skip if scan ID is missing or project not in scope
+			if (!rawScanId || !projectsMap[projectSysId]) {
+				continue;
+			}
+			
+			// Create parent scan object if first time seeing this rawScanId
+			if (!scansMap[rawScanId]) {
+				var scanData = {};
+				
+				scanData.last_scan_date = scanSummaryGr.getDisplayValue('last_scan_date');
+				scanData.policy = scanSummaryGr.getValue('policy');
+				scanData.project_sys_id = projectSysId;
+				scanData.scan_summaries = [];
+				
+				// Parse branch name from tags field (format: "Branch: main | ...")
+				try {
+					var tags = scanSummaryGr.getValue('tags') || '';
+					var branchMatch = /Branch:\s*([^|]*)/.exec(tags);
+					scanData.scan_branch = branchMatch && branchMatch[1] ? branchMatch[1].trim() : '.unknown';
+				} catch (e) {
+					gs.warn(this.MSG + " _getFilteredScans: Could not parse branch from tags for scan: " + rawScanId);
+					scanData.scan_branch = '.unknown';
+				}
+				
+				// Parse scan type from scan_submitted_by field (format: "...Scan Type: Full Scan...")
+				try {
+					var submittedBy = scanSummaryGr.getValue('scan_submitted_by') || '';
+					var typeMatch = /Scan Type:\s*([^\n]*)/.exec(submittedBy);
+					scanData.scan_type = typeMatch && typeMatch[1] ? typeMatch[1].trim() : 'Unknown';
+				} catch (e) {
+					gs.warn(this.MSG + " _getFilteredScans: Could not parse scan type from scan_submitted_by for scan: " + rawScanId);
+					scanData.scan_type = 'Unknown';
+				}
+				
+				// Map policy string to engine names array
+				try {
+					var policyString = scanData.policy || '';
+					var engines = [];
+					var seenEngines = {};
+					var engineMap = {
+						'sast': 'sast',
+						'sca': 'sca',
+						'kics': 'kics',
+						'containers': 'containers',
+						'apisec': 'apisec',
+						'ScoreCard': 'sscs-scorecard',
+						'SecretDetection': 'sscs-secret-detection'
+					};
+					
+					if (policyString) {
+						var policies = policyString.split(',');
+						for (var i = 0; i < policies.length; i++) {
+							var policy = policies[i].trim();
+							var mappedEngine = engineMap[policy];
+							if (mappedEngine && !seenEngines[mappedEngine]) {
+								engines.push(mappedEngine);
+								seenEngines[mappedEngine] = true;
+							}
+						}
+					}
+					scanData.engines = engines;
+				} catch (e) {
+					gs.warn(this.MSG + " _getFilteredScans: Could not parse engines from policy for scan: " + rawScanId);
+					scanData.engines = [];
+				}
+				
+				scansMap[rawScanId] = scanData;
+			}
+			
+			// Add engine-level summary record to scan
+			var summaryData = {
+				sys_id: scanSummaryGr.getUniqueValue(),
+				source_scan_id: scanSummaryGr.getValue('source_scan_id')
+			};
+			scansMap[rawScanId].scan_summaries.push(summaryData);
+		}
+		
+		// Apply synchronization rules based on configuration
+		var syncType = config.scan_synchronization;
+		var filteredScans = {};
+		
+		if (syncType == 'latest scan across all branches') {
+			var latestScanPerProject = {};
+			for (var scanId in scansMap) {
+				var scan = scansMap[scanId];
+				var projectSysId = scan.project_sys_id;
+				var scanDate = scan.last_scan_date;
+				
+				if (!latestScanPerProject[projectSysId] || scanDate > latestScanPerProject[projectSysId].date) {
+					latestScanPerProject[projectSysId] = {
+						date: scanDate,
+						scanId: scanId
+					};
+				}
+			}
+			for (var projId in latestScanPerProject) {
+				var winningScanId = latestScanPerProject[projId].scanId;
+				filteredScans[winningScanId] = scansMap[winningScanId];
+			}
+			
+		} else if (syncType == 'latest scan of primary branch') {
+			var latestScanPerPrimaryBranch = {};
+			for (var scanId in scansMap) {
+				var scan = scansMap[scanId];
+				var project = projectsMap[scan.project_sys_id];
+				
+				if (project && project.primary_branch && scan.scan_branch === project.primary_branch) {
+					var projectSysId = scan.project_sys_id;
+					var scanDate = scan.last_scan_date;
+					
+					if (!latestScanPerPrimaryBranch[projectSysId] || scanDate > latestScanPerPrimaryBranch[projectSysId].date) {
+						latestScanPerPrimaryBranch[projectSysId] = {
+							date: scanDate,
+							scanId: scanId
+						};
+					}
+				}
+			}
+			for (var projId in latestScanPerPrimaryBranch) {
+				var winningScanId = latestScanPerPrimaryBranch[projId].scanId;
+				filteredScans[winningScanId] = scansMap[winningScanId];
+			}
+			
+		} else if (syncType == 'latest scan from each branch') {
+			var latestScanPerBranch = {};
+			for (var scanId in scansMap) {
+				var scan = scansMap[scanId];
+				var branchKey = scan.project_sys_id + '_' + scan.scan_branch;
+				var scanDate = scan.last_scan_date;
+				
+				if (!latestScanPerBranch[branchKey] || scanDate > latestScanPerBranch[branchKey].date) {
+					latestScanPerBranch[branchKey] = {
+						date: scanDate,
+						scanId: scanId
+					};
+				}
+			}
+			for (var key in latestScanPerBranch) {
+				var winningScanId = latestScanPerBranch[key].scanId;
+				filteredScans[winningScanId] = scansMap[winningScanId];
+			}
+			
+		}
+		return filteredScans;
+	},
 
     // Gets the start time of the integration
     _getCurrentDeltaStartTime: function() {
@@ -1136,6 +1139,32 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             }
         }
         return deletedProjectIds;
+    },
+
+    // Updates the active field to false in discovered applications
+    _handleAppReleaseForDeletedProjects: function(projectIdsToSkip) {
+        var updatedCount = 0;
+        var avit = new sn_vul.PagedGlideRecord('sn_vul_app_release');
+        avit.addEncodedQuery('source=Checkmarx One^active=true' + '^source_app_idIN' + GlideStringUtil.escapeQueryTermSeparator(projectIdsToSkip.join(',')));
+        avit.setSortField("sys_id");
+
+        while (avit.next()) {
+            avit.gr.update('active', 'false');
+            updatedCount++;
+        }
+    },
+
+    // Updates the active field to false in scan summary
+    _handleScanSummaryForDeletedProjects: function(projectIdsToSkip) {
+        var updatedCount = 0;
+        var avit = new sn_vul.PagedGlideRecord('sn_vul_app_vul_scan_summary');
+        avit.addEncodedQuery('source=Checkmarx One^active=true' + '^application_release.source_app_idIN' + GlideStringUtil.escapeQueryTermSeparator(projectIdsToSkip.join(',')));
+        avit.setSortField("sys_id");
+
+        while (avit.next()) {
+            avit.gr.update('active', 'false');
+            updatedCount++;
+        }
     },
 
     // Close-Skipped AVIs for deleted projects
