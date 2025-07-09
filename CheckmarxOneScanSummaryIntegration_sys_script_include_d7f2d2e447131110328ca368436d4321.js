@@ -148,8 +148,8 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                             ' scan_origin="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceOrigin) + '"' +
                             ' scan_source="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceType) + '"' +
                             ' scan_type="' + this.UTIL.escapeXmlChars(scaScanType) + '"' +
-                            ' scan_id="' + jsonLastScanSummResp.scans[item].id + '"' +
-                            ' engine="' + engines + '"' +
+                            ' scan_id="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].id) + '"' +
+                            ' engine="' + this.UTIL.escapeXmlChars(engines) + '"' +
                             ' app_name="' + this.UTIL.escapeXmlChars(appId) + '"/>';
                     }
                 }
@@ -181,8 +181,8 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                             ' scan_origin="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceOrigin) + '"' +
                             ' scan_source="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceType) + '"' +
                             ' scan_type="' + this.UTIL.escapeXmlChars(sastScanType) + '"' +
-                            ' scan_id="' + jsonLastScanSummResp.scans[item].id + '"' +
-                            ' engine="' + engines + '"' +
+                            ' scan_id="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].id) + '"' +
+                            ' engine="' + this.UTIL.escapeXmlChars(engines) + '"' +
                             ' app_name="' + this.UTIL.escapeXmlChars(appId) + '"/>';
                     }
                 }
@@ -200,8 +200,8 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                             ' scan_origin="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceOrigin) + '"' +
                             ' scan_source="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceType) + '"' +
                             ' scan_type="' + this.UTIL.escapeXmlChars(scanType) + '"' +
-                            ' scan_id="' + jsonLastScanSummResp.scans[item].id + '"' +
-                            ' engine="' + engines + '"' +
+                            ' scan_id="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].id) + '"' +
+                            ' engine="' + this.UTIL.escapeXmlChars(engines) + '"' +
                             ' app_name="' + this.UTIL.escapeXmlChars(appId) + '"/>';
                     }
                 }
@@ -219,8 +219,8 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                             ' scan_origin="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceOrigin) + '"' +
                             ' scan_source="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceType) + '"' +
                             ' scan_type="' + this.UTIL.escapeXmlChars(container_scanType) + '"' +
-                            ' scan_id="' + jsonLastScanSummResp.scans[item].id + '"' +
-                            ' engine="' + engines + '"' +
+                            ' scan_id="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].id) + '"' +
+                            ' engine="' + this.UTIL.escapeXmlChars(engines) + '"' +
                             ' app_name="' + this.UTIL.escapeXmlChars(appId) + '"/>';
                     }
                 }
@@ -238,8 +238,8 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                             ' scan_origin="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceOrigin) + '"' +
                             ' scan_source="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceType) + '"' +
                             ' scan_type="' + this.UTIL.escapeXmlChars(api_scanType) + '"' +
-                            ' scan_id="' + jsonLastScanSummResp.scans[item].id + '"' +
-                            ' engine="' + engines + '"' +
+                            ' scan_id="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].id) + '"' +
+                            ' engine="' + this.UTIL.escapeXmlChars(engines) + '"' +
                             ' app_name="' + this.UTIL.escapeXmlChars(appId) + '"/>';
                     }
                 }
@@ -256,8 +256,8 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                             ' scan_origin="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceOrigin) + '"' +
                             ' scan_source="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceType) + '"' +
                             ' scan_type="' + this.UTIL.escapeXmlChars(scorecard_scanType) + '"' +
-                            ' scan_id="' + jsonLastScanSummResp.scans[item].id + '"' +
-                            ' engine="' + engines + '"' +
+                            ' scan_id="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].id) + '"' +
+                            ' engine="' + this.UTIL.escapeXmlChars(engines) + '"' +
                             ' app_name="' + this.UTIL.escapeXmlChars(appId) + '"/>';
                     }
                 }
@@ -275,8 +275,8 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                             ' scan_origin="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceOrigin) + '"' +
                             ' scan_source="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].sourceType) + '"' +
                             ' scan_type="' + this.UTIL.escapeXmlChars(secretDetection_scanType) + '"' +
-                            ' scan_id="' + jsonLastScanSummResp.scans[item].id + '"' +
-                            ' engine="' + engines + '"' +
+                            ' scan_id="' + this.UTIL.escapeXmlChars(jsonLastScanSummResp.scans[item].id) + '"' +
+                            ' engine="' + this.UTIL.escapeXmlChars(engines) + '"' +
                             ' app_name="' + this.UTIL.escapeXmlChars(appId) + '"/>';
                     }
                 }

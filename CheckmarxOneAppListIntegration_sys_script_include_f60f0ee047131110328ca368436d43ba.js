@@ -78,7 +78,7 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
                         applicationIds = projects[item].applicationIds.toString();
                     if (null != projects[item].mainBranch && projects[item].mainBranch.length > 0)
                         primaryBranch = projects[item].mainBranch.toString();
-
+                  
                     var currentGroupVal = (groups.length == 0) ? groupval : projects[item].groups.toString();
 
                     appListAll += '<project id="' + this.UTIL.escapeXmlChars(projects[item].id) + '"' +
