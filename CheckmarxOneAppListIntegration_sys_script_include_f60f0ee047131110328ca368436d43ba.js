@@ -56,7 +56,7 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
     //Creates XML summary for Projects
     getAppList: function(filteredCount, offset) {
         try {
-            
+
             var appListRootNodeStart = "<appInfoList><xml id=\"checkmarxone\"><projects>";
             var appListRootNodeEnd = "</projects></xml></appInfoList>";
             var appListAll = '';
@@ -79,24 +79,17 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
                     if (null != projects[item].mainBranch && projects[item].mainBranch.length > 0)
                         primaryBranch = projects[item].mainBranch.toString();
 
-                    if (groups == 0) {
-                        appListAll += '<project id="' + projects[item].id +
-                            '" createdAt="' + projects[item].createdAt +
-                            '" applicationIds="' + applicationIds +
-                            '" groups="' + groupval + '"><primaryBranch><' +
-                            '![CDATA[' + primaryBranch + ']]' + '></primaryBranch><projectTags><' +
-                            '![CDATA[' + projectTags + ']]' + '></projectTags><name><' +
-                            '![CDATA[' + projects[item].name + ']]' + '></name></project>';
+                    var currentGroupVal = (groups.length == 0) ? groupval : projects[item].groups.toString();
 
-                    } else {
-                        appListAll += '<project id="' + projects[item].id +
-                            '" createdAt="' + projects[item].createdAt +
-                            '" applicationIds="' + applicationIds +
-                            '" groups="' + projects[item].groups.toString() + '"><primaryBranch><' +
-                            '![CDATA[' + primaryBranch + ']]' + '></primaryBranch><projectTags><' +
-                            '![CDATA[' + projectTags + ']]' + '></projectTags><name><' +
-                            '![CDATA[' + projects[item].name + ']]' + '></name></project>';
-                    }
+                    appListAll += '<project id="' + this.UTIL.escapeXmlChars(projects[item].id) + '"' +
+                        ' createdAt="' + this.UTIL.escapeXmlChars(projects[item].createdAt) + '"' +
+                        ' applicationIds="' + this.UTIL.escapeXmlChars(applicationIds) + '"' +
+                        ' groups="' + this.UTIL.escapeXmlChars(currentGroupVal) + '">' +
+                        '<primaryBranch>' + this.UTIL.escapeCDATA(primaryBranch) + '</primaryBranch>' +
+                        '<projectTags>' + this.UTIL.escapeCDATA(projectTags) + '</projectTags>' +
+                        '<name>' + this.UTIL.escapeCDATA(projects[item].name) + '</name>' +
+                        '</project>';
+
                 }
                 if (appListAll == '' && createdDate > projects[item].createdAt) {
                     return -1;

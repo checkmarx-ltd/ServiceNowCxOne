@@ -1,16 +1,16 @@
 var CheckmarxOneScanSummaryDetailsJSONProcessor = Class.create();
 CheckmarxOneScanSummaryDetailsJSONProcessor.prototype = Object.extendsObject(sn_vul.ApplicationVulnerabilityImportProcessorBase, {
-    
-	UTIL: new x_chec3_chexone.CheckmarxOneUtil(),
+
+    UTIL: new x_chec3_chexone.CheckmarxOneUtil(),
     processRecord: function(sourceGr) {
 
         var data = {};
         //map attributes from CheckmarxOne into the servicenow scan summary table
         data['source_app_id'] = sourceGr.u_projectid + "";
         data['source_scan_id'] = sourceGr.u_id + "";
-		data['name'] = sourceGr.u_projectname + "";
-		data['app_name'] = sourceGr.u_projectname + "";
-		data['last_scan_date'] = this.UTIL.parseDate(sourceGr.u_updatedat);
+        data['name'] = sourceGr.u_projectname + "";
+        data['app_name'] = sourceGr.u_projectname + "";
+        data['last_scan_date'] = this.UTIL.parseDate(sourceGr.u_updatedat);
         //data['last_scan_date'] = new GlideDateTime(sourceGr.u_updatedat);
         data['detected_flaw_count'] = +sourceGr.u_totalvulnerabilities;
         data['scan_summary_name'] = sourceGr.u_id + ' ' + data['last_scan_date'];
@@ -53,7 +53,7 @@ CheckmarxOneScanSummaryDetailsJSONProcessor.prototype = Object.extendsObject(sn_
         this.PROCESS_GR = processGr;
     },
 
-       _upsert: function(data) {
+    _upsert: function(data) {
         try {
             var result = this.AVR_API.createOrUpdateSummary(data);
             if (!result)
