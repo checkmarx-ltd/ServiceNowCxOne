@@ -649,6 +649,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             for (var scanId in scans) {
                 var scan = scans[scanId];
                 var project = projects[scan.project_sys_id];
+				var scanDate = new GlideDateTime(scan.last_scan_date);
 
                 if (!project) continue;
 
@@ -673,6 +674,9 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 
                 // Add string parameter to remaining (not JSON)
                 params.remaining[parameterString] = offsetArray;
+
+				// Update this.LATEST start time for next scheduled execution
+				if (scanDate.after(this.LATEST)) this.LATEST = scanDate;
             }
 
             // Prepare first processing item and save state
