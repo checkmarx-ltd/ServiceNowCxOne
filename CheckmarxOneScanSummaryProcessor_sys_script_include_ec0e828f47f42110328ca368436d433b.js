@@ -3,7 +3,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
     MSG: 'CheckmarxOne Scan Summary Processor: ',
     UTIL: new x_chec3_chexone.CheckmarxOneUtil(),
 
-    process: function (attachment) {
+    process: function(attachment) {
         if (attachment) {
             try {
                 this.UTIL.validateXML(new GlideSysAttachment().getContent(attachment), 'error');
@@ -233,7 +233,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
     },
 
 
-    _parseStatic: function (node, data) {
+    _parseStatic: function(node, data) {
         try {
             this._handleScanType(node, data, 'last_static_scan_date');
         } catch (err) {
@@ -242,7 +242,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
         }
     },
 
-    _handleScanType: function (node, data, dateField) {
+    _handleScanType: function(node, data, dateField) {
         try {
             data[dateField] = new GlideDateTime(node.getAttribute('last_scan_date'));
             if (gs.nil(data['last_scan_date']) >= data['last_scan_date']) {
@@ -254,7 +254,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
         }
     },
 
-    _upsert: function (data) {
+    _upsert: function(data) {
         try {
             var result = this.AVR_API.createOrUpdateSummary(data);
             if (!result)

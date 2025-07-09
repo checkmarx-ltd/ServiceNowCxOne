@@ -3,7 +3,7 @@ CheckmarxOneAVITClosureProcessor.prototype = Object.extendsObject(sn_vul.Applica
     MSG: 'CheckmarxOneAVITClosureProcessor:',
     UTIL: new x_chec3_chexone.CheckmarxOneUtil(),
 
-    process: function (attachment) {
+    process: function(attachment) {
         if (!attachment) {
             gs.warn(this.MSG + ' Called with no attachment');
             return;
@@ -34,7 +34,7 @@ CheckmarxOneAVITClosureProcessor.prototype = Object.extendsObject(sn_vul.Applica
                     var appId = data.app_id;
                     var branch = data.branch;
                     var enginesStr = data.engines;
-                    var engines = enginesStr ? enginesStr.split(',').map(function (s) {
+                    var engines = enginesStr ? enginesStr.split(',').map(function(s) {
                         return s.trim();
                     }) : [];
 
@@ -64,7 +64,7 @@ CheckmarxOneAVITClosureProcessor.prototype = Object.extendsObject(sn_vul.Applica
         }
     },
 
-    _extractScanNodeData: function (scanNode) {
+    _extractScanNodeData: function(scanNode) {
         var data = {};
         var childIter = scanNode.getChildNodeIterator();
 
@@ -87,7 +87,7 @@ CheckmarxOneAVITClosureProcessor.prototype = Object.extendsObject(sn_vul.Applica
         return data;
     },
 
-    _handleFixedAVIT: function (source_scan_id, projectId, branch, scan_synchronization, engines) {
+    _handleFixedAVIT: function(source_scan_id, projectId, branch, scan_synchronization, engines) {
         var engineList = engines.split(",");
 
         // Optional: Log the result

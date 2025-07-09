@@ -3,10 +3,10 @@ var CheckmarxOneUtilBase = Class.create();
 CheckmarxOneUtilBase.prototype = {
     SEC_UTIL: new sn_sec_cmn.SecCommonUtil(),
     MSG: 'CheckmarxOneUtilBase:',
-    initialize: function () { },
+    initialize: function() {},
 
     //get all project list
-    getProjectList: function (configId) {
+    getProjectList: function(configId) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -23,7 +23,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //get one project from project list for pre Validation
-    getProjectListForValidation: function (config) {
+    getProjectListForValidation: function(config) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
@@ -41,7 +41,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //get one project from project list
-    getProject: function (configId) {
+    getProject: function(configId) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -59,7 +59,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //get all project list
-    getProjects: function (configId) {
+    getProjects: function(configId) {
         var projectJson = '';
         try {
             var request = new sn_ws.RESTMessageV2();
@@ -82,7 +82,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //get ProjectId and Primary Branch list
-    getProjectPrimaryBranchList: function (configId) {
+    getProjectPrimaryBranchList: function(configId) {
         var projectPrimaryBranchList = [];
         try {
             var projectJson = this.getProjects(configId);
@@ -101,7 +101,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //get Primary Branch By projectId
-    getPrimaryBranchByProjectId: function (projectPrimaryBranchList, projectId) {
+    getPrimaryBranchByProjectId: function(projectPrimaryBranchList, projectId) {
         var primaryBranch = '';
         for (var item in projectPrimaryBranchList) {
             var primaryBranchWithProjectId = projectPrimaryBranchList[item];
@@ -114,7 +114,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //get new project list
-    getNewProjectList: function (configId) {
+    getNewProjectList: function(configId) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -135,7 +135,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //To get Lists of project from Configuration Page
-    getConfigProjectList: function (configId) {
+    getConfigProjectList: function(configId) {
         try {
             var config = this._getConfig(configId);
             var project_lists = [];
@@ -156,7 +156,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //To get the list of project name from Configuration Page
-    getConfigProjectNameList: function (configId) {
+    getConfigProjectNameList: function(configId) {
         try {
             var config = this._getConfig(configId);
             var project_name_lists = [];
@@ -177,7 +177,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //get Project By Id
-    getConfigProjectById: function (configId, projectId) {
+    getConfigProjectById: function(configId, projectId) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -194,7 +194,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     // To Get Result state from configuartion	
-    getResultStateFromUI: function (configId) {
+    getResultStateFromUI: function(configId) {
         try {
             var config = this._getConfig(configId);
             var resultState = config.result_states;
@@ -211,7 +211,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     // To get API Security vulnerabilities information of scanId based on sast_risk_id
-    getApiSecVulInfoBySastRiskId: function (configId, scanId, sastRiskId) {
+    getApiSecVulInfoBySastRiskId: function(configId, scanId, sastRiskId) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -230,7 +230,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     // To Get Severity from configuartion	
-    getSeverityFromUI: function (configId) {
+    getSeverityFromUI: function(configId) {
         try {
             var config = this._getConfig(configId);
             var severity = config.severity;
@@ -247,7 +247,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //get 50 project list at a time
-    getNextProjectList: function (configId, offsetno) {
+    getNextProjectList: function(configId, offsetno) {
         var projects = [];
         var list_projects = [];
         var list_projects_name = [];
@@ -344,7 +344,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //get project Ids from the Config Project Name List
-    getProjectIdsFromProjectNames: function (configId, list_projects_name) {
+    getProjectIdsFromProjectNames: function(configId, list_projects_name) {
         var projectIds = [];
         try {
             var config = this._getConfig(configId);
@@ -384,7 +384,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     // Escape Special Chars in ProjectName
-    escapeProjectName: function (projectName) {
+    escapeProjectName: function(projectName) {
         var escapedProjectName = '';
         var projectNameArr = projectName.split('');
 
@@ -401,7 +401,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //check if project needs to be included or not
-    isProjectIncluded: function (configId, filter_project, list_projects, list_projects_name, projectIdsByNames, projectId) {
+    isProjectIncluded: function(configId, filter_project, list_projects, list_projects_name, projectIdsByNames, projectId) {
         var includeProjectFlag = 'true';
 
         if (filter_project == 'by_Id' && list_projects && list_projects.length > 0 && list_projects.indexOf('exclude') != -1 && list_projects.indexOf(projectId) != -1) {
@@ -419,7 +419,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //get Project By Id
-    getProjectById: function (configId, projectId) {
+    getProjectById: function(configId, projectId) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -440,7 +440,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     // Get Project Branch List with pagination
-    getProjectBranchList: function (configId, projectId) {
+    getProjectBranchList: function(configId, projectId) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -488,7 +488,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //get Project By Name
-    getProjectByName: function (configId, projectName) {
+    getProjectByName: function(configId, projectName) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -509,7 +509,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //List of project IDs from last_run_date
-    getprojectScanList: function (configId, last_run_date) {
+    getprojectScanList: function(configId, last_run_date) {
         var projectIdsByLastScanDate = [];
         try {
             var includesca = this.importScaFlaw(this.IMPLEMENTATION);
@@ -545,7 +545,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //List of scans from last_run_date
-    getAllScanList: function (configId, last_run_date) {
+    getAllScanList: function(configId, last_run_date) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -569,7 +569,7 @@ CheckmarxOneUtilBase.prototype = {
 
 
     //List of scanIds for a given app/project filter by branch name
-    getScanListFilterByBranch: function (configId, projectId, last_run_date, branch) {
+    getScanListFilterByBranch: function(configId, projectId, last_run_date, branch) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -590,7 +590,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //List of scanIds for a given app/project filter by branch name
-    getScanListFilterByMultipleBranch: function (configId, projectId, last_run_date, branches) {
+    getScanListFilterByMultipleBranch: function(configId, projectId, last_run_date, branches) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var branch = '';
@@ -614,7 +614,7 @@ CheckmarxOneUtilBase.prototype = {
 
 
     //Second Last scanId for a given app/project
-    getSecondLastScan: function (configId, projectId, scanId, primaryBranch) {
+    getSecondLastScan: function(configId, projectId, scanId, primaryBranch) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -647,7 +647,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     // last  scan details of a given appId 
-    getScanInfo: function (configId, appId, offset, last_run_date) {
+    getScanInfo: function(configId, appId, offset, last_run_date) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -668,7 +668,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     // last  scan  config details of a given appId  and scanId
-    getScanConfigInfo: function (configId, appId, scanId) {
+    getScanConfigInfo: function(configId, appId, scanId) {
         var responseBody = '';
         try {
             var request = new sn_ws.RESTMessageV2();
@@ -689,7 +689,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //List of Last scanId for a given app/project
-    getLastScan: function (configId, projectId) {
+    getLastScan: function(configId, projectId) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -707,7 +707,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     // last  scan details of a given scanId 
-    getLastScanInfo: function (configId, appId, scanId) {
+    getLastScanInfo: function(configId, appId, scanId) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -726,7 +726,7 @@ CheckmarxOneUtilBase.prototype = {
 
 
     //scan details of a given scanId
-    getQueryInfo: function (configId, scanId) {
+    getQueryInfo: function(configId, scanId) {
         var queryJSON;
         try {
             var request = new sn_ws.RESTMessageV2();
@@ -747,7 +747,7 @@ CheckmarxOneUtilBase.prototype = {
 
     },
 
-    processQueryData: function (configId, scanId) {
+    processQueryData: function(configId, scanId) {
         var queryJSON = this.getQueryInfo(configId, scanId);
         var query = [];
         var index = 0;
@@ -770,7 +770,7 @@ CheckmarxOneUtilBase.prototype = {
         return query;
     },
 
-    checkQueryIndex: function (query, name) {
+    checkQueryIndex: function(query, name) {
         for (queryIndex in query)
             if (query[queryIndex].category_name === name)
                 return queryIndex;
@@ -778,7 +778,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     // to fetch scan details of particular scanId
-    getScanDetails: function (configId, scanId) {
+    getScanDetails: function(configId, scanId) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -796,7 +796,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //to get total vul item 
-    getTotalVulcount: function (configId, scanId) {
+    getTotalVulcount: function(configId, scanId) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -826,7 +826,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //to get Api Security vulnerability count
-    getApiSecVulCount: function (configId, scanId) {
+    getApiSecVulCount: function(configId, scanId) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -861,7 +861,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //to get SAST  vul item 
-    getSASTVulcount: function (configId, scanId) {
+    getSASTVulcount: function(configId, scanId) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -888,7 +888,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //to get total SAST and KICS  vul item 
-    getTotal_SAST_KICS_Vulcount: function (configId, scanId) {
+    getTotal_SAST_KICS_Vulcount: function(configId, scanId) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -916,7 +916,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     // to get vulnerabilities information of scanId
-    getVulInfo: function (configId, scanId, offsetId, severity) {
+    getVulInfo: function(configId, scanId, offsetId, severity) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -945,7 +945,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     // to get API Security vulnerabilities information of scanId
-    getApiSecVulInfo: function (configId, scanId, offsetId) {
+    getApiSecVulInfo: function(configId, scanId, offsetId) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -966,7 +966,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //Sca scan details of a given scanId
-    getScanSummaryInfo: function (configId, scanId) {
+    getScanSummaryInfo: function(configId, scanId) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -1013,7 +1013,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //Sast scan details of a given scanId
-    getSastScanSummaryInfo: function (configId, scanId) {
+    getSastScanSummaryInfo: function(configId, scanId) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -1051,7 +1051,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //Kics scan details of a given scanId
-    getKicsScanSummaryInfo: function (configId, scanId) {
+    getKicsScanSummaryInfo: function(configId, scanId) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -1091,7 +1091,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //Container Security scan details of a given scanId
-    getContainerSecurityScanSummaryInfo: function (configId, scanId) {
+    getContainerSecurityScanSummaryInfo: function(configId, scanId) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -1131,7 +1131,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //API Security scan details of a given scanId
-    getApiSecurityScanSummaryInfo: function (configId, scanId) {
+    getApiSecurityScanSummaryInfo: function(configId, scanId) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -1166,7 +1166,7 @@ CheckmarxOneUtilBase.prototype = {
 
     },
     //ScoreCard scan details of a given scanId
-    getScoreCardScanSummaryInfo: function (configId, scanId) {
+    getScoreCardScanSummaryInfo: function(configId, scanId) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -1227,7 +1227,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //SecretDetection scan details of a given scanId
-    getSecretDetectionScanSummaryInfo: function (configId, scanId) {
+    getSecretDetectionScanSummaryInfo: function(configId, scanId) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -1287,7 +1287,7 @@ CheckmarxOneUtilBase.prototype = {
 
     },
 
-    getSCADeltaVul: function (configId, appId, scanId, secondlastscan) {
+    getSCADeltaVul: function(configId, appId, scanId, secondlastscan) {
         try {
             var request = new sn_ws.RESTMessageV2();
             var config = this._getConfig(configId);
@@ -1307,7 +1307,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //To get remediation status for state mapping
-    getSASTRemediationStatus: function (status, state) {
+    getSASTRemediationStatus: function(status, state) {
         try {
 
             if (state == 'TO_VERIFY' || status == 'FIXED' || status == 'RESOLVED') {
@@ -1324,7 +1324,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //To get remediation status for state mapping
-    getSCARemediationStatus: function (status, state) {
+    getSCARemediationStatus: function(status, state) {
         try {
 
             if (state == 'NOT_IGNORED' || status == 'FIXED' || status == 'RESOLVED' || state == 'TO_VERIFY') {
@@ -1341,7 +1341,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //To get remediation status for state mapping
-    getKICSRemediationStatus: function (status, state) {
+    getKICSRemediationStatus: function(status, state) {
         try {
 
             if (state == 'NOT_IGNORED' || status == 'FIXED' || status == 'RESOLVED' || state == 'TO_VERIFY') {
@@ -1357,7 +1357,7 @@ CheckmarxOneUtilBase.prototype = {
 
     },
 
-    getFirstDetectionDate: function () {
+    getFirstDetectionDate: function() {
         try {
             var configId = '1234';
             var config = this._getConfig(configId);
@@ -1370,11 +1370,11 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //Devops Integration
-    getProjectByLegacyId: function (configId, params) {
+    getProjectByLegacyId: function(configId, params) {
         return this._makeRestCallJSON(configId, 'Project list', JSON.parse(params));
     },
 
-    _getConfig: function (configId) {
+    _getConfig: function(configId) {
         try {
             if (configId && configId != '1234') {
                 return new sn_sec_int.Implementation().getConfiguration(configId);
@@ -1422,14 +1422,14 @@ CheckmarxOneUtilBase.prototype = {
         return newconfig;
     },
 
-    getAccessToken: function (baseUrl, config, method, request, configId) {
+    getAccessToken: function(baseUrl, config, method, request, configId) {
         //to get access token from sn_sec_cmn_int_auth_config table
         var getConfig = this.SEC_UTIL.getConfig(configId);
         var auth_config = getConfig.auth_config;
         return this._getToken(baseUrl, config, method, request, config.client_id, config.client_secret, config.ast_client_id, config.tenant, auth_config, configId);
     },
 
-    _getToken: function (baseUrl, config, method, request, username, password, ast_client_id, tenant, currentToken, configId) {
+    _getToken: function(baseUrl, config, method, request, username, password, ast_client_id, tenant, currentToken, configId) {
         try {
             var accessToken = currentToken;
             if (accessToken == null || accessToken == "" || this._isTokenExpired(this._getExpTimeFromAccessToken(accessToken)) || !this._checkClientId(username, accessToken)) {
@@ -1466,7 +1466,7 @@ CheckmarxOneUtilBase.prototype = {
         return accessToken;
     },
 
-    getNewToken: function (baseUrl, config, method, request, username, password, tenant, saveinstanceflag, configId) {
+    getNewToken: function(baseUrl, config, method, request, username, password, tenant, saveinstanceflag, configId) {
 
         try {
             var fullUrl = baseUrl + '/auth/realms/' + tenant + '/protocol/openid-connect/token';
@@ -1511,7 +1511,7 @@ CheckmarxOneUtilBase.prototype = {
 
     },
 
-    getNewTokenForValidation: function (baseUrl, config, method, request, username, password, tenant, saveinstanceflag, configId) {
+    getNewTokenForValidation: function(baseUrl, config, method, request, username, password, tenant, saveinstanceflag, configId) {
         try {
             var fullUrl = baseUrl + '/auth/realms/' + tenant + '/protocol/openid-connect/token';
             var query = "client_id=" + username + "&grant_type=" + "client_credentials" + "&client_secret=" + password;
@@ -1580,7 +1580,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     // get required permission from config
-    getRequiredPermission: function (configId) {
+    getRequiredPermission: function(configId) {
         var config = this._getConfig(configId);
         var requiredPermission = [];
         var requiredPermissionarr;
@@ -1595,7 +1595,7 @@ CheckmarxOneUtilBase.prototype = {
 
     },
 
-    getUserAgentHeaderDetails: function () {
+    getUserAgentHeaderDetails: function() {
         try {
             var plugin = new GlideRecord("sys_store_app");
             plugin.get("scope", "x_chec3_chexone");
@@ -1609,7 +1609,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //Compare current clientId with accessToken's clientId
-    _checkClientId: function (clientId, accessToken) {
+    _checkClientId: function(clientId, accessToken) {
         try {
             var tokenPayload = accessToken.split(".")[1];
             var tokenPayloadJson = JSON.parse(gs.base64Decode(tokenPayload));
@@ -1624,7 +1624,7 @@ CheckmarxOneUtilBase.prototype = {
 
     },
     // Get expiry token from JWT access token
-    _getExpTimeFromAccessToken: function (accessToken) {
+    _getExpTimeFromAccessToken: function(accessToken) {
         try {
             var splittedStr = accessToken.split(".");
             var decodedToken = JSON.parse(gs.base64Decode(splittedStr[1]));
@@ -1636,7 +1636,7 @@ CheckmarxOneUtilBase.prototype = {
         return expTime;
     },
     // This method checks  if access token is expired or not.
-    _isTokenExpired: function (tokenExpTime) {
+    _isTokenExpired: function(tokenExpTime) {
         try {
             if (tokenExpTime == 0)
                 return true;
@@ -1653,7 +1653,7 @@ CheckmarxOneUtilBase.prototype = {
         }
     },
     // This method is to return token expiry time.
-    _getTokenExpiredTime: function (tokenExpTime) {
+    _getTokenExpiredTime: function(tokenExpTime) {
         try {
             var token_time = tokenExpTime * 1000;
             var dateTime = new GlideDateTime();
@@ -1665,7 +1665,7 @@ CheckmarxOneUtilBase.prototype = {
         }
     },
 
-    _makeRestCall: function (apiurl, configId, token, apiPath, method, params) {
+    _makeRestCall: function(apiurl, configId, token, apiPath, method, params) {
         var request;
         try {
             request = this.setRequestParams(apiurl, configId, token, apiPath, method, params);
@@ -1677,7 +1677,7 @@ CheckmarxOneUtilBase.prototype = {
         return response;
     },
 
-    setRequestParams: function (baseUrl, configId, token, apiPath, method, params) {
+    setRequestParams: function(baseUrl, configId, token, apiPath, method, params) {
         try {
             var fullUrl = baseUrl + apiPath;
             var r = new sn_ws.RESTMessageV2();
@@ -1686,7 +1686,7 @@ CheckmarxOneUtilBase.prototype = {
 
             if (params) {
                 fullUrl += '/?';
-                Object.keys(params).forEach(function (key) {
+                Object.keys(params).forEach(function(key) {
                     r.setQueryParameter(key, params[key]);
                     fullUrl += key + '=' + gs.urlEncode(params[key]) + '&';
                 });
@@ -1706,7 +1706,7 @@ CheckmarxOneUtilBase.prototype = {
         return r;
     },
 
-    setnewRequestParams: function (fullUrl, method, newtoken, configId, params) {
+    setnewRequestParams: function(fullUrl, method, newtoken, configId, params) {
         try {
             var r = new sn_ws.RESTMessageV2();
             r.setEndpoint(fullUrl);
@@ -1714,7 +1714,7 @@ CheckmarxOneUtilBase.prototype = {
 
             if (params) {
                 fullUrl += '/?';
-                Object.keys(params).forEach(function (key) {
+                Object.keys(params).forEach(function(key) {
                     r.setQueryParameter(key, params[key]);
                     fullUrl += key + '=' + gs.urlEncode(params[key]) + '&';
                 });
@@ -1734,7 +1734,7 @@ CheckmarxOneUtilBase.prototype = {
         return r;
     },
 
-    _checkResponseStatus: function (request, configId, method, params) {
+    _checkResponseStatus: function(request, configId, method, params) {
         try {
             var endpoint = request.getEndpoint();
             var response = request.execute();
@@ -1794,7 +1794,7 @@ CheckmarxOneUtilBase.prototype = {
         }
     },
 
-    _makeConfigRestApiCall: function (baseUrl, configId, token, name, method) {
+    _makeConfigRestApiCall: function(baseUrl, configId, token, name, method) {
         try {
             var fullUrl = baseUrl + name;
             var r = new sn_ws.RESTMessageV2();
@@ -1817,7 +1817,7 @@ CheckmarxOneUtilBase.prototype = {
         return status;
     },
 
-    _makeRestApiCall: function (baseUrl, configId, token, name, method, params) {
+    _makeRestApiCall: function(baseUrl, configId, token, name, method, params) {
         try {
             var fullUrl = baseUrl + name;
             var r = new sn_ws.RESTMessageV2();
@@ -1839,12 +1839,12 @@ CheckmarxOneUtilBase.prototype = {
         return this._checkResponseStatus(r, configId, method, params);
     },
     //For DevOps Integration
-    _makeRestCallJSON: function (configId, token, name, params, pathParams, body) {
+    _makeRestCallJSON: function(configId, token, name, params, pathParams, body) {
         var requestType = 'GET';
         var r = new sn_ws.RESTMessageV2('x_chec3_chexone.CheckmarxOneJson', name);
         var endpoint = this._getEndpointComponents(r.getEndpoint());
         if (pathParams) {
-            Object.keys(pathParams).forEach(function (key) {
+            Object.keys(pathParams).forEach(function(key) {
                 r.setStringParameter(key, pathParams[key]);
                 endpoint.path = endpoint.path.replace('${' + key + '}', pathParams[key]);
             });
@@ -1852,7 +1852,7 @@ CheckmarxOneUtilBase.prototype = {
 
         if (params) {
             endpoint.path += '?';
-            Object.keys(params).forEach(function (key) {
+            Object.keys(params).forEach(function(key) {
                 r.setQueryParameter(key, gs.urlEncode(params[key]));
                 endpoint.path += key + '=' + gs.urlEncode(params[key]) + '&';
             });
@@ -1873,7 +1873,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     // Helper function to handle pagination for Project API calls potentially returning large datasets
-    _makePaginatedApiCall: function (apiurl, configId, token, baseQuery, method, resultKey) {
+    _makePaginatedApiCall: function(apiurl, configId, token, baseQuery, method, resultKey) {
         var MAX_LIMIT_WITHOUT_PAGINATION = 2000;
         var PAGINATION_CHUNK_SIZE = 1000; // Default chunk size for pagination
         var allResults = [];
@@ -1953,7 +1953,7 @@ CheckmarxOneUtilBase.prototype = {
 
 
     // Helper function to handle pagination for Scan API calls potentially returning large datasets
-    _makePaginatedScansApiCall: function (apiurl, configId, token, baseQuery, method, resultKey) {
+    _makePaginatedScansApiCall: function(apiurl, configId, token, baseQuery, method, resultKey) {
         var MAX_LIMIT_WITHOUT_PAGINATION = 1000;
         var PAGINATION_CHUNK_SIZE = 500; // Default chunk size for pagination
         var allResults = [];
@@ -2034,7 +2034,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //no system function for scoped application like this integration
-    customSleep: function (ms) {
+    customSleep: function(ms) {
         try {
             var endSleep = new GlideDuration().getNumericValue() + ms;
             while (new GlideDuration().getNumericValue() < endSleep) {
@@ -2048,7 +2048,7 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     // 2022-12-08T09:33:00.028555Z to 2022-12-08 09:33:00
-    parseDate: function (str) {
+    parseDate: function(str) {
         var a = str.replace('T', ' ');
         var b = a.replace('T', ' ');
         var c = b.split('.')[0];
@@ -2057,13 +2057,13 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //2022-12-08 09:33:00 to 2022-12-08,09:33:00
-    parseDateWithComma: function (str) {
+    parseDateWithComma: function(str) {
         var a = str.replace(/ /g, ',');
         return a;
     },
 
     //2022-12-08 09:33:00 to 2022-12-08T09:33:00.028555Z
-    parseTZDate: function (str) {
+    parseTZDate: function(str) {
         str1 = str.slice(0, str.length - 9) + 'T';
         str2 = str.slice(-8) + '.028555Z';
         if (str == "" || str == null) {
@@ -2099,37 +2099,37 @@ CheckmarxOneUtilBase.prototype = {
     },
 
     //value of sca checkbox
-    importScaFlaw: function (configId) {
+    importScaFlaw: function(configId) {
         return this._getConfig(configId).import_sca;
     },
     //value of sast checkbox
-    importSastFlaw: function (configId) {
+    importSastFlaw: function(configId) {
         return this._getConfig(configId).import_sast;
     },
     //value of kics checkbox
-    importKicsFlaw: function (configId) {
+    importKicsFlaw: function(configId) {
         return this._getConfig(configId).import_kics;
     },
     //value of Container Security checkbox
-    importContainerSecurityFlaw: function (configId) {
+    importContainerSecurityFlaw: function(configId) {
         return this._getConfig(configId).include_container_security;
     },
     //value of API security checkbox
-    importApiSecurityFlaw: function (configId) {
+    importApiSecurityFlaw: function(configId) {
         return this._getConfig(configId).include_api_security;
     },
 
     //value of OSSF Scorecard	 checkbox
-    importScoreCardFlaw: function (configId) {
+    importScoreCardFlaw: function(configId) {
         return this._getConfig(configId).include_ossf_scorecard;
     },
 
     //value of Secret Detection checkbox
-    importSecretDetectionFlaw: function (configId) {
+    importSecretDetectionFlaw: function(configId) {
         return this._getConfig(configId).include_secret_detection;
     },
     //validate XML
-    validateXML: function (body, errorNodeName) {
+    validateXML: function(body, errorNodeName) {
         if (!body) return;
         var doc = new XMLDocument2();
         doc.parseXML(body);

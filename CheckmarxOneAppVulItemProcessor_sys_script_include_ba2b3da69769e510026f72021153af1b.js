@@ -7,7 +7,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
 
     import_static_flaws: null,
 
-    process: function (attachment) {
+    process: function(attachment) {
 
         if (attachment) {
             try {
@@ -302,7 +302,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
     },
 
     //updating data to app vul entry table
-    _upsertQuery: function (data) {
+    _upsertQuery: function(data) {
         try {
             var result = this.AVR_API.createOrUpdateAppVulEntry(data);
             if (!result)
@@ -319,7 +319,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
         }
     },
     //updating data to app vul item table
-    _upsertAVIT: function (data) {
+    _upsertAVIT: function(data) {
         try {
             var result = this.AVR_API.createOrUpdateAVIT(data);
             if (!result)
@@ -337,7 +337,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
         }
     },
 
-    _handleSimilarityId: function (similarityId, similarityIdHash, projectId) {
+    _handleSimilarityId: function(similarityId, similarityIdHash, projectId) {
         var avit = new sn_vul.PagedGlideRecord('sn_vul_app_vulnerable_item');
         avit.addQuery('source_avit_id', similarityId);
         avit.setSortField("sys_id");
@@ -351,7 +351,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
         }
     },
 
-    _getAvitDetailsByProjectId: function (projectId) {
+    _getAvitDetailsByProjectId: function(projectId) {
         var avitArr = [];
         var avit = new GlideRecord('sn_vul_app_vulnerable_item');
         avit.addQuery('application_release.source_app_id', projectId);
@@ -366,7 +366,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
 
 
     // To map API security vul info to exisiting sast vul items
-    _handleApiSecurity: function (source_app_id, source_scan_id, sast_risk_id, affected_url) {
+    _handleApiSecurity: function(source_app_id, source_scan_id, sast_risk_id, affected_url) {
         var avit = new sn_vul.PagedGlideRecord('sn_vul_app_vulnerable_item');
         avit.addEncodedQuery('application_release.source_app_id=' + GlideStringUtil.escapeQueryTermSeparator(source_app_id) + '^app_vul_scan_summaryLIKE' + GlideStringUtil.escapeQueryTermSeparator(source_scan_id) + '^source_exploit=' + GlideStringUtil.escapeQueryTermSeparator(sast_risk_id));
         //avit.addQuery('source_exploit', sast_risk_id);
@@ -377,7 +377,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
         }
     },
 
-    _handleCVE: function (nvdData, resultObj, cve) {
+    _handleCVE: function(nvdData, resultObj, cve) {
         var name = cve;
         var url = resultObj.source_references;
         var cvss_base_score = nvdData.cvss_base_score;

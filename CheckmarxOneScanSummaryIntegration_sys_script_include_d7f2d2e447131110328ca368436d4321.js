@@ -4,7 +4,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
     UTIL: new x_chec3_chexone.CheckmarxOneUtil(),
     MSG: 'CheckmarxOneScanSummaryIntegration:',
 
-    retrieveData: function () {
+    retrieveData: function() {
         var response = "<null/>";
         try {
             var params = this._getParameters(this.PROCESS.getValue('parameters'));
@@ -42,7 +42,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
     },
 
     //Creates XML summary for given scan Id
-    getSummaryReport: function (appId, offsetId) {
+    getSummaryReport: function(appId, offsetId) {
         try {
             var scanSummaryRootNodeStart = "<scanData>";
             var scanSummaryRootNodeEnd = "</scanData>";
@@ -140,7 +140,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                     var scaresponsevul = this.UTIL.getScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
                     var scaScanType = "Full Scan";
                     if (scaresponsevul != -1) {
-                      
+
                         scaScanSummaryAll += '<scan id="' + this.UTIL.escapeXmlChars('sca' + jsonLastScanSummResp.scans[item].id) + '"' +
                             ' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
                             ' last_scan_date="' + this.UTIL.escapeXmlChars(this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt)) + '"' +
@@ -320,7 +320,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
     },
 
     //get Fast Scan Mode value
-    _isFastScanMode: function (configId, appId, scanId) {
+    _isFastScanMode: function(configId, appId, scanId) {
         var scanResponse = this.UTIL.getScanConfigInfo(configId, appId, scanId);
         var isFastScan = 'false';
         try {
@@ -344,7 +344,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
 
 
     // Gets the integration parameters as a map
-    _getParameters: function (parameters) {
+    _getParameters: function(parameters) {
         var params = {
             run: null,
             remaining: {}
@@ -401,7 +401,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
         return params;
     },
     // Gets the start time of the integration
-    _getCurrentDeltaStartTime: function () {
+    _getCurrentDeltaStartTime: function() {
         try {
             var delta = this.UTIL.parseTZDate(this.DELTA_START_TIME) || '1970-01-01T10:16:06.17544Z';
         } catch (err) {
@@ -412,7 +412,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
     },
 
     //to get offset(to get offset value as 1 , to get details of last scan)
-    _getoffsets: function (appId) {
+    _getoffsets: function(appId) {
         var offsets = [];
         var offset = 1;
         var loopLength = 1;
@@ -424,11 +424,11 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
         return offsets;
     },
 
-    _getoffset: function (appId, offsetId) {
+    _getoffset: function(appId, offsetId) {
         return offsetId;
     },
 
-    _serializeParameters: function (params) {
+    _serializeParameters: function(params) {
         if (params.latest)
             params.latest = params.latest.getValue();
         else
@@ -436,7 +436,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
         return params;
     },
 
-    _nextParameters: function (params) {
+    _nextParameters: function(params) {
         params.run = null;
         var keys = Object.keys(params.remaining);
         if (keys.length) {
@@ -453,15 +453,15 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
     },
 
     //Presently returning the same buildId. 
-    _getScan: function (appId, buildId) {
+    _getScan: function(appId, buildId) {
         return buildId;
     },
 
-    shouldRetry: function (process) {
+    shouldRetry: function(process) {
         return true;
     },
 
-    _getLOCforSAST: function (statusDetails) {
+    _getLOCforSAST: function(statusDetails) {
         var loc = -1;
 
         if (null != statusDetails && statusDetails.length > 0) {
