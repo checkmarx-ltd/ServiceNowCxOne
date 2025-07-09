@@ -2075,26 +2075,26 @@ CheckmarxOneUtilBase.prototype = {
 
     // Helper function to escape CDATA content
     escapeCDATA: function(str) {
-        if (str === null || typeof str === 'undefined' || str == '') {
-            return '';
-        }
+        if (str === null || typeof str === 'undefined' || str === '') {
+			return '';
+		}
         // When ]]> appears in content, replace it with ]]]]><![CDATA[>
         var escaped = str.toString().replace(/]]>/g, ']]]]><![CDATA[>');
         return '<![CDATA[' + escaped + ']]>';
     },
 
-    // Helper function to escape xml special characters
-    escapeXmlChars: function(str) {
-        if (str === null || typeof str === 'undefined' || str == '') {
-            return '';
-        }
-        str = String(str);
-        return str.replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&apos;');
-    },
+	// Helper function to escape xml special characters
+	escapeXmlChars: function(str) {
+		if (str === null || typeof str === 'undefined' || str === '') {
+			return '';
+		}
+		str = String(str); 
+		return str.replace(/&/g, '&amp;')
+				.replace(/</g, '&lt;')
+				.replace(/>/g, '&gt;')
+				.replace(/"/g, '&quot;')
+				.replace(/'/g, '&apos;');
+	},
 
     //value of sca checkbox
     importScaFlaw: function(configId) {
