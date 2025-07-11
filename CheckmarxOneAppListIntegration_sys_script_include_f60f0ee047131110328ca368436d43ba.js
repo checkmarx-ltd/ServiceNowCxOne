@@ -56,12 +56,13 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
     //Creates XML summary for Projects
     getAppList: function(filteredCount, offset) {
         try {
-
+            var config = this.UTIL._getConfig(this.IMPLEMENTATION);
+            var limit = config.limit;
             var appListRootNodeStart = "<appInfoList><xml id=\"checkmarxone\"><projects>";
             var appListRootNodeEnd = "</projects></xml></appInfoList>";
             var appListAll = '';
-            //to start offset from 0 and limit 50
-            var newoffset = offset - 50;
+            //to start offset from 0 and limit
+            var newoffset = offset - limit;
             var projects = this.UTIL.getNextProjectList(this.IMPLEMENTATION, newoffset);
             var groups = '';
             var groupval = ' ';
@@ -160,10 +161,12 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
     //to get offset value from total length
     _getoffsets: function(filteredCount, totalCount) {
         var offsets = [];
-        var loopLength = totalCount / 50;
+        var config = this.UTIL._getConfig(this.IMPLEMENTATION);
+        var limit = config.limit;
+        var loopLength = totalCount / limit;
         var offset = 0;
         for (var i = 0; i <= parseInt(loopLength); i++) {
-            offset += 50;
+            offset += limit;
             var offsetId = this._getoffset(filteredCount, offset);
             if (offsetId) {
                 offsets.push(offsetId);

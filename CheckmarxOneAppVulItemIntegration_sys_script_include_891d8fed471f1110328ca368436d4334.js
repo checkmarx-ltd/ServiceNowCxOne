@@ -63,7 +63,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             }
             var xml_response = '';
             if (params.run) {
-                //   scanId, offset
+                // For ApiSec, offset is passed as negative
                 if (offset > 0) {
                     response = this.getDetailedReport(scanId, params.run[Object.keys(params.run)[0]], lastscandate, appname, branch, appId, applicationIdsStr, engines, severity, resultStateFilter, result_state_array);
                     if (response == "<null/>") {
@@ -443,7 +443,8 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 
     getApiSecReport: function(scanId, offset, lastscandate, appname, branch, appId, applicationIdsStr, engines) {
         try {
-            var newoffset = offset - offset * 2;
+            // ApiSec offset are passed as negative so we're making it positive.
+            var newoffset = Math.abs(offset);
             var basicContent = '<scanResults app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
                 ' scan_id="' + this.UTIL.escapeXmlChars(scanId) + '"' +
                 ' last_scan_date="' + this.UTIL.escapeXmlChars(lastscandate) + '"' +
@@ -1008,13 +1009,15 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         return delta;
     },
 
-    //to get offset (50 items at a time)
+    //to get offset (config.limit items at a time)
     _getoffsets: function(appId, scans) {
         var offsets = [];
         var offset = 0;
+        var config = this.UTIL._getConfig(this.IMPLEMENTATION);
         var includeApiSecurity = this.UTIL.importApiSecurityFlaw(this.IMPLEMENTATION);
         var reportLength = this.UTIL.getTotalVulcount(this.IMPLEMENTATION, scans);
-        var loopLength = reportLength / 50;
+        var limit = config.limit;
+        var loopLength = reportLength / limit;
         //in result api offset value start from 0 and increment by 1, here it acts like page instead of number of item like other api
         for (var i = 0; i <= parseInt(loopLength); i++) {
             offset += 1;
@@ -1027,7 +1030,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         if (includeApiSecurity) {
             var pageNumber = 0;
             var apiSecLength = this.UTIL.getApiSecVulCount(this.IMPLEMENTATION, scans);
-            var apiSec_loopLength = apiSecLength / 50;
+            var apiSec_loopLength = apiSecLength / limit;
             if (apiSecLength > 0) {
                 for (var j = 0; j <= parseInt(apiSec_loopLength) + 1; j++) {
                     pageNumber = j * -1;

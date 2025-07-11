@@ -267,7 +267,7 @@ CheckmarxOneUtilBase.prototype = {
 
             if (list_projects && list_projects.length > 0 && list_projects.indexOf('exclude') == -1 && filter_project == 'by_Id') {
                 var index = parseInt(offsetno);
-                var offsetLength = index + 50;
+                var offsetLength = index + limit_val;
                 if (offsetLength > list_projects.length) {
                     offsetLength = list_projects.length;
                 }
