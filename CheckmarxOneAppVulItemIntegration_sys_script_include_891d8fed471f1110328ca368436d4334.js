@@ -739,17 +739,16 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                 queryConditions.push('source_app_id' + operator + projectIds.join(','));
             }
         } else if (filterType == 'by_name') {
-            var projectNamesRaw = (config.project_filter_by_name || '').split(';');
-            var isExcludeModeNames = projectNamesRaw.indexOf('exclude') > -1;
-            var projectNames = projectNamesRaw.filter(function(name) {
-                return name && name !== 'exclude';
-            });
-
-            if (projectNames.length > 0) {
-                var regexPattern = projectNames.join('|');
-                var operator = isExcludeModeNames ? 'NOT MATCH_REGEX' : 'MATCH_REGEX';
-                queryConditions.push('app_name' + operator + regexPattern);
-            }
+            var projectNamesRaw = this.UTIL.getConfigProjectNameList(this.IMPLEMENTATION);
+			var isExcludeModeNames = projectNamesRaw.indexOf('exclude') > -1;
+			if (projectNamesRaw.length > 0) {
+				// Use API approach to get project IDs from project names
+				var projectIdsFromNames = this.UTIL.getProjectIdsFromProjectNames(this.IMPLEMENTATION, projectNamesRaw);
+				if (projectIdsFromNames.length > 0) {
+					var operator = isExcludeModeNames ? 'NOT IN' : 'IN';
+					queryConditions.push('source_app_id' + operator + projectIdsFromNames.join(','));
+				}
+			}
         }
 
         // Join all conditions with '^' to create final encoded query
