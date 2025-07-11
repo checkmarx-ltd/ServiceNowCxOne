@@ -728,15 +728,11 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 
         // Apply project filtering based on configuration type
         if (filterType == 'by_Id') {
-            var projectIdsRaw = (config.list_of_project_id_s || '').split(';');
-            var isExcludeMode = projectIdsRaw.indexOf('exclude') > -1;
-            var projectIds = projectIdsRaw.filter(function(id) {
-                return id && id !== 'exclude';
-            });
-
+            var projectIds = this.UTIL.getConfigProjectList(this.IMPLEMENTATION);
+            var isExcludeMode = projectIds.indexOf('exclude') > -1;
             if (projectIds.length > 0) {
-                var operator = isExcludeMode ? 'NOT IN' : 'IN';
-                queryConditions.push('source_app_id' + operator + projectIds.join(','));
+                var byIdOperator = isExcludeMode ? 'NOT IN' : 'IN';
+                queryConditions.push('source_app_id' + byIdOperator + projectIds.join(','));
             }
         } else if (filterType == 'by_name') {
             var projectNamesRaw = this.UTIL.getConfigProjectNameList(this.IMPLEMENTATION);
