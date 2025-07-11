@@ -17,10 +17,10 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
 
         } catch (err) {
             gs.error(this.MSG + " retrieveData : Error while retrieving the data. Skipping appId: " + appId + err);
-            response = '<scanData><scaScanData><scans></scans></scaScanData><sastScanData><scans></scans></sastScanData><kicsScanData><scans></scans></kicsScanData><conSecScanData><conSecScanData><scans></scans></conSecScanData><apiSecScanData><scans></scans></apiSecScanData></scanData><scoreCardScanData><scans></scans></scoreCardScanData><secretDetectionScanData><scans></scans></secretDetectionScanData>';
+            response = '<scanData><scaScanData><scans></scans></scaScanData><sastScanData><scans></scans></sastScanData><kicsScanData><scans></scans></kicsScanData><conSecScanData><scans></scans></conSecScanData><apiSecScanData><scans></scans></apiSecScanData><scoreCardScanData><scans></scans></scoreCardScanData><secretDetectionScanData><scans></scans></secretDetectionScanData></scanData>';
         }
         if (response == "<null/>") {
-            response = '<scanData><scaScanData><scans></scans></scaScanData><sastScanData><scans></scans></sastScanData><kicsScanData><scans></scans></kicsScanData><conSecScanData><conSecScanData><scans></scans></conSecScanData><apiSecScanData><scans></scans></apiSecScanData></scanData><scoreCardScanData><scans></scans></scoreCardScanData><secretDetectionScanData><scans></scans></secretDetectionScanData>';
+            response = '<scanData><scaScanData><scans></scans></scaScanData><sastScanData><scans></scans></sastScanData><kicsScanData><scans></scans></kicsScanData><conSecScanData><scans></scans></conSecScanData><apiSecScanData><scans></scans></apiSecScanData><scoreCardScanData><scans></scans></scoreCardScanData><secretDetectionScanData><scans></scans></secretDetectionScanData></scanData>';
         }
         params = this._serializeParameters(this._nextParameters(params));
         this.setNextRunParameters(params);
