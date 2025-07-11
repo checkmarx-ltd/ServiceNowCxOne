@@ -3,7 +3,7 @@ CheckmarxOneAVITClosureProcessor.prototype = Object.extendsObject(sn_vul.Applica
     MSG: 'CheckmarxOneAVITClosureProcessor:',
     UTIL: new x_chec3_chexone.CheckmarxOneUtil(),
 
-    process: function(attachment) {
+    process: function (attachment) {
         if (!attachment) {
             gs.warn(this.MSG + ' Called with no attachment');
             return;
@@ -34,9 +34,6 @@ CheckmarxOneAVITClosureProcessor.prototype = Object.extendsObject(sn_vul.Applica
                     var appId = data.app_id;
                     var branch = data.branch;
                     var enginesStr = data.engines;
-                    var engines = enginesStr ? enginesStr.split(',').map(function(s) {
-                        return s.trim();
-                    }) : [];
 
                     if (!scanId || !appId) {
                         gs.warn(this.MSG + " Missing scanId or appId in <scan> element");
@@ -64,7 +61,7 @@ CheckmarxOneAVITClosureProcessor.prototype = Object.extendsObject(sn_vul.Applica
         }
     },
 
-    _extractScanNodeData: function(scanNode) {
+    _extractScanNodeData: function (scanNode) {
         var data = {};
         var childIter = scanNode.getChildNodeIterator();
 
@@ -81,24 +78,50 @@ CheckmarxOneAVITClosureProcessor.prototype = Object.extendsObject(sn_vul.Applica
                 }
             }
 
-            data[nodeName] = text.trim();
+            data[nodeName] = String(text || '').trim();
         }
 
         return data;
     },
 
-    _handleFixedAVIT: function(source_scan_id, projectId, branch, scan_synchronization, engines) {
+    _handleFixedAVIT: function (source_scan_id, projectId, branch, scan_synchronization, engines) {
         var engineList = engines.split(",");
+        var selectedEngine = [];
+        var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
+        var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
+        var includekics = this.UTIL.importKicsFlaw(this.IMPLEMENTATION);
+        var includeContainerSecurity = this.UTIL.importContainerSecurityFlaw(this.IMPLEMENTATION);
+        var includeSecretDetection = this.UTIL.importSecretDetectionFlaw(this.IMPLEMENTATION);
+        var includeScoreCard = this.UTIL.importScoreCardFlaw(this.IMPLEMENTATION);
+        var includeApiSecurity = this.UTIL.importApiSecurityFlaw(this.IMPLEMENTATION);
 
-        // Optional: Log the result
-        for (var i = 0; i < engineList.length; i++) {
+        // Insert values into selectedEngine based on conditions
+        if (includesca) selectedEngine.push("sca");
+        if (includesast) selectedEngine.push("sast");
+        if (includekics) selectedEngine.push("IaC");
+        if (includeContainerSecurity) selectedEngine.push("CS");
+        if (includeSecretDetection) selectedEngine.push("SecretDetection");
+        if (includeScoreCard) selectedEngine.push("Scorecard");
+        if (includeApiSecurity) selectedEngine.push("apisec");
+
+        // Step 3: Create finalEngine array with common values between engineList and selectedEngine
+        var finalEngine = [];
+
+        // Loop through engineList and check if the value exists in selectedEngine using indexOf
+        for (var j = 0; j < engineList.length; j++) {
+            if (selectedEngine.indexOf(engineList[j]) !== -1) { // indexOf returns -1 if not found
+                finalEngine.push(engineList[j]);
+            }
+        }
+
+        for (var i = 0; i < finalEngine.length; i++) {
             var avit = new sn_vul.PagedGlideRecord('sn_vul_app_vulnerable_item');
             if (scan_synchronization == 'latest scan from each branch' && (branch != null || branch != '' || branch != '.unknown' || branch != 'undefined')) {
                 avit.addEncodedQuery('application_release.source_app_id=' + GlideStringUtil.escapeQueryTermSeparator(projectId) + '^app_vul_scan_summaryNOT LIKE' + GlideStringUtil.escapeQueryTermSeparator(source_scan_id) +
                     '^state!=3^project_branch=' + GlideStringUtil.escapeQueryTermSeparator(branch) + '^app_vul_scan_summarySTARTSWITH' +
-                    GlideStringUtil.escapeQueryTermSeparator(engineList[i]));
+                    GlideStringUtil.escapeQueryTermSeparator(finalEngine[i]));
             } else {
-                avit.addEncodedQuery('application_release.source_app_id=' + GlideStringUtil.escapeQueryTermSeparator(projectId) + '^app_vul_scan_summaryNOT LIKE' + GlideStringUtil.escapeQueryTermSeparator(source_scan_id) + '^state!=3' + '^app_vul_scan_summarySTARTSWITH' + GlideStringUtil.escapeQueryTermSeparator(engineList[i]));
+                avit.addEncodedQuery('application_release.source_app_id=' + GlideStringUtil.escapeQueryTermSeparator(projectId) + '^app_vul_scan_summaryNOT LIKE' + GlideStringUtil.escapeQueryTermSeparator(source_scan_id) + '^state!=3' + '^app_vul_scan_summarySTARTSWITH' + GlideStringUtil.escapeQueryTermSeparator(finalEngine[i]));
             }
             avit.setSortField("sys_id");
             while (avit.next()) {

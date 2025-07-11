@@ -3,14 +3,13 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
     MSG: 'CheckmarxOne Scan Summary Processor: ',
     UTIL: new x_chec3_chexone.CheckmarxOneUtil(),
 
-    process: function(attachment) {
+    process: function (attachment) {
         if (attachment) {
             try {
                 this.UTIL.validateXML(new GlideSysAttachment().getContent(attachment), 'error');
                 var doc = new XMLDocument2();
                 doc.parseXML(new GlideSysAttachment().getContent(attachment));
                 var node = doc.getNode('/scanData');
-                var engine = '';
                 if (node.toString().indexOf("sastScanData") != -1) {
                     var sastnodes = doc.getNode('/scanData/sastScanData/scans');
                 }
@@ -22,7 +21,6 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                 }
                 if (node.toString().indexOf("conSecScanData") != -1) {
                     var containerSecurityNodes = doc.getNode('/scanData/conSecScanData/scans');
-                    engine += 'CS, ';
                 }
                 if (node.toString().indexOf("apiSecScanData") != -1) {
                     var apiSecNodes = doc.getNode('/scanData/apiSecScanData/scans');
@@ -233,7 +231,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
     },
 
 
-    _parseStatic: function(node, data) {
+    _parseStatic: function (node, data) {
         try {
             this._handleScanType(node, data, 'last_static_scan_date');
         } catch (err) {
@@ -242,7 +240,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
         }
     },
 
-    _handleScanType: function(node, data, dateField) {
+    _handleScanType: function (node, data, dateField) {
         try {
             data[dateField] = new GlideDateTime(node.getAttribute('last_scan_date'));
             if (gs.nil(data['last_scan_date']) >= data['last_scan_date']) {
@@ -254,7 +252,7 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
         }
     },
 
-    _upsert: function(data) {
+    _upsert: function (data) {
         try {
             var result = this.AVR_API.createOrUpdateSummary(data);
             if (!result)
