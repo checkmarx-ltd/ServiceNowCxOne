@@ -1242,8 +1242,8 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         appReleaseGr.query();
 
         while (appReleaseGr.next()) {
-            var sourceAppId = appReleaseGr.gr.getValue('source_app_id');
-            var description = appReleaseGr.gr.getValue('description') || '';
+            var sourceAppId = appReleaseGr.getValue('source_app_id');
+            var description = appReleaseGr.getValue('description') || '';
 
             try {
                 var dateStr = String(description.substring(descriptionPrefix.length) || '').trim();
@@ -1268,7 +1268,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         appReleaseGr.query();
 
         while (appReleaseGr.next()) {
-            appReleaseGr.gr.update('active', 'false');
+            appReleaseGr.update('active', 'false');
         }
     },
 
@@ -1279,7 +1279,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         scanSummaryGr.query();
 
         while (scanSummaryGr.next()) {
-            scanSummaryGr.gr.update('active', 'false');
+            scanSummaryGr.update('active', 'false');
         }
     },
 
@@ -1292,9 +1292,9 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         avitGr.query();
 
         while (avitGr.next()) {
-            avitGr.gr.setValue('source_remediation_status', 'SKIPPED');
-            avitGr.gr.setValue('state', 3);
-            avitGr.gr.update('substate', 7);
+            avitGr.setValue('source_remediation_status', 'SKIPPED');
+            avitGr.setValue('state', 3);
+            avitGr.update('substate', 7);
         }
     },
 
