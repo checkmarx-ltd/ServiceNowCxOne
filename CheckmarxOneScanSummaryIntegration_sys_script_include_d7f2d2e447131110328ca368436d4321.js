@@ -17,10 +17,10 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
 
         } catch (err) {
             gs.error(this.MSG + " retrieveData : Error while retrieving the data. Skipping appId: " + appId + err);
-            response = '<scanData><scaScanData><scans></scans></scaScanData><sastScanData><scans></scans></sastScanData><kicsScanData><scans></scans></kicsScanData></scanData>';
+            response = '<scanData><scaScanData><scans></scans></scaScanData><sastScanData><scans></scans></sastScanData><kicsScanData><scans></scans></kicsScanData><conSecScanData><scans></scans></conSecScanData><apiSecScanData><scans></scans></apiSecScanData><scoreCardScanData><scans></scans></scoreCardScanData><secretDetectionScanData><scans></scans></secretDetectionScanData></scanData>';
         }
         if (response == "<null/>") {
-            response = '<scanData><scaScanData><scans></scans></scaScanData><sastScanData><scans></scans></sastScanData><kicsScanData><scans></scans></kicsScanData></scanData>';
+            response = '<scanData><scaScanData><scans></scans></scaScanData><sastScanData><scans></scans></sastScanData><kicsScanData><scans></scans></kicsScanData><conSecScanData><scans></scans></conSecScanData><apiSecScanData><scans></scans></apiSecScanData><scoreCardScanData><scans></scans></scoreCardScanData><secretDetectionScanData><scans></scans></secretDetectionScanData></scanData>';
         }
         params = this._serializeParameters(this._nextParameters(params));
         this.setNextRunParameters(params);
@@ -83,27 +83,31 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
             } else if (scan_synchronization == 'latest scan across all branches' || jsonLastScanSummResp == '' || jsonLastScanSummResp == null || jsonLastScanSummResp == -1) {
                 jsonLastScanSummResp = this.UTIL.getScanInfo(this.IMPLEMENTATION, appId, newoffset, this._getCurrentDeltaStartTime());
             }
-            var lastSastDate;
-            var lastScaDate;
-            var lastKicsDate;
-            var lastConSecDate;
-            var lastApiSecDate;
-            var lastScoreCardDate;
-            var lastSecretDetectionDate;
+
             var branch = [];
             var configScanType = config.scan_type.toString();
             for (var item in jsonLastScanSummResp.scans) {
-                var engine = '';
-                var engineList = [];
-                if (jsonLastScanSummResp.scans[item].engines.toString().indexOf("microengines") != -1) {
-                    var found = false;
+                var engines = jsonLastScanSummResp.scans[item].engines;
+
+                // Replace "containers" with "CS" if it's in the array
+                if (engines.indexOf("containers") !== -1) {
+                    engines[engines.indexOf("containers")] = "CS";
+                }
+
+                // Replace "kics" with "IaC" if it's in the array
+                if (engines.indexOf("kics") !== -1) {
+                    engines[engines.indexOf("kics")] = "IaC";
+                }
+
+                // Replace "microengines" with "Scorecard" if it's in the array
+                if (engines.indexOf("microengines") !== -1) {
+
                     var value2ms = null;
                     var valueScorecard = null;
 
                     // Loop through configs
                     for (var i = 0; i < jsonLastScanSummResp.scans[item].metadata.configs.length; i++) {
                         if (jsonLastScanSummResp.scans[item].metadata.configs[i].type === "microengines") {
-                            found = true;
                             if (jsonLastScanSummResp.scans[item].metadata.configs[i].value) {
                                 value2ms = jsonLastScanSummResp.scans[item].metadata.configs[i].value["2ms"];
                                 valueScorecard = jsonLastScanSummResp.scans[item].metadata.configs[i].value["scorecard"];
@@ -112,35 +116,20 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                         }
                     }
                     if (value2ms == true || value2ms == 'true') {
-                        engine += 'SecretDetection,';
+                        engines[engines.indexOf("microengines")] = "SecretDetection";
                     }
                     if (valueScorecard == true || valueScorecard == 'true') {
-                        engine += 'Scorecard,';
+                        engines.push("Scorecard");
                     }
                 }
+                // Convert the array to a string
+                var enginesString = engines.join(", ");
 
-                if (jsonLastScanSummResp.scans[item].engines.toString().indexOf('containers') != -1 && engineList.indexOf('CS') == -1) {
-                    engine += 'CS,';
-                }
-                if (jsonLastScanSummResp.scans[item].engines.toString().indexOf('kics') != -1 && engineList.indexOf('IaC') == -1) {
-                    engine += 'IaC,';
-                }
-                var start = 0;
-
-                for (var j = 0; j < engine.length; j++) {
-                    if (engine[j] === ",") {
-                        engineList.push(engine.slice(start, j));
-                        start = j + 1;
-                    }
-                }
-                engineList.push(engine.slice(start));
-                var engines = engine + jsonLastScanSummResp.scans[item].engines;
                 //sca scan summary
-                if (includesca && jsonLastScanSummResp.scans[item].engines.toString().indexOf("sca") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
+                if (includesca && engines.indexOf("sca") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
                     var scaresponsevul = this.UTIL.getScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
                     var scaScanType = "Full Scan";
                     if (scaresponsevul != -1) {
-
                         scaScanSummaryAll += '<scan id="' + this.UTIL.escapeXmlChars('sca' + jsonLastScanSummResp.scans[item].id) + '"' +
                             ' app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
                             ' last_scan_date="' + this.UTIL.escapeXmlChars(this.UTIL.parseDate(jsonLastScanSummResp.scans[item].updatedAt)) + '"' +
@@ -156,7 +145,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                 }
 
                 //sast scan summary
-                if (includesast && jsonLastScanSummResp.scans[item].engines.toString().indexOf("sast") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
+                if (includesast && engines.indexOf("sast") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
                     var sastresponsevul = this.UTIL.getSastScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
                     var sastScanTypeToCheck = '';
 
@@ -189,7 +178,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                 }
 
                 //kics scan summary
-                if (includekics && jsonLastScanSummResp.scans[item].engines.toString().indexOf("kics") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
+                if (includekics && engines.indexOf("kics") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
                     var kicsresponsevul = this.UTIL.getKicsScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
                     var scanType = "Full Scan";
                     if (kicsresponsevul != -1) {
@@ -208,7 +197,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                 }
 
                 //Container Security scan summary
-                if (includeContainerSecurity && jsonLastScanSummResp.scans[item].engines.toString().indexOf("containers") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
+                if (includeContainerSecurity && engines.indexOf("containers") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
                     var containerSecurityResponseVul = this.UTIL.getContainerSecurityScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
                     var container_scanType = "Full Scan";
                     if (containerSecurityResponseVul != -1) {
@@ -227,7 +216,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                 }
 
                 // API Security scan summary
-                if (includeApiSecurity && jsonLastScanSummResp.scans[item].engines.toString().indexOf("apisec") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
+                if (includeApiSecurity && engines.indexOf("apisec") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
                     var apiSecResponseVul = this.UTIL.getApiSecurityScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
                     var api_scanType = "Full Scan";
                     if (apiSecResponseVul != -1) {
@@ -245,7 +234,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                     }
                 }
                 //OSSF Scorecard scan summary
-                if (includeScoreCard && jsonLastScanSummResp.scans[item].engines.toString().indexOf("microengines") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
+                if (includeScoreCard && engines.indexOf("microengines") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
                     var scorecardResponseVul = this.UTIL.getScoreCardScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
                     var scorecard_scanType = "Full Scan";
                     if (scorecardResponseVul != -1) {
@@ -264,7 +253,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                 }
 
                 //secretDetection scan summary
-                if (includeSecretDetection && jsonLastScanSummResp.scans[item].engines.toString().indexOf("microengines") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
+                if (includeSecretDetection && engines.indexOf("microengines") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
                     var secretDetectionResponseVul = this.UTIL.getSecretDetectionScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
                     var secretDetection_scanType = "Full Scan";
                     if (secretDetectionResponseVul != -1) {
@@ -366,7 +355,6 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                 this.LATEST = new GlideDateTime(this.DELTA_START_TIME || '1970-01-01T10:16:06.17544Z').getDate();
                 var apps = this.AVR_API.getAppReleases();
                 projectIdsByLastScanDate = this.UTIL.getprojectScanList(this.IMPLEMENTATION, this._getCurrentDeltaStartTime());
-
                 var config = this.UTIL._getConfig(this.IMPLEMENTATION);
                 var filter_project = config.filter_project;
                 var list_projects = this.UTIL.getConfigProjectList(this.IMPLEMENTATION);
