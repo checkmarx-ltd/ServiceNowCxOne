@@ -10,7 +10,6 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                 var doc = new XMLDocument2();
                 doc.parseXML(new GlideSysAttachment().getContent(attachment));
                 var node = doc.getNode('/scanData');
-                var engine = '';
                 if (node.toString().indexOf("sastScanData") != -1) {
                     var sastnodes = doc.getNode('/scanData/sastScanData/scans');
                 }
@@ -22,7 +21,6 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                 }
                 if (node.toString().indexOf("conSecScanData") != -1) {
                     var containerSecurityNodes = doc.getNode('/scanData/conSecScanData/scans');
-                    engine += 'CS, ';
                 }
                 if (node.toString().indexOf("apiSecScanData") != -1) {
                     var apiSecNodes = doc.getNode('/scanData/apiSecScanData/scans');
