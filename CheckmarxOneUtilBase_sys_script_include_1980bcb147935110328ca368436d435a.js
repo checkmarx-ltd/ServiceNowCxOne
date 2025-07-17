@@ -267,7 +267,7 @@ CheckmarxOneUtilBase.prototype = {
 
             if (list_projects && list_projects.length > 0 && list_projects.indexOf('exclude') == -1 && filter_project == 'by_Id') {
                 var index = parseInt(offsetno);
-                var offsetLength = index + 50;
+                var offsetLength = index + limit_val;
                 if (offsetLength > list_projects.length) {
                     offsetLength = list_projects.length;
                 }
@@ -1741,17 +1741,31 @@ CheckmarxOneUtilBase.prototype = {
             var status = response.getStatusCode();
             if (status == 200 || status == 202)
                 return response;
-
             if (status <= 0)
                 throw gs.getMessage("Request could not be completed: {0} Reason : {1}", [endpoint, response.getErrorMessage()]);
             if (status == 400) {
                 throw gs.getMessage("Bad request: {0} Reason : {1}", [endpoint, response.getErrorMessage()]);
             }
             if (status == -1 || status == 408 || status == 504 || status == 502 || status == 500) {
+
+                // Special handling for status 500 with error code 5005 for deleted projects or scans
+                if (status == 500) {
+                    try {
+                        var responseBody = JSON.parse(response.getBody());
+                        var responseErrorCode = responseBody.code;
+                        if (responseErrorCode === 5005) {
+                            gs.warn("Checkmarx returned error code 5005: Project or scan not found (it may have been deleted), request URL: " + endpoint);
+                            return response;
+                        }
+                    } catch (parseError) {
+                        // If JSON parsing fails, continue with retry logic below
+                    }
+                }
+
                 this.customSleep(5000);
                 var nextResponse = request.execute();
                 var nextStatus = nextResponse.getStatusCode();
-                if (newStatus == 200 || nextStatus == 202) {
+                if (nextStatus == 200 || nextStatus == 202) {
                     return nextResponse;
                 } else {
                     throw gs.getMessage("Request timed out: {0} Reason : {1}", [endpoint, response.getErrorMessage()]);
@@ -1785,7 +1799,7 @@ CheckmarxOneUtilBase.prototype = {
             this.customSleep(5000);
             var catchResponse = request.execute();
             var catchStatus = catchResponse.getStatusCode();
-            if (newStatus == 200 || nextStatus == 202) {
+            if (catchStatus == 200 || catchStatus == 202) {
                 return catchResponse;
             } else {
                 gs.error(this.MSG + " :_checkResponseStatus :Error in checking the response of the API call." + err);
