@@ -3,6 +3,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 
     UTIL: new x_chec3_chexone.CheckmarxOneUtil(),
     MSG: "CheckmarxOneAppVulItemIntegration",
+    INTEGRATION_ID: 'e5dffb5c47575110328ca368436d436b', // constant for integration filter
 
     retrieveData: function() {
         var response = "<null/>";
@@ -63,7 +64,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             }
             var xml_response = '';
             if (params.run) {
-                //   scanId, offset
+                // For ApiSec, offset is passed as negative
                 if (offset > 0) {
                     response = this.getDetailedReport(scanId, params.run[Object.keys(params.run)[0]], lastscandate, appname, branch, appId, applicationIdsStr, engines, severity, resultStateFilter, result_state_array);
                     if (response == "<null/>") {
@@ -443,7 +444,8 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 
     getApiSecReport: function(scanId, offset, lastscandate, appname, branch, appId, applicationIdsStr, engines) {
         try {
-            var newoffset = offset - offset * 2;
+            // ApiSec offset are passed as negative so we're making it positive.
+            var newoffset = Math.abs(offset);
             var basicContent = '<scanResults app_id="' + this.UTIL.escapeXmlChars(appId) + '"' +
                 ' scan_id="' + this.UTIL.escapeXmlChars(scanId) + '"' +
                 ' last_scan_date="' + this.UTIL.escapeXmlChars(lastscandate) + '"' +
@@ -601,93 +603,93 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                     this.LATEST = latest;
                 }
                 return params;
-            }
+            } else {
+                //Updating delta start time value in Integration Instance
+                var parameterName = 'delta_start_time';
+                var newValue = new GlideDateTime(this.DELTA_START_TIME || '1970-01-01T00:00:00.00000Z');
+                var INTEGRATION_CONFIG_SYSID = 'a981cec29721a510026f72021153afa6';
+                var gr = new GlideRecord("x_chec3_chexone_checkmarxone_configuration");
+                gr.get(INTEGRATION_CONFIG_SYSID);
+                var instance = gr.getValue("integration_instance");
+                var implConfig = new GlideRecord("sn_sec_int_impl_config");
+                implConfig.addQuery("implementation", instance);
+                implConfig.query();
+                while (implConfig.next()) {
+                    var configName = implConfig.getDisplayValue("configuration");
+                    if (configName == parameterName) {
+                        implConfig.setValue("value", newValue);
+                        implConfig.update();
+                    }
+                }
 
-            //Updating delta start time value in Integration Instance
-            var parameterName = 'delta_start_time';
-            var newValue = new GlideDateTime(this.DELTA_START_TIME || '1970-01-01T10:16:06.17544Z');
-            var gr = new GlideRecord("x_chec3_chexone_checkmarxone_configuration");
-            gr.get('a981cec29721a510026f72021153afa6');
-            var instance = gr.getValue("integration_instance");
-            var implConfig = new GlideRecord("sn_sec_int_impl_config");
-            implConfig.addQuery("implementation", instance);
-            implConfig.query();
-            while (implConfig.next()) {
-                var configName = implConfig.getDisplayValue("configuration");
-                if (configName == parameterName) {
-                    implConfig.setValue("value", newValue);
-                    implConfig.update();
+                // Initialize delta load timestamp
+                this.LATEST = new GlideDateTime(this.DELTA_START_TIME || '1970-01-01 00:00:00');
+                var config = this.UTIL._getConfig(this.IMPLEMENTATION);
+
+                // Use the new functions to get filtered projects and scans
+                var projects = this._getFilteredProjects(config, this.LATEST);
+                var scans = this._getFilteredScans(projects, config, this.LATEST);
+
+                // Handle Auto-Close for Deleted Projects (if enabled)
+                if (config.close_findings_of_deleted_projects) {
+                    var scan_app_list = [];
+                    var scanJson = this.UTIL.getAllScanList(this.IMPLEMENTATION, this._getCurrentDeltaStartTime());
+                    for (var k in scanJson.scans) {
+                        if (scan_app_list.indexOf(scanJson.scans[k].projectId) == -1)
+                            scan_app_list.push(scanJson.scans[k].projectId);
+                    }
+                    var deltaStartGdt = new GlideDateTime(this.DELTA_START_TIME || '1970-01-01T10:16:06.17544Z');
+                    var deletedProjectIds = this._getDeletedProjects(scan_app_list, deltaStartGdt);
+                    if (deletedProjectIds.length > 0) {
+                        this._handleAppReleaseForDeletedProjects(deletedProjectIds);
+                        this._handleScanSummaryForDeletedProjects(deletedProjectIds);
+                        this._closeSkippedAVIsForDeletedProjects(deletedProjectIds);
+                    }
+                }
+
+                // Build params.remaining from filtered scans
+                for (var scanId in scans) {
+                    var scan = scans[scanId];
+                    var project = projects[scan.project_sys_id];
+                    var scanDate = new GlideDateTime(scan.last_scan_date);
+
+                    if (!project) continue;
+
+                    // Build scan object from filtered data
+                    var scanObject = {
+                        scanId: scanId,
+                        last_scan_date: scan.last_scan_date,
+                        appname: project.app_name || '',
+                        scanbranch: scan.scan_branch || '',
+                        appId: project.source_app_id || '',
+                        applicationIds: project.application_ids || '',
+                        primaryBranch: project.primary_branch || ''
+                    };
+
+                    // Build parameter string from scan object
+                    var parameterString = this._buildScanParameterString(scanObject);
+                    if (!parameterString) continue;
+
+                    // Get offsets
+                    var offsetArray = this._getoffsets(scanObject.appId, scanObject.scanId);
+                    if (!offsetArray || offsetArray.length === 0) continue;
+
+                    // Add string parameter to remaining (not JSON)
+                    params.remaining[parameterString] = offsetArray;
+
+                    // Update this.LATEST start time for next scheduled execution
+                    if (scanDate.after(this.LATEST)) this.LATEST = scanDate;
+                }
+
+                // Prepare first processing item and save state
+                params = this._nextParameters(params);
+                if (params.run) {
+                    this.PROCESS.setValue('parameters', JSON.stringify(this._serializeParameters(params)));
+                    this.PROCESS.update();
                 }
             }
-
-            // Initialize delta load timestamp
-            this.LATEST = new GlideDateTime(this.DELTA_START_TIME || '1970-01-01 00:00:00');
-            var config = this.UTIL._getConfig(this.IMPLEMENTATION);
-
-            // Use the new functions to get filtered projects and scans
-            var projects = this._getFilteredProjects(config, this.LATEST);
-            var scans = this._getFilteredScans(projects, config, this.LATEST);
-
-            // Handle Auto-Close for Deleted Projects (if enabled)
-            if (config.close_findings_of_deleted_projects) {
-                var scan_app_list = [];
-                var scanJson = this.UTIL.getAllScanList(this.IMPLEMENTATION, this._getCurrentDeltaStartTime());
-                for (var k in scanJson.scans) {
-                    if (scan_app_list.indexOf(scanJson.scans[k].projectId) == -1)
-                        scan_app_list.push(scanJson.scans[k].projectId);
-                }
-                var deltaStartGdt = new GlideDateTime(this.DELTA_START_TIME || '1970-01-01T10:16:06.17544Z');
-                var deletedProjectIds = this._getDeletedProjects(scan_app_list, deltaStartGdt);
-                if (deletedProjectIds.length > 0) {
-                    this._handleAppReleaseForDeletedProjects(deletedProjectIds);
-                    this._handleScanSummaryForDeletedProjects(deletedProjectIds);
-                    this._closeSkippedAVIsForDeletedProjects(deletedProjectIds);
-                }
-            }
-
-            // Build params.remaining from filtered scans
-            for (var scanId in scans) {
-                var scan = scans[scanId];
-                var project = projects[scan.project_sys_id];
-				var scanDate = new GlideDateTime(scan.last_scan_date);
-
-                if (!project) continue;
-
-                // Build scan object from filtered data
-                var scanObject = {
-                    scanId: scanId,
-                    last_scan_date: scan.last_scan_date,
-                    appname: project.app_name || '',
-                    scanbranch: scan.scan_branch || '',
-                    appId: project.source_app_id || '',
-                    applicationIds: project.application_ids || '',
-                    primaryBranch: project.primary_branch || ''
-                };
-
-                // Build parameter string from scan object
-                var parameterString = this._buildScanParameterString(scanObject);
-                if (!parameterString) continue;
-
-                // Get offsets
-                var offsetArray = this._getoffsets(scanObject.appId, scanObject.scanId);
-                if (!offsetArray || offsetArray.length === 0) continue;
-
-                // Add string parameter to remaining (not JSON)
-                params.remaining[parameterString] = offsetArray;
-
-				// Update this.LATEST start time for next scheduled execution
-				if (scanDate.after(this.LATEST)) this.LATEST = scanDate;
-            }
-
-            // Prepare first processing item and save state
-            params = this._nextParameters(params);
-            if (params.run) {
-                this.PROCESS.setValue('parameters', JSON.stringify(this._serializeParameters(params)));
-                this.PROCESS.update();
-            }
-
         } catch (err) {
-            gs.error(this.MSG + " _getParameters: " + err);
+            gs.error(this.MSG + " _getParameters : Error while getting the integration parameters: " + err);
             throw err;
         }
 
@@ -696,21 +698,18 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 
     // Build parameter string from scan object (converts object to semicolon-separated string)
     _buildScanParameterString: function(scanObject) {
-        if (!scanObject || !scanObject.scanId) {
+        if (scanObject == null || scanObject.scanId == null) {
             return null;
         }
 
         // Build semicolon-separated parameter string (without engines)
-        var parameterString =
-            'scanId=' + (scanObject.scanId || '') +
+        return 'scanId=' + (scanObject.scanId || '') +
             '; last_scan_date=' + (scanObject.last_scan_date || '') +
             '; appname=' + (scanObject.appname || '') +
             '; scanbranch=' + (scanObject.scanbranch || '') +
             '; appId=' + (scanObject.appId || '') +
             '; applicationIds=' + (scanObject.applicationIds || '') +
             '; primaryBranch=' + (scanObject.primaryBranch || '');
-
-        return parameterString;
     },
 
     // Retrieves filtered projects based on delta start time and user-configured filters (ID or name/regex)
@@ -718,37 +717,32 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         var projectsMap = {};
         var projectGr = new GlideRecord('sn_vul_app_release');
 
-        // Build query conditions as array for better structure
+        // Build query conditions as array for better structure	
         var queryConditions = [];
-        queryConditions.push('source=Checkmarx One');
+        queryConditions.push('integration=' + this.INTEGRATION_ID);
         queryConditions.push('active=true');
         queryConditions.push('sys_updated_on>=' + deltaStartTime.getDisplayValueInternal());
 
         var filterType = config.filter_project;
 
         // Apply project filtering based on configuration type
-        if (filterType == 'by_Id') {
-            var projectIdsRaw = (config.list_of_project_id_s || '').split(';');
-            var isExcludeMode = projectIdsRaw.indexOf('exclude') > -1;
-            var projectIds = projectIdsRaw.filter(function(id) {
-                return id && id !== 'exclude';
-            });
-
+        if (filterType === 'by_Id') {
+            var projectIds = this.UTIL.getConfigProjectList(this.IMPLEMENTATION);
+            var isExcludeMode = projectIds.indexOf('exclude') > -1;
             if (projectIds.length > 0) {
-                var operator = isExcludeMode ? 'NOT IN' : 'IN';
-                queryConditions.push('source_app_id' + operator + projectIds.join(','));
+                var byIdOperator = isExcludeMode ? 'NOT IN' : 'IN';
+                queryConditions.push('source_app_id' + byIdOperator + projectIds.join(','));
             }
-        } else if (filterType == 'by_name') {
-            var projectNamesRaw = (config.project_filter_by_name || '').split(';');
-            var isExcludeModeNames = projectNamesRaw.indexOf('exclude') > -1;
-            var projectNames = projectNamesRaw.filter(function(name) {
-                return name && name !== 'exclude';
-            });
-
+        } else if (filterType === 'by_name') {
+            var projectNames = this.UTIL.getConfigProjectNameList(this.IMPLEMENTATION);
+            var isExcludeModeNames = projectNames.indexOf('exclude') > -1;
             if (projectNames.length > 0) {
-                var regexPattern = projectNames.join('|');
-                var operator = isExcludeModeNames ? 'NOT MATCH_REGEX' : 'MATCH_REGEX';
-                queryConditions.push('app_name' + operator + regexPattern);
+                // Use API approach to get project IDs from project names
+                var projectIdsFromNames = this.UTIL.getProjectIdsFromProjectNames(this.IMPLEMENTATION, projectNames);
+                if (projectIdsFromNames.length > 0) {
+                    var byNameOperator = isExcludeModeNames ? 'NOT IN' : 'IN';
+                    queryConditions.push('source_app_id' + byNameOperator + projectIdsFromNames.join(','));
+                }
             }
         }
 
@@ -758,44 +752,42 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 
         while (projectGr.next()) {
             var projectSysId = projectGr.getUniqueValue();
-            var projectData = {};
-
-            projectData.source_app_id = projectGr.getValue('source_app_id');
-            projectData.app_name = projectGr.getValue('app_name');
-            projectData.primary_branch = projectGr.getValue('source_app_guid');
-            projectData.source_assigned_teams = projectGr.getValue('source_assigned_teams');
+            var projectData = {
+                source_app_id: projectGr.getValue('source_app_id'),
+                app_name: projectGr.getValue('app_name'),
+                primary_branch: projectGr.getValue('source_app_guid'),
+                source_assigned_teams: projectGr.getValue('source_assigned_teams'),
+                project_created_at: '',
+                application_ids: ''
+            };
 
             // Parse project creation date from description field (format: "...created at<ISO_DATE>")
-            try {
-                var description = projectGr.getValue('description') || '';
-                var dateString = description.split('created at')[1];
-                if (dateString) {
-                    // Remove microseconds if present and clean the date string
-                    var cleanDateString = dateString.trim().replace(/\.\d{6}Z$/, 'Z');
-                    var parsedDate = new GlideDateTime();
-                    parsedDate.setValue(cleanDateString);
-                    projectData.project_created_at = parsedDate.getDisplayValue();
-                } else {
-                    projectData.project_created_at = '';
+            var description = projectGr.getValue('description');
+            if (description != null) {
+                try {
+                    var dateString = description.split('created at')[1];
+                    if (dateString != null) {
+                        // Remove microseconds if present and clean the date string
+                        var cleanDateString = dateString.trim().replace(/\.\d{6}Z$/, 'Z');
+                        var parsedDate = new GlideDateTime();
+                        parsedDate.setValue(cleanDateString);
+                        projectData.project_created_at = parsedDate.getDisplayValue();
+                    }
+                } catch (e) {
+                    gs.warn(this.MSG + ' _getFilteredProjects: Could not parse project_created_at from description for project: ' + projectSysId + ' Error: ' + e);
                 }
-            } catch (e) {
-                gs.warn(this.MSG + " _getFilteredProjects: Could not parse project_created_at from description for project: " + projectSysId);
-                projectData.project_created_at = '';
             }
 
             // Parse Application IDs from source_additional_info JSON (note: key has trailing space)
-            try {
-                var additionalInfoStr = projectGr.getValue('source_additional_info');
-                if (additionalInfoStr) {
+            var additionalInfoStr = projectGr.getValue('source_additional_info');
+            if (additionalInfoStr != null) {
+                try {
                     var additionalInfo = JSON.parse(additionalInfoStr);
                     // Key "Application Id " has intentional trailing space from original integration
-                    projectData.application_ids = additionalInfo["Application Id "] || '';
-                } else {
-                    projectData.application_ids = '';
+                    projectData.application_ids = additionalInfo['Application Id '] || '';
+                } catch (e) {
+                    gs.warn(this.MSG + ' _getFilteredProjects: Could not parse application_ids from source_additional_info for project: ' + projectSysId + ' Error: ' + e);
                 }
-            } catch (e) {
-                gs.warn(this.MSG + " _getFilteredProjects: Could not parse application_ids from source_additional_info for project: " + projectSysId);
-                projectData.application_ids = '';
             }
 
             projectsMap[projectSysId] = projectData;
@@ -805,196 +797,353 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 
     // Retrieves filtered scan summaries based on project scope, delta time, and synchronization rules
     _getFilteredScans: function(projectsMap, config, deltaStartTime) {
-        var scansMap = {};
         var projectSysIds = Object.keys(projectsMap);
+        var MAX_PROJECTS_PER_QUERY = 1000;
 
         // Early return if no projects are in scope
         if (projectSysIds.length === 0) {
-            return scansMap;
+            return {};
         }
 
-        // Build query conditions as array for better structure
-        var queryConditions = [];
-        queryConditions.push('application_releaseIN' + projectSysIds.join(','));
-        queryConditions.push('last_scan_date>=' + deltaStartTime.getDisplayValueInternal());
-        queryConditions.push('active=true');
+        var batchSize = MAX_PROJECTS_PER_QUERY;
+        var projectBatches = this._createProjectBatches(projectSysIds, batchSize);
+        var scansMap = {};
+        var orderedScanIds = []; // Track insertion order for synchronization
 
-        // Build engine filter based on configuration
-        var enginePolicyFilters = [];
-        if (config.import_sast) enginePolicyFilters.push('policyCONTAINSsast');
-        if (config.import_sca) enginePolicyFilters.push('policyCONTAINSsca');
-        if (config.import_kics) enginePolicyFilters.push('policyCONTAINSkics');
-        if (config.include_container_security) enginePolicyFilters.push('policyCONTAINScontainers');
-        if (config.include_api_security) enginePolicyFilters.push('policyCONTAINSapisec');
-        if (config.include_ossf_scorecard) enginePolicyFilters.push('policyCONTAINSScoreCard');
-        if (config.include_secret_detection) enginePolicyFilters.push('policyCONTAINSSecretDetection');
+        // Process each batch
+        for (var projectBatchIndex = 0; projectBatchIndex < projectBatches.length; projectBatchIndex++) {
+            var currentBatch = projectBatches[projectBatchIndex];
 
-        if (enginePolicyFilters.length > 0) {
-            queryConditions.push('^' + enginePolicyFilters.join('^OR'));
-        } else {
-            gs.warn(this.MSG + " _getFilteredScans: No scan engines are enabled in the configuration.");
-            return scansMap;
-        }
-
-        // Apply scan type filter if configured
-        if (config.scan_type) {
-            queryConditions.push('scan_submitted_byLIKE' + config.scan_type);
-        }
-
-        // Join all conditions with '^' to create final encoded query
-        var scanSummaryGr = new GlideRecord('sn_vul_app_vul_scan_summary');
-        scanSummaryGr.addEncodedQuery(queryConditions.join('^'));
-        scanSummaryGr.orderByDesc('last_scan_date');
-        scanSummaryGr.query();
-
-        while (scanSummaryGr.next()) {
-            var rawScanId = scanSummaryGr.getValue('source_sdlc_status');
-            var projectSysId = scanSummaryGr.getValue('application_release');
-
-            // Skip if scan ID is missing or project not in scope
-            if (!rawScanId || !projectsMap[projectSysId]) {
+            var encodedQuery = this._buildEncodedQuery(currentBatch, config, deltaStartTime);
+            if (!encodedQuery) {
+                gs.warn(this.MSG + ' _getFilteredScans: No valid encoded query built for internal projects batch ' + (projectBatchIndex + 1));
                 continue;
             }
 
-            // Create parent scan object if first time seeing this rawScanId
-            if (!scansMap[rawScanId]) {
-                var scanData = {};
+            var batchResult = this._processBatchScans(encodedQuery, projectsMap, scansMap, orderedScanIds, projectBatchIndex + 1);
+            if (!batchResult) {
+                gs.warn(this.MSG + ' _getFilteredScans: Batch ' + (projectBatchIndex + 1) + ' processing failed, continuing with next internal projects batch');
+            }
+        }
 
-                scanData.last_scan_date = scanSummaryGr.getDisplayValue('last_scan_date');
-                scanData.policy = scanSummaryGr.getValue('policy');
-                scanData.project_sys_id = projectSysId;
-                scanData.scan_summaries = [];
+        // Apply synchronization rules and return filtered results
+        return this._applySynchronizationRules(scansMap, orderedScanIds, projectsMap, config.scan_synchronization);
+    },
 
-                // Parse branch name from tags field (format: "Branch: main | ...")
-                try {
-                    var tags = scanSummaryGr.getValue('tags') || '';
-                    var branchMatch = /Branch:\s*([^|]*)/.exec(tags);
-                    scanData.scan_branch = branchMatch && branchMatch[1] ? branchMatch[1].trim() : '.unknown';
-                } catch (e) {
-                    gs.warn(this.MSG + " _getFilteredScans: Could not parse branch from tags for scan: " + rawScanId);
-                    scanData.scan_branch = '.unknown';
+    // Helper function: Create project ID batches
+    _createProjectBatches: function(projectSysIds, batchSize) {
+        var projectBatches = [];
+        var currentBatch = [];
+
+        for (var projectIndex = 0; projectIndex < projectSysIds.length; projectIndex++) {
+            currentBatch.push(projectSysIds[projectIndex]);
+
+            if (currentBatch.length === batchSize) {
+                projectBatches.push(currentBatch);
+                currentBatch = [];
+            }
+        }
+
+        // Add remaining projects if any
+        if (currentBatch.length > 0) {
+            projectBatches.push(currentBatch);
+        }
+
+        return projectBatches;
+    },
+
+    // Helper function: Build single encoded query string with proper precedence
+    _buildEncodedQuery: function(projectBatch, config, deltaStartTime) {
+        var queryConditions = [];
+        var maxVulItemTimestamp = new GlideDateTime(this._getMaxVulItemTimestamp() || deltaStartTime);
+
+        // Add base conditions (AND group)
+        queryConditions.push('application_releaseIN' + projectBatch.join(','));
+        queryConditions.push('sys_updated_on>=' + maxVulItemTimestamp.getValue());
+        queryConditions.push('active=true');
+
+        // Build combined filter conditions (OR within single group)
+        var combinedFilters = [];
+
+        // Add engine filters
+        var engineFilters = this._buildEngineFilters(config);
+
+        // Add all engine filters to combined filters
+        for (var engineIndex = 0; engineIndex < engineFilters.length; engineIndex++) {
+            combinedFilters.push(engineFilters[engineIndex]);
+        }
+
+        // Add scan type filters to the same combined group
+        var scanTypeFilters = this._buildScanTypeFilters(config);
+        for (var scanTypeIndex = 0; scanTypeIndex < scanTypeFilters.length; scanTypeIndex++) {
+            combinedFilters.push(scanTypeFilters[scanTypeIndex]);
+        }
+
+        // Add the combined OR group to query conditions
+        if (combinedFilters.length > 0) {
+            queryConditions.push(combinedFilters.join('^OR'));
+        }
+
+        return queryConditions.join('^');
+    },
+
+    // Helper function: Get max sys_updated_on from vulnerable items or null
+    _getMaxVulItemTimestamp: function() {
+        var ga = new GlideAggregate('sn_vul_app_vulnerable_item');
+        ga.addAggregate('MAX', 'sys_updated_on');
+        ga.query();
+        return ga.next() ? ga.getAggregate('MAX', 'sys_updated_on') : null;
+    },
+
+    // Helper function: Build engine filters
+    _buildEngineFilters: function(config) {
+        var engineFilters = [];
+
+        if (config.import_sast === true) engineFilters.push('policyCONTAINSsast');
+        if (config.import_sca === true) engineFilters.push('policyCONTAINSsca');
+        if (config.import_kics === true) engineFilters.push('policyCONTAINSkics');
+        if (config.include_container_security === true) engineFilters.push('policyCONTAINScontainers');
+        if (config.include_api_security === true) engineFilters.push('policyCONTAINSapisec');
+        if (config.include_ossf_scorecard === true) engineFilters.push('policyCONTAINSScoreCard');
+        if (config.include_secret_detection === true) engineFilters.push('policyCONTAINSSecretDetection');
+
+        return engineFilters;
+    },
+
+    // Helper function: Build scan type filters
+    _buildScanTypeFilters: function(config) {
+        if (config.scan_type == null) {
+            return [];
+        }
+
+        var SCAN_TYPE_LABELS = {
+            fullScan: 'Full Scan',
+            incrementalScan: 'Incremental Scan',
+            fastScanMode: 'Fast Scan'
+        };
+
+        var requestedScanTypes = config.scan_type.split(',');
+        var scanTypeQueryClauses = [];
+
+        for (var scanTypeIndex = 0; scanTypeIndex < requestedScanTypes.length; scanTypeIndex++) {
+            var scanType = requestedScanTypes[scanTypeIndex];
+            if (scanType) {
+                scanType = scanType.trim();
+                if (scanType !== '') {
+                    var displayLabel = SCAN_TYPE_LABELS.hasOwnProperty(scanType) ? SCAN_TYPE_LABELS[scanType] : scanType;
+                    scanTypeQueryClauses.push('scan_submitted_byLIKE' + displayLabel);
                 }
+            }
+        }
 
-                // Parse scan type from scan_submitted_by field (format: "...Scan Type: Full Scan...")
-                try {
-                    var submittedBy = scanSummaryGr.getValue('scan_submitted_by') || '';
-                    var typeMatch = /Scan Type:\s*([^\n]*)/.exec(submittedBy);
-                    scanData.scan_type = typeMatch && typeMatch[1] ? typeMatch[1].trim() : 'Unknown';
-                } catch (e) {
-                    gs.warn(this.MSG + " _getFilteredScans: Could not parse scan type from scan_submitted_by for scan: " + rawScanId);
-                    scanData.scan_type = 'Unknown';
-                }
+        return scanTypeQueryClauses;
+    },
 
-                // Map policy string to engine names array
-                try {
-                    var policyString = scanData.policy || '';
-                    var engines = [];
-                    var seenEngines = {};
-                    var engineMap = {
-                        'sast': 'sast',
-                        'sca': 'sca',
-                        'kics': 'kics',
-                        'containers': 'containers',
-                        'apisec': 'apisec',
-                        'ScoreCard': 'sscs-scorecard',
-                        'SecretDetection': 'sscs-secret-detection'
-                    };
+    // Helper function: Process scans for a single batch with optimized pagination
+    _processBatchScans: function(encodedQuery, projectsMap, scansMap, orderedScanIds, batchNumber) {
+        try {
+            var PAGINATION_BATCH_SIZE = 10000;
+            var processedCount = 0;
+            var hasMoreRecords = true;
 
-                    if (policyString) {
-                        var policies = policyString.split(',');
-                        for (var i = 0; i < policies.length; i++) {
-                            var policy = policies[i].trim();
-                            var mappedEngine = engineMap[policy];
-                            if (mappedEngine && !seenEngines[mappedEngine]) {
-                                engines.push(mappedEngine);
-                                seenEngines[mappedEngine] = true;
-                            }
+            while (hasMoreRecords) {
+                // Create fresh GlideRecord for each pagination iteration
+                var gr = new GlideRecord('sn_vul_app_vul_scan_summary');
+                gr.setNoCount(true); // Disable row-count query for performance
+                gr.orderByDesc('last_scan_date');
+                gr.addEncodedQuery(encodedQuery);
+
+                // Define window with explicit start/end bounds
+                var start = processedCount;
+                var end = processedCount + PAGINATION_BATCH_SIZE - 1;
+                gr.chooseWindow(start, end);
+
+                gr.query();
+
+                var currentBatch = 0;
+                while (gr.next()) {
+                    var rawScanId = gr.getValue('source_sdlc_status');
+                    var projectSysId = gr.getValue('application_release');
+
+                    // Skip if scan ID is missing or project not in scope
+                    if (rawScanId == null || projectSysId == null || projectsMap[projectSysId] == null) {
+                        currentBatch++;
+                        continue;
+                    }
+
+                    // Create scan object if first time seeing this rawScanId
+                    if (scansMap[rawScanId] == null) {
+                        var scanDataResult = this._createScanDataObject(gr, projectSysId);
+                        if (scanDataResult) {
+                            scansMap[rawScanId] = scanDataResult;
+                            orderedScanIds.push(rawScanId); // Track insertion order
                         }
                     }
-                    scanData.engines = engines;
-                } catch (e) {
-                    gs.warn(this.MSG + " _getFilteredScans: Could not parse engines from policy for scan: " + rawScanId);
-                    scanData.engines = [];
+                    currentBatch++;
                 }
 
-                scansMap[rawScanId] = scanData;
+                processedCount += currentBatch;
+                hasMoreRecords = (currentBatch === PAGINATION_BATCH_SIZE);
+
+                // Release resources
+                gr = null;
             }
 
-            // Add engine-level summary record to scan
-            var summaryData = {
-                sys_id: scanSummaryGr.getUniqueValue(),
-                source_scan_id: scanSummaryGr.getValue('source_scan_id')
+            return true;
+
+        } catch (error) {
+            gs.error(this.MSG + ' _processBatchScans: Error processing batch ' + batchNumber + ': ' + error);
+            return false;
+        }
+    },
+
+    // Helper function: Create scan data object from GlideRecord
+    _createScanDataObject: function(gr, projectSysId) {
+        try {
+            // scanId serves as the key for this scanData object in scansMap
+            var scanData = {
+                last_scan_date: null,
+                project_sys_id: projectSysId,
+                scan_branch: '',
+                scan_type: ''
             };
-            scansMap[rawScanId].scan_summaries.push(summaryData);
+
+            // Use getValue() for internal consistency
+            scanData.last_scan_date = gr.getValue('last_scan_date');
+
+            // Parse branch name from tags field using constant regex
+            scanData.scan_branch = this._parseBranchFromTags(gr.getValue('tags'));
+
+            // Parse scan type from scan_submitted_by field using constant regex
+            scanData.scan_type = this._parseScanTypeFromSubmittedBy(gr.getValue('scan_submitted_by'));
+
+            return scanData;
+
+        } catch (error) {
+            gs.error(this.MSG + ' _createScanDataObject: Error creating scan data object: ' + error);
+            return null;
+        }
+    },
+
+    // Helper function: Parse branch name from tags field using constant regex
+    _parseBranchFromTags: function(tags) {
+        if (tags == null) {
+            return '.unknown';
         }
 
-        // Apply synchronization rules based on configuration
-        var syncType = config.scan_synchronization;
-        var filteredScans = {};
-
-        if (syncType == 'latest scan across all branches') {
-            var latestScanPerProject = {};
-            for (var scanId in scansMap) {
-                var scan = scansMap[scanId];
-                var projectSysId = scan.project_sys_id;
-                var scanDate = scan.last_scan_date;
-
-                if (!latestScanPerProject[projectSysId] || scanDate > latestScanPerProject[projectSysId].date) {
-                    latestScanPerProject[projectSysId] = {
-                        date: scanDate,
-                        scanId: scanId
-                    };
-                }
+        try {
+            var branchMatch = /Branch:\s*([^|]*)/.exec(tags);
+            if (branchMatch != null && branchMatch[1] != null) {
+                return String(branchMatch[1] || '').trim();
             }
-            for (var projId in latestScanPerProject) {
-                var winningScanId = latestScanPerProject[projId].scanId;
-                filteredScans[winningScanId] = scansMap[winningScanId];
+        } catch (error) {
+            gs.warn(this.MSG + ' _parseBranchFromTags: Could not parse branch from tags. Tags: ' + tags + ' Error: ' + error);
+        }
+
+        return '.unknown';
+    },
+
+    // Helper function: Parse scan type from scan_submitted_by field using constant regex
+    _parseScanTypeFromSubmittedBy: function(submittedBy) {
+        if (submittedBy == null) {
+            return '';
+        }
+
+        try {
+            var typeMatch = /Scan Type:\s*([^\n]*)/.exec(submittedBy);
+            if (typeMatch != null && typeMatch[1] != null) {
+                return String(typeMatch[1] || '').trim();
+            }
+        } catch (error) {
+            gs.warn(this.MSG + ' _parseScanTypeFromSubmittedBy: Could not parse scan type from scan_submitted_by. Error: ' + error);
+        }
+
+        return '';
+    },
+
+    // Helper function: Apply synchronization rules to filter scans
+    _applySynchronizationRules: function(scansMap, orderedScanIds, projectsMap, syncType) {
+        try {
+            var filteredScans = {};
+
+            if (syncType === 'latest scan across all branches') {
+                filteredScans = this._getLatestScanAcrossAllBranches(scansMap, orderedScanIds);
+            } else if (syncType === 'latest scan of primary branch') {
+                filteredScans = this._getLatestScanOfPrimaryBranch(scansMap, orderedScanIds, projectsMap);
+            } else if (syncType === 'latest scan from each branch') {
+                filteredScans = this._getLatestScanFromEachBranch(scansMap, orderedScanIds);
             }
 
-        } else if (syncType == 'latest scan of primary branch') {
-            var latestScanPerPrimaryBranch = {};
-            for (var scanId in scansMap) {
-                var scan = scansMap[scanId];
+            return filteredScans;
+
+        } catch (error) {
+            gs.error(this.MSG + ' _applySynchronizationRules: Error applying scan synchronization rules: ' + error);
+            return {};
+        }
+    },
+
+    // Abstract utility: Filter scans by predicate to reduce duplication
+    _filterByPredicate: function(scansMap, orderedIds, predicate) {
+        var result = {};
+        var done = {};
+
+        for (var i = 0; i < orderedIds.length; i++) {
+            var id = orderedIds[i];
+            var scan = scansMap[id];
+
+            if (scan && !done[scan.project_sys_id] && predicate(scan)) {
+                result[id] = scan;
+                done[scan.project_sys_id] = true;
+            }
+        }
+
+        return result;
+    },
+
+    // Helper function: Get latest scan across all branches per project
+    _getLatestScanAcrossAllBranches: function(scansMap, orderedIds) {
+        // Returns the most recent scan for each project, regardless of branch
+        try {
+            return this._filterByPredicate(scansMap, orderedIds, function() {
+                return true; // Accept all scans
+            });
+        } catch (error) {
+            gs.error(this.MSG + ' _getLatestScanAcrossAllBranches: Failed to process latest scans across all branches: ' + error);
+            return {};
+        }
+    },
+
+    // Helper function: Get latest scan of primary branch per project
+    _getLatestScanOfPrimaryBranch: function(scansMap, orderedIds, projectsMap) {
+        // Returns the most recent scan from each project's primary branch only
+        try {
+            return this._filterByPredicate(scansMap, orderedIds, function(scan) {
                 var project = projectsMap[scan.project_sys_id];
-
-                if (project && project.primary_branch && scan.scan_branch === project.primary_branch) {
-                    var projectSysId = scan.project_sys_id;
-                    var scanDate = scan.last_scan_date;
-
-                    if (!latestScanPerPrimaryBranch[projectSysId] || scanDate > latestScanPerPrimaryBranch[projectSysId].date) {
-                        latestScanPerPrimaryBranch[projectSysId] = {
-                            date: scanDate,
-                            scanId: scanId
-                        };
-                    }
-                }
-            }
-            for (var projId in latestScanPerPrimaryBranch) {
-                var winningScanId = latestScanPerPrimaryBranch[projId].scanId;
-                filteredScans[winningScanId] = scansMap[winningScanId];
-            }
-
-        } else if (syncType == 'latest scan from each branch') {
-            var latestScanPerBranch = {};
-            for (var scanId in scansMap) {
-                var scan = scansMap[scanId];
-                var branchKey = scan.project_sys_id + '_' + scan.scan_branch;
-                var scanDate = scan.last_scan_date;
-
-                if (!latestScanPerBranch[branchKey] || scanDate > latestScanPerBranch[branchKey].date) {
-                    latestScanPerBranch[branchKey] = {
-                        date: scanDate,
-                        scanId: scanId
-                    };
-                }
-            }
-            for (var key in latestScanPerBranch) {
-                var winningScanId = latestScanPerBranch[key].scanId;
-                filteredScans[winningScanId] = scansMap[winningScanId];
-            }
-
+                return project != null && project.primary_branch != null && scan.scan_branch === project.primary_branch;
+            });
+        } catch (error) {
+            gs.error(this.MSG + ' _getLatestScanOfPrimaryBranch: Failed to process latest scans from primary branches: ' + error);
+            return {};
         }
-        return filteredScans;
+    },
+
+    // Helper function: Get latest scan from each branch per project
+    _getLatestScanFromEachBranch: function(scansMap, orderedIds) {
+        // Returns the most recent scan for each unique project-branch combination
+        try {
+            var seen = {};
+            return this._filterByPredicate(scansMap, orderedIds, function(scan) {
+                var key = scan.project_sys_id + '|' + scan.scan_branch;
+                if (seen[key]) {
+                    return false;
+                }
+                seen[key] = true;
+                return true;
+            });
+        } catch (error) {
+            gs.error(this.MSG + ' _getLatestScanFromEachBranch: Failed to process latest scans from each branch: ' + error);
+            return {};
+        }
     },
 
     // Gets the start time of the integration
@@ -1008,13 +1157,15 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         return delta;
     },
 
-    //to get offset (50 items at a time)
+    //to get offset (config.limit items at a time)
     _getoffsets: function(appId, scans) {
         var offsets = [];
         var offset = 0;
+        var config = this.UTIL._getConfig(this.IMPLEMENTATION);
         var includeApiSecurity = this.UTIL.importApiSecurityFlaw(this.IMPLEMENTATION);
         var reportLength = this.UTIL.getTotalVulcount(this.IMPLEMENTATION, scans);
-        var loopLength = reportLength / 50;
+        var limit = config.limit;
+        var loopLength = reportLength / limit;
         //in result api offset value start from 0 and increment by 1, here it acts like page instead of number of item like other api
         for (var i = 0; i <= parseInt(loopLength); i++) {
             offset += 1;
@@ -1027,7 +1178,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         if (includeApiSecurity) {
             var pageNumber = 0;
             var apiSecLength = this.UTIL.getApiSecVulCount(this.IMPLEMENTATION, scans);
-            var apiSec_loopLength = apiSecLength / 50;
+            var apiSec_loopLength = apiSecLength / limit;
             if (apiSecLength > 0) {
                 for (var j = 0; j <= parseInt(apiSec_loopLength) + 1; j++) {
                     pageNumber = j * -1;
@@ -1086,16 +1237,16 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         var deletedProjectIds = [];
         var descriptionPrefix = "created at";
 
-        var avit = new sn_vul.PagedGlideRecord('sn_vul_app_release');
-        avit.addEncodedQuery('source=Checkmarx One' + '^source_app_idNOT IN' + GlideStringUtil.escapeQueryTermSeparator(recentScanProjectIds.join(',')));
-        avit.setSortField("sys_id");
+        var appReleaseGr = new GlideRecord('sn_vul_app_release');
+        appReleaseGr.addEncodedQuery('integration=' + this.INTEGRATION_ID + '^source_app_idNOT IN' + GlideStringUtil.escapeQueryTermSeparator(recentScanProjectIds.join(',')));
+        appReleaseGr.query();
 
-        while (avit.next()) {
-            var sourceAppId = avit.gr.getValue('source_app_id');
-            var description = avit.gr.getValue('description');
+        while (appReleaseGr.next()) {
+            var sourceAppId = appReleaseGr.gr.getValue('source_app_id');
+            var description = appReleaseGr.gr.getValue('description') || '';
 
             try {
-                var dateStr = description.substring(descriptionPrefix.length).trim();
+                var dateStr = String(description.substring(descriptionPrefix.length) || '').trim();
                 var createdAt = new GlideDateTime();
                 createdAt.setValue(this.UTIL.parseDate(dateStr));
 
@@ -1112,44 +1263,38 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 
     // Updates the active field to false in discovered applications
     _handleAppReleaseForDeletedProjects: function(projectIdsToSkip) {
-        var updatedCount = 0;
-        var avit = new sn_vul.PagedGlideRecord('sn_vul_app_release');
-        avit.addEncodedQuery('source=Checkmarx One^active=true' + '^source_app_idIN' + GlideStringUtil.escapeQueryTermSeparator(projectIdsToSkip.join(',')));
-        avit.setSortField("sys_id");
+        var appReleaseGr = new GlideRecord('sn_vul_app_release');
+        appReleaseGr.addEncodedQuery('integration=' + this.INTEGRATION_ID + '^active=true' + '^source_app_idIN' + GlideStringUtil.escapeQueryTermSeparator(projectIdsToSkip.join(',')));
+        appReleaseGr.query();
 
-        while (avit.next()) {
-            avit.gr.update('active', 'false');
-            updatedCount++;
+        while (appReleaseGr.next()) {
+            appReleaseGr.gr.update('active', 'false');
         }
     },
 
     // Updates the active field to false in scan summary
     _handleScanSummaryForDeletedProjects: function(projectIdsToSkip) {
-        var updatedCount = 0;
-        var avit = new sn_vul.PagedGlideRecord('sn_vul_app_vul_scan_summary');
-        avit.addEncodedQuery('source=Checkmarx One^active=true' + '^application_release.source_app_idIN' + GlideStringUtil.escapeQueryTermSeparator(projectIdsToSkip.join(',')));
-        avit.setSortField("sys_id");
+        var scanSummaryGr = new GlideRecord('sn_vul_app_vul_scan_summary');
+        scanSummaryGr.addEncodedQuery('integration=' + this.INTEGRATION_ID + '^active=true' + '^application_release.source_app_idIN' + GlideStringUtil.escapeQueryTermSeparator(projectIdsToSkip.join(',')));
+        scanSummaryGr.query();
 
-        while (avit.next()) {
-            avit.gr.update('active', 'false');
-            updatedCount++;
+        while (scanSummaryGr.next()) {
+            scanSummaryGr.gr.update('active', 'false');
         }
     },
 
     // Close-Skipped AVIs for deleted projects
     _closeSkippedAVIsForDeletedProjects: function(projectIdsToSkip) {
-        var updatedCount = 0;
-        var avit = new sn_vul.PagedGlideRecord('sn_vul_app_vulnerable_item');
-        avit.addEncodedQuery('source=Checkmarx One' +
+        var avitGr = new GlideRecord('sn_vul_app_vulnerable_item');
+        avitGr.addEncodedQuery('integration=' + this.INTEGRATION_ID +
             '^application_release.source_app_idIN' + GlideStringUtil.escapeQueryTermSeparator(projectIdsToSkip.join(',')) +
             '^state!=3');
-        avit.setSortField("sys_id");
+        avitGr.query();
 
-        while (avit.next()) {
-            avit.gr.setValue('source_remediation_status', 'SKIPPED');
-            avit.gr.setValue('state', 3);
-            avit.gr.update('substate', 7);
-            updatedCount++;
+        while (avitGr.next()) {
+            avitGr.gr.setValue('source_remediation_status', 'SKIPPED');
+            avitGr.gr.setValue('state', 3);
+            avitGr.gr.update('substate', 7);
         }
     },
 
