@@ -161,7 +161,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         if (scan_type == 'static') {
                             var resultHash = '';
                             var childIter = node.getChildNodeIterator();
-                            while (childIter.hasNext) {
+                            while (childIter.hasNext()) {
                                 var childNode = childIter.next();
                                 if (childNode.getNodeName() == "resultHash") {
                                     resultHash = childNode.getTextContent();
@@ -214,7 +214,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                             similarityIdToUpsert = secretDetectionAvitId;
                             var remediation = '';
                             var remediationIter = node.getChildNodeIterator();
-                            while (remediationIter.hasNext) {
+                            while (remediationIter.hasNext()) {
                                 var remediationNode = remediationIter.next();
                                 if (remediationNode.getNodeName() == "remediation") {
                                     remediation = remediationNode.getTextContent();
