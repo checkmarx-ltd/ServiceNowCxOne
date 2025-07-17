@@ -624,11 +624,22 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 
                 // Initialize delta load timestamp
                 this.LATEST = new GlideDateTime(this.DELTA_START_TIME || '1970-01-01 00:00:00');
+                var lastAVITUpdateTime = new GlideDateTime(this._getLastAVITUpdateTime() || this.LATEST);
                 var config = this.UTIL._getConfig(this.IMPLEMENTATION);
 
                 // Use the new functions to get filtered projects and scans
                 var projects = this._getFilteredProjects(config, this.LATEST);
-                var scans = this._getFilteredScans(projects, config, this.LATEST);
+                var scans = this._getFilteredScans(projects, config, lastAVITUpdateTime);
+
+                // Log info if projects object is empty
+                if (!projects || Object.keys(projects).length === 0) {
+                    gs.info(this.MSG + ' _getParameters: No new or updated projects found since last synchronization on ' + this.LATEST.getValue());
+                }
+
+                // Log info if scans object is empty
+                if (!scans || Object.keys(scans).length === 0) {
+                    gs.info(this.MSG + ' _getParameters: No new or updated scans found since last synchronization on ' + lastAVITUpdateTime.getValue());
+                }
 
                 // Handle Auto-Close for Deleted Projects (if enabled)
                 if (config.close_findings_of_deleted_projects) {
@@ -721,7 +732,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         var queryConditions = [];
         queryConditions.push('integration=' + this.INTEGRATION_ID);
         queryConditions.push('active=true');
-        queryConditions.push('sys_updated_on>=' + deltaStartTime.getDisplayValueInternal());
+        queryConditions.push('sys_updated_on>=' + deltaStartTime.getValue());
 
         var filterType = config.filter_project;
 
@@ -796,7 +807,8 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
     },
 
     // Retrieves filtered scan summaries based on project scope, delta time, and synchronization rules
-    _getFilteredScans: function(projectsMap, config, deltaStartTime) {
+    _getFilteredScans: function(projectsMap, config, lastAVITUpdateTime) {
+        if (!projectsMap) return {};
         var projectSysIds = Object.keys(projectsMap);
         var MAX_PROJECTS_PER_QUERY = 1000;
 
@@ -806,7 +818,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         }
 
         var batchSize = MAX_PROJECTS_PER_QUERY;
-        var projectBatches = this._createProjectBatches(projectSysIds, batchSize);
+        var projectBatches = this._createProjectBatches(projectSysIds, batchSize); // Array of array ({{},{},...}) 
         var scansMap = {};
         var orderedScanIds = []; // Track insertion order for synchronization
 
@@ -814,23 +826,26 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         for (var projectBatchIndex = 0; projectBatchIndex < projectBatches.length; projectBatchIndex++) {
             var currentBatch = projectBatches[projectBatchIndex];
 
-            var encodedQuery = this._buildEncodedQuery(currentBatch, config, deltaStartTime);
+            var encodedQuery = this._buildEncodedQuery(currentBatch, config, lastAVITUpdateTime);
             if (!encodedQuery) {
                 gs.warn(this.MSG + ' _getFilteredScans: No valid encoded query built for internal projects batch ' + (projectBatchIndex + 1));
                 continue;
             }
 
-            var batchResult = this._processBatchScans(encodedQuery, projectsMap, scansMap, orderedScanIds, projectBatchIndex + 1);
+            var batchResult = this._processBatchScans(encodedQuery, projectsMap, projectBatchIndex + 1);
             if (!batchResult) {
                 gs.warn(this.MSG + ' _getFilteredScans: Batch ' + (projectBatchIndex + 1) + ' processing failed, continuing with next internal projects batch');
             }
+
+            // Merge batch results (scansMap and orderedScanIds) into main collections
+            this._mergeBatchResults(scansMap, orderedScanIds, batchResult.scansMap, batchResult.orderedScanIds);
         }
 
         // Apply synchronization rules and return filtered results
         return this._applySynchronizationRules(scansMap, orderedScanIds, projectsMap, config.scan_synchronization);
     },
 
-    // Helper function: Create project ID batches
+    // Create project ID batches
     _createProjectBatches: function(projectSysIds, batchSize) {
         var projectBatches = [];
         var currentBatch = [];
@@ -852,14 +867,14 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         return projectBatches;
     },
 
-    // Helper function: Build single encoded query string with proper precedence
-    _buildEncodedQuery: function(projectBatch, config, deltaStartTime) {
+    // Build single encoded query string with proper precedence
+    _buildEncodedQuery: function(projectBatch, config, lastAVITUpdateTime) {
         var queryConditions = [];
-        var maxVulItemTimestamp = new GlideDateTime(this._getMaxVulItemTimestamp() || deltaStartTime);
 
         // Add base conditions (AND group)
+        queryConditions.push('integration=' + this.INTEGRATION_ID);
         queryConditions.push('application_releaseIN' + projectBatch.join(','));
-        queryConditions.push('sys_updated_on>=' + maxVulItemTimestamp.getValue());
+        queryConditions.push('sys_updated_on>=' + lastAVITUpdateTime.getValue());
         queryConditions.push('active=true');
 
         // Build combined filter conditions (OR within single group)
@@ -887,15 +902,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         return queryConditions.join('^');
     },
 
-    // Helper function: Get max sys_updated_on from vulnerable items or null
-    _getMaxVulItemTimestamp: function() {
-        var ga = new GlideAggregate('sn_vul_app_vulnerable_item');
-        ga.addAggregate('MAX', 'sys_updated_on');
-        ga.query();
-        return ga.next() ? ga.getAggregate('MAX', 'sys_updated_on') : null;
-    },
-
-    // Helper function: Build engine filters
+    // Build engine filters
     _buildEngineFilters: function(config) {
         var engineFilters = [];
 
@@ -910,7 +917,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         return engineFilters;
     },
 
-    // Helper function: Build scan type filters
+    // Build scan type filters
     _buildScanTypeFilters: function(config) {
         if (config.scan_type == null) {
             return [];
@@ -939,12 +946,15 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         return scanTypeQueryClauses;
     },
 
-    // Helper function: Process scans for a single batch with optimized pagination
-    _processBatchScans: function(encodedQuery, projectsMap, scansMap, orderedScanIds, batchNumber) {
+    // Process scans for a single batch with optimized pagination
+    _processBatchScans: function(encodedQuery, projectsMap, orderedScanIds, batchNumber) {
         try {
             var PAGINATION_BATCH_SIZE = 10000;
             var processedCount = 0;
             var hasMoreRecords = true;
+
+            var batchScansMap = {};
+            var batchOrderedScanIds = [];
 
             while (hasMoreRecords) {
                 // Create fresh GlideRecord for each pagination iteration
@@ -972,11 +982,11 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                     }
 
                     // Create scan object if first time seeing this rawScanId
-                    if (scansMap[rawScanId] == null) {
+                    if (batchScansMap[rawScanId] == null) {
                         var scanDataResult = this._createScanDataObject(gr, projectSysId);
                         if (scanDataResult) {
-                            scansMap[rawScanId] = scanDataResult;
-                            orderedScanIds.push(rawScanId); // Track insertion order
+                            batchScansMap[rawScanId] = scanDataResult;
+                            batchOrderedScanIds.push(rawScanId); // Track insertion order
                         }
                     }
                     currentBatch++;
@@ -989,15 +999,39 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                 gr = null;
             }
 
-            return true;
+            // Return batch results
+            return {
+                scansMap: batchScansMap,
+                orderedScanIds: batchOrderedScanIds,
+                success: true
+            };
 
         } catch (error) {
             gs.error(this.MSG + ' _processBatchScans: Error processing batch ' + batchNumber + ': ' + error);
-            return false;
+            return {
+                scansMap: {},
+                orderedScanIds: [],
+                success: false
+            };
         }
     },
 
-    // Helper function: Create scan data object from GlideRecord
+    // Explicitly merge batch results into main collections
+    _mergeBatchResults: function(mainScansMap, mainOrderedScanIds, batchScansMap, batchOrderedScanIds) {
+        // Merge scans map
+        for (var scanId in batchScansMap) {
+            if (batchScansMap.hasOwnProperty(scanId)) {
+                mainScansMap[scanId] = batchScansMap[scanId];
+            }
+        }
+
+        // Merge ordered scan IDs
+        for (var i = 0; i < batchOrderedScanIds.length; i++) {
+            mainOrderedScanIds.push(batchOrderedScanIds[i]);
+        }
+    },
+
+    // Create scan data object from GlideRecord
     _createScanDataObject: function(gr, projectSysId) {
         try {
             // scanId serves as the key for this scanData object in scansMap
@@ -1025,7 +1059,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         }
     },
 
-    // Helper function: Parse branch name from tags field using constant regex
+    // Parse branch name from tags field using constant regex
     _parseBranchFromTags: function(tags) {
         if (tags == null) {
             return '.unknown';
@@ -1043,7 +1077,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         return '.unknown';
     },
 
-    // Helper function: Parse scan type from scan_submitted_by field using constant regex
+    // Parse scan type from scan_submitted_by field using constant regex
     _parseScanTypeFromSubmittedBy: function(submittedBy) {
         if (submittedBy == null) {
             return '';
@@ -1061,7 +1095,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         return '';
     },
 
-    // Helper function: Apply synchronization rules to filter scans
+    // Apply synchronization rules to filter scans
     _applySynchronizationRules: function(scansMap, orderedScanIds, projectsMap, syncType) {
         try {
             var filteredScans = {};
@@ -1082,7 +1116,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         }
     },
 
-    // Abstract utility: Filter scans by predicate to reduce duplication
+    // Filter scans by predicate to reduce duplication
     _filterByPredicate: function(scansMap, orderedIds, predicate) {
         var result = {};
         var done = {};
@@ -1100,7 +1134,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         return result;
     },
 
-    // Helper function: Get latest scan across all branches per project
+    // Get latest scan across all branches per project
     _getLatestScanAcrossAllBranches: function(scansMap, orderedIds) {
         // Returns the most recent scan for each project, regardless of branch
         try {
@@ -1113,7 +1147,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         }
     },
 
-    // Helper function: Get latest scan of primary branch per project
+    // Get latest scan of primary branch per project
     _getLatestScanOfPrimaryBranch: function(scansMap, orderedIds, projectsMap) {
         // Returns the most recent scan from each project's primary branch only
         try {
@@ -1127,7 +1161,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         }
     },
 
-    // Helper function: Get latest scan from each branch per project
+    // Get latest scan from each branch per project
     _getLatestScanFromEachBranch: function(scansMap, orderedIds) {
         // Returns the most recent scan for each unique project-branch combination
         try {
@@ -1155,6 +1189,14 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             throw err;
         }
         return delta;
+    },
+
+    // Get max sys_updated_on from vulnerable items or null
+    _getLastAVITUpdateTime: function() {
+        var ga = new GlideAggregate('sn_vul_app_vulnerable_item');
+        ga.addAggregate('MAX', 'sys_updated_on');
+        ga.query();
+        return ga.next() ? ga.getAggregate('MAX', 'sys_updated_on') : null;
     },
 
     //to get offset (config.limit items at a time)
