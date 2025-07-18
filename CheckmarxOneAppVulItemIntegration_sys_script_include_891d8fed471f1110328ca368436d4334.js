@@ -908,10 +908,10 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 
         if (config.import_sast === true) engineFilters.push('policyCONTAINSsast');
         if (config.import_sca === true) engineFilters.push('policyCONTAINSsca');
-        if (config.import_kics === true) engineFilters.push('policyCONTAINSkics');
-        if (config.include_container_security === true) engineFilters.push('policyCONTAINScontainers');
+        if (config.import_kics === true) engineFilters.push('policyCONTAINSIaC');
+        if (config.include_container_security === true) engineFilters.push('policyCONTAINSCS');
         if (config.include_api_security === true) engineFilters.push('policyCONTAINSapisec');
-        if (config.include_ossf_scorecard === true) engineFilters.push('policyCONTAINSScoreCard');
+        if (config.include_ossf_scorecard === true) engineFilters.push('policyCONTAINSScorecard');
         if (config.include_secret_detection === true) engineFilters.push('policyCONTAINSSecretDetection');
 
         return engineFilters;
