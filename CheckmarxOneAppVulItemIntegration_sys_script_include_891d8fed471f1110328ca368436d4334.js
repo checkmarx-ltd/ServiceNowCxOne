@@ -44,6 +44,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                 engines = result.engines;
                 applicationIds += result["applicationIds"];
                 var primaryBranch = result["primaryBranch"];
+                var shouldProcessSast = result["should_process_sast"] === 'true';
                 var config = this.UTIL._getConfig(this.IMPLEMENTATION);
                 var resultState = config.result_states;
                 var resultStateFilter = false;
@@ -66,7 +67,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             if (params.run) {
                 // For ApiSec, offset is passed as negative
                 if (offset > 0) {
-                    response = this.getDetailedReport(scanId, params.run[Object.keys(params.run)[0]], lastscandate, appname, branch, appId, applicationIdsStr, engines, severity, resultStateFilter, result_state_array);
+                    response = this.getDetailedReport(scanId, params.run[Object.keys(params.run)[0]], lastscandate, appname, branch, appId, applicationIdsStr, engines, severity, resultStateFilter, result_state_array, shouldProcessSast);
                     if (response == "<null/>") {
                         xml_response = '<scanResults><Results></Results><ApiSecResults></ApiSecResults></scanResults>';
                     } else {
@@ -127,7 +128,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         };
     },
 
-    getDetailedReport: function(scanId, offset, lastscandate, appname, branch, appId, applicationIdsStr, engines, severity, resultStateFilter, result_state_array) {
+    getDetailedReport: function(scanId, offset, lastscandate, appname, branch, appId, applicationIdsStr, engines, severity, resultStateFilter, result_state_array, shouldProcessSast) {
         try {
             var includesca = this.UTIL.importScaFlaw(this.IMPLEMENTATION);
             var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
@@ -172,7 +173,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             for (item in jsonLastScanReportResp.results) {
                 if (((resultStateFilter == true && (result_state_array.indexOf(jsonLastScanReportResp.results[item].state.toUpperCase()) != -1)) ||
                         resultStateFilter == false)) {
-                    if (includesast == true && jsonLastScanReportResp.results[item].type == "sast") {
+                    if (includesast == true && jsonLastScanReportResp.results[item].type == "sast" && shouldProcessSast == true) {
                         var isSastScanIncluded = 'false';
                         var scanTypeToCheck = '';
                         var sastseverity = jsonLastScanReportResp.results[item].severity;
@@ -674,7 +675,8 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                         scanbranch: scan.scan_branch || '',
                         appId: project.source_app_id || '',
                         applicationIds: project.application_ids || '',
-                        primaryBranch: project.primary_branch || ''
+                        primaryBranch: project.primary_branch || '',
+                        shouldProcessSast: scan.should_process_sast
                     };
 
                     // Build parameter string from scan object
@@ -713,14 +715,15 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             return null;
         }
 
-        // Build semicolon-separated parameter string (without engines)
+        // Build semicolon-separated parameter string
         return 'scanId=' + (scanObject.scanId || '') +
             '; last_scan_date=' + (scanObject.last_scan_date || '') +
             '; appname=' + (scanObject.appname || '') +
             '; scanbranch=' + (scanObject.scanbranch || '') +
             '; appId=' + (scanObject.appId || '') +
             '; applicationIds=' + (scanObject.applicationIds || '') +
-            '; primaryBranch=' + (scanObject.primaryBranch || '');
+            '; primaryBranch=' + (scanObject.primaryBranch || '') +
+            '; shouldProcessSast=' + scanObject.should_process_sast;
     },
 
     // Retrieves filtered projects based on delta start time and user-configured filters (ID or name/regex)
@@ -827,6 +830,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             var currentBatch = projectBatches[projectBatchIndex];
 
             var encodedQuery = this._buildEncodedQuery(currentBatch, config, lastAVITUpdateTime);
+
             if (!encodedQuery) {
                 gs.warn(this.MSG + ' _getFilteredScans: No valid encoded query built for internal projects batch ' + (projectBatchIndex + 1));
                 continue;
@@ -956,6 +960,10 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             var batchScansMap = {};
             var batchOrderedScanIds = [];
 
+            // For determining if SAST should be processed based on config
+            var config = this.UTIL._getConfig(this.IMPLEMENTATION);
+            var includesast = this.UTIL.importSastFlaw(this.IMPLEMENTATION);
+
             while (hasMoreRecords) {
                 // Create fresh GlideRecord for each pagination iteration
                 var gr = new GlideRecord('sn_vul_app_vul_scan_summary');
@@ -974,6 +982,9 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                 while (gr.next()) {
                     var rawScanId = gr.getValue('source_sdlc_status');
                     var projectSysId = gr.getValue('application_release');
+                    var engines = gr.getValue('policy') || '';
+                    var sourceScanId = gr.getValue('source_scan_id') || '';
+                    var shouldProcessSast = true;
 
                     // Skip if scan ID is missing or project not in scope
                     if (rawScanId == null || projectSysId == null || projectsMap[projectSysId] == null) {
@@ -981,9 +992,14 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                         continue;
                     }
 
+                    // Skip processing SAST if included in config and engine includes 'sast', and sourceScanId does NOT start with 'sast'
+                    if (config.scan_type && includesast && engines.indexOf('sast') !== -1 && sourceScanId.indexOf('sast') !== 0) {
+                        shouldProcessSast = false;
+                    }
+
                     // Create scan object if first time seeing this rawScanId
                     if (batchScansMap[rawScanId] == null) {
-                        var scanDataResult = this._createScanDataObject(gr, projectSysId);
+                        var scanDataResult = this._createScanDataObject(gr, projectSysId, shouldProcessSast);
                         if (scanDataResult) {
                             batchScansMap[rawScanId] = scanDataResult;
                             batchOrderedScanIds.push(rawScanId); // Track insertion order
@@ -1032,14 +1048,15 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
     },
 
     // Create scan data object from GlideRecord
-    _createScanDataObject: function(gr, projectSysId) {
+    _createScanDataObject: function(gr, projectSysId, shouldProcessSast) {
         try {
             // scanId serves as the key for this scanData object in scansMap
             var scanData = {
                 last_scan_date: null,
                 project_sys_id: projectSysId,
                 scan_branch: '',
-                scan_type: ''
+                scan_type: '',
+                should_process_sast: shouldProcessSast
             };
 
             // Use getValue() for internal consistency
