@@ -178,7 +178,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                 }
 
                 //kics scan summary
-                if (includekics && engines.indexOf("kics") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
+                if (includekics && engines.indexOf("IaC") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
                     var kicsresponsevul = this.UTIL.getKicsScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
                     var scanType = "Full Scan";
                     if (kicsresponsevul != -1) {
@@ -197,7 +197,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                 }
 
                 //Container Security scan summary
-                if (includeContainerSecurity && engines.indexOf("containers") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
+                if (includeContainerSecurity && engines.indexOf("CS") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
                     var containerSecurityResponseVul = this.UTIL.getContainerSecurityScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
                     var container_scanType = "Full Scan";
                     if (containerSecurityResponseVul != -1) {
@@ -234,7 +234,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                     }
                 }
                 //OSSF Scorecard scan summary
-                if (includeScoreCard && engines.indexOf("microengines") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
+                if (includeScoreCard && engines.indexOf("Scorecard") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
                     var scorecardResponseVul = this.UTIL.getScoreCardScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
                     var scorecard_scanType = "Full Scan";
                     if (scorecardResponseVul != -1) {
@@ -253,7 +253,7 @@ CheckmarxOneScanSummaryIntegration.prototype = Object.extendsObject(sn_vul.Appli
                 }
 
                 //secretDetection scan summary
-                if (includeSecretDetection && engines.indexOf("microengines") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
+                if (includeSecretDetection && engines.indexOf("SecretDetection") != -1 && branch.indexOf(jsonLastScanSummResp.scans[item].branch) == -1) {
                     var secretDetectionResponseVul = this.UTIL.getSecretDetectionScanSummaryInfo(this.IMPLEMENTATION, jsonLastScanSummResp.scans[item].id);
                     var secretDetection_scanType = "Full Scan";
                     if (secretDetectionResponseVul != -1) {
