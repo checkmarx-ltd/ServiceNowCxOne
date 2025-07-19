@@ -723,7 +723,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
             '; appId=' + (scanObject.appId || '') +
             '; applicationIds=' + (scanObject.applicationIds || '') +
             '; primaryBranch=' + (scanObject.primaryBranch || '') +
-            '; shouldProcessSast=' + scanObject.should_process_sast;
+            '; shouldProcessSast=' + scanObject.shouldProcessSast;
     },
 
     // Retrieves filtered projects based on delta start time and user-configured filters (ID or name/regex)
