@@ -1340,7 +1340,8 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         appReleaseGr.query();
 
         while (appReleaseGr.next()) {
-            appReleaseGr.update('active', 'false');
+            appReleaseGr.setValue('active', false);
+            appReleaseGr.update();
         }
     },
 
@@ -1351,7 +1352,8 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
         scanSummaryGr.query();
 
         while (scanSummaryGr.next()) {
-            scanSummaryGr.update('active', 'false');
+            scanSummaryGr.setValue('active', false);
+            scanSummaryGr.update();
         }
     },
 
