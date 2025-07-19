@@ -44,7 +44,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                 engines = result.engines;
                 applicationIds += result["applicationIds"];
                 var primaryBranch = result["primaryBranch"];
-                var shouldProcessSast = result["should_process_sast"] === 'true';
+                var shouldProcessSast = result["shouldProcessSast"] === 'true';
                 var config = this.UTIL._getConfig(this.IMPLEMENTATION);
                 var resultState = config.result_states;
                 var resultStateFilter = false;
@@ -1004,6 +1004,8 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             batchScansMap[rawScanId] = scanDataResult;
                             batchOrderedScanIds.push(rawScanId); // Track insertion order
                         }
+                    } else if (!shouldProcessSast && batchScansMap[rawScanId].should_process_sast) {
+                        batchScansMap[rawScanId].should_process_sast = false;
                     }
                     currentBatch++;
                 }
@@ -1179,18 +1181,29 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
     },
 
     // Get latest scan from each branch per project
-    _getLatestScanFromEachBranch: function(scansMap, orderedIds) {
-        // Returns the most recent scan for each unique project-branch combination
+    _getLatestScanFromEachBranch: function(scansMap, orderedScanIds) {
         try {
-            var seen = {};
-            return this._filterByPredicate(scansMap, orderedIds, function(scan) {
-                var key = scan.project_sys_id + '|' + scan.scan_branch;
-                if (seen[key]) {
-                    return false;
+            var filteredScans = {};
+            var seenBranches = {};
+
+            // Process scans in order (newest first) - keep first occurrence of each project-branch combo
+            for (var i = 0; i < orderedScanIds.length; i++) {
+                var scanId = orderedScanIds[i];
+                var scan = scansMap[scanId];
+
+                if (scan) {
+                    var branchKey = scan.project_sys_id + '|' + scan.scan_branch;
+
+                    // Only keep the first (latest) scan for each project-branch combination
+                    if (!seenBranches[branchKey]) {
+                        filteredScans[scanId] = scan;
+                        seenBranches[branchKey] = true;
+                    }
                 }
-                seen[key] = true;
-                return true;
-            });
+            }
+
+            return filteredScans;
+
         } catch (error) {
             gs.error(this.MSG + ' _getLatestScanFromEachBranch: Failed to process latest scans from each branch: ' + error);
             return {};
