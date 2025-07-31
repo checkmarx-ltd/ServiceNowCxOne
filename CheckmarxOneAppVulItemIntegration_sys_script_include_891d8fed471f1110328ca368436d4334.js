@@ -210,7 +210,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 
             for (item in jsonLastScanReportResp.results) {
                 if (((resultStateFilter == true && (result_state_array.indexOf(jsonLastScanReportResp.results[item].state.toUpperCase()) != -1)) ||
-                        resultStateFilter == false)) {
+                    resultStateFilter == false)) {
                     if (includesast == true && jsonLastScanReportResp.results[item].type == "sast") {
                         var isSastScanIncluded = 'false';
                         var scanTypeToCheck = '';
@@ -247,6 +247,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             '" sourcefile="' + apibaseurl + '/results/' + scanId + '/' + appId + '/sast' +
                             '" cvssVector="' + cvssVector +
                             '" first_found_date="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt) +
+                            '" found_at="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].foundAt) +
                             '" state="' + jsonLastScanReportResp.results[item].state +
                             '" status="' + jsonLastScanReportResp.results[item].status +
                             '" app_id="' + appId +
@@ -288,6 +289,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             '" category_name="' + jsonLastScanReportResp.results[item].vulnerabilityDetails.cweId +
                             '" source_severity="' + jsonLastScanReportResp.results[item].severity +
                             '" first_found_date="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt) +
+                            '" found_at="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].foundAt) +
                             '" state="' + jsonLastScanReportResp.results[item].state +
                             '" status="' + jsonLastScanReportResp.results[item].status +
                             '" package_unique_id="' + sca_packageID +
@@ -325,6 +327,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             '" sourcefile="' + apibaseurl + '/results/' + scanId + '/' + appId + '/kics' +
                             '" cvssVector="' + cvssVector +
                             '" first_found_date="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt) +
+                            '" found_at="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].foundAt) +
                             '" state="' + jsonLastScanReportResp.results[item].state +
                             '" status="' + jsonLastScanReportResp.results[item].status +
                             '" app_id="' + appId +
@@ -363,6 +366,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             '" sourcefile="' + apibaseurl + '/container-security-results/' + appId + '/' + scanId + '/results/' +
                             '" cvssVector="' + access_vector +
                             '" first_found_date="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt) +
+                            '" found_at="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].foundAt) +
                             '" state="' + jsonLastScanReportResp.results[item].state +
                             '" status="' + jsonLastScanReportResp.results[item].status +
                             '" app_id="' + appId +
@@ -393,6 +397,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             '" sourcefile="' + apibaseurl + '/results/' + scanId + '/' + appId + '/kics' +
                             '" cvssVector="' + cvssVector +
                             '" first_found_date="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt) +
+                            '" found_at="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].foundAt) +
                             '" state="' + jsonLastScanReportResp.results[item].state +
                             '" status="' + jsonLastScanReportResp.results[item].status +
                             '" app_id="' + appId +
@@ -427,6 +432,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
                             '" sourcefile="' + apibaseurl + '/results/' + scanId + '/' + appId + '/kics' +
                             '" cvssVector="' + cvssVector +
                             '" first_found_date="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].firstFoundAt) +
+                            '" found_at="' + this.UTIL.parseDate(jsonLastScanReportResp.results[item].foundAt) +
                             '" state="' + jsonLastScanReportResp.results[item].state +
                             '" status="' + jsonLastScanReportResp.results[item].status +
                             '" app_id="' + appId +
@@ -489,7 +495,7 @@ CheckmarxOneAppVulItemIntegration.prototype = Object.extendsObject(sn_vul.Applic
 
             for (var entry in jsonApiSecScanReportResp.entries) {
                 if (((resultStateFilter && result_state_array.includes(jsonApiSecScanReportResp.entries[entry].state)) ||
-                        !resultStateFilter) &&
+                    !resultStateFilter) &&
                     severity_array.includes(jsonApiSecScanReportResp.entries[entry].severity.toUpperCase())) {
 
                     var affectedUrl = jsonApiSecScanReportResp.entries[entry].http_method + " " + jsonApiSecScanReportResp.entries[entry].url;
