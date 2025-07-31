@@ -265,7 +265,8 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
                         infObj[gs.getMessage("Project Id")] = node.getAttribute('app_id');
                         resultObj['source_additional_info'] = JSON.stringify(infObj);
                         resultObj['source_finding_status'] = node.getAttribute('state');
-                        resultObj['last_found'] = reportData.last_scan_date.getDate();
+                        resultObj['last_found'] = new GlideDateTime(node.getAttribute('found_at')).getDate();
+                        resultObj['last_found_dt_tm'] = new GlideDateTime(node.getAttribute('found_at'));
                         resultObj['source_severity'] = source_severity_string;
                         resultObj['complies_with_policy'] = 'not_applicable';
                         resultObj['source_entry_id'] = queryData['source_entry_id'];
@@ -341,7 +342,7 @@ CheckmarxOneAppVulItemProcessor.prototype = Object.extendsObject(sn_vul.Applicat
             gs.error(this.MSG + " _upsert : Error while inserting data into ServiceNow App Vul Item Table." + err);
         }
     },
-
+    
     _handleSimilarityId: function(similarityId, similarityIdHash, projectId) {
         var avit = new sn_vul.PagedGlideRecord('sn_vul_app_vulnerable_item');
         avit.addQuery('source_avit_id', similarityId);
