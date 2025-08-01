@@ -77,7 +77,7 @@ CheckmarxOneConfigUtilBase.prototype = {
                 "filter_project": gr.getValue("filter_project"),
                 "severity": gr.getValue("severity"),
                 "scan_type": gs.nil(gr.getValue("scan_type")) ? "" : gr.getValue("scan_type"),
-				"close_findings_of_deleted_projects": gr.getValue("close_findings_of_deleted_projects") === "1",
+                "close_findings_of_deleted_projects": gr.getValue("close_findings_of_deleted_projects") === "1",
             };
 
             new sn_sec_int.Implementation().setConfiguration(instance, newconfig);

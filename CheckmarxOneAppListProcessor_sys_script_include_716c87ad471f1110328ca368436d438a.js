@@ -38,7 +38,7 @@ CheckmarxOneAppListProcessor.prototype = Object.extendsObject(sn_vul.Application
                 var childIter = appNode.getChildNodeIterator();
                 var projectTagsFlag = 'false';
                 var primaryBranchFlag = 'false';
-                while (childIter.hasNext) {
+                while (childIter.hasNext()) {
                     var childNode = childIter.next();
                     if (childNode.getNodeName() == "projectTags") {
                         projectTags = childNode.getTextContent();

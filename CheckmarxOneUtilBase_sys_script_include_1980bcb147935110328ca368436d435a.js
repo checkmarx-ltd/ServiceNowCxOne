@@ -267,7 +267,7 @@ CheckmarxOneUtilBase.prototype = {
 
             if (list_projects && list_projects.length > 0 && list_projects.indexOf('exclude') == -1 && filter_project == 'by_Id') {
                 var index = parseInt(offsetno);
-                var offsetLength = index + 50;
+                var offsetLength = index + limit_val;
                 if (offsetLength > list_projects.length) {
                     offsetLength = list_projects.length;
                 }
@@ -439,7 +439,7 @@ CheckmarxOneUtilBase.prototype = {
         return projectJSON;
     },
 
-    //get Project Branch List
+    // Get Project Branch List with pagination
     getProjectBranchList: function(configId, projectId) {
         try {
             var request = new sn_ws.RESTMessageV2();
@@ -447,17 +447,44 @@ CheckmarxOneUtilBase.prototype = {
             var accesscontrolbaseUrl = config.checkmarxone_server_url;
             var apibaseurl = config.checkmarxone_api_base_url;
             var method = "post";
+
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
-            var query = '/api/projects/branches?project-id=' + projectId;
-            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
-            var body = resp.getBody();
-            var projectJSON = JSON.parse(body);
+
+            var limit = 1000;
+            var offset = 0;
+            var allBranches = [];
+
+            while (true) {
+                var query = '/api/projects/branches?project-id=' + projectId +
+                    '&limit=' + limit + '&offset=' + offset;
+
+                var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
+                var body = resp.getBody();
+                var batch = JSON.parse(body);
+
+                // Check if it's an array
+                if (!Array.isArray(batch)) {
+                    throw 'Expected API response to be a list/array';
+                }
+
+                // Append to the result array
+                allBranches = allBranches.concat(batch);
+
+                // If less than limit, we are done
+                if (batch.length < limit) {
+                    break;
+                }
+
+                // Otherwise, increase offset and keep going
+                offset += limit;
+            }
+
+            return allBranches;
 
         } catch (err) {
             gs.error(this.MSG + " getProjectBranchList: Error while getting the project info: " + err);
             throw err;
         }
-        return projectJSON;
     },
 
     //get Project By Name
@@ -572,14 +599,11 @@ CheckmarxOneUtilBase.prototype = {
             var apibaseurl = config.checkmarxone_api_base_url;
             var method = "post";
             var token = this.getAccessToken(accesscontrolbaseUrl, config, method, request, configId);
-            for (var item in branches) {
-                branch += '&branches=' + encodeURIComponent(branches[item]);
-            }
 
-            var query = '/api/scans/?statuses=Completed&project-id=' + projectId + '&from-date=' + last_run_date + '&sort=-created_at&sort=%2Bstatus&field=scan-ids' + branch;
-
-            var resp = this._makeRestApiCall(apibaseurl, configId, token, query, "get");
-            var jsonLastScanSummResp = JSON.parse(resp.getBody());
+            // Define base query without offset/limit
+            var baseQuery = '/api/scans/?statuses=Completed&project-id=' + projectId + '&from-date=' + last_run_date + '&sort=-created_at&sort=%2Bstatus&field=scan-ids';
+            // Use pagination helper
+            var jsonLastScanSummResp = this._makePaginatedScansApiCall(apibaseurl, configId, token, baseQuery, "get", 'scans');
         } catch (err) {
             gs.error(this.MSG + " :getScanListFilterByMultipleBranch :Error in getting the scan details with branch filter: " + err);
             return -1;
@@ -1186,10 +1210,11 @@ CheckmarxOneUtilBase.prototype = {
                         counts = ScanSummaryJson.engineOverviews[item].riskSummary.info;
                         flaws += counts;
                     }
+                    if (ScanSummaryJson.engineOverviews[item].status != 'Completed') {
+                        flaws = -1;
+                    }
                 }
-                if (ScanSummaryJson.engineOverviews[item].status != 'Completed') {
-                    flaws = -1;
-                }
+
 
             }
         } catch (err) {
@@ -1246,9 +1271,10 @@ CheckmarxOneUtilBase.prototype = {
                         counts = ScanSummaryJson.engineOverviews[item].riskSummary.info;
                         flaws += counts;
                     }
-                }
-                if (ScanSummaryJson.engineOverviews[item].status != 'Completed') {
-                    flaws = -1;
+
+                    if (ScanSummaryJson.engineOverviews[item].status != 'Completed') {
+                        flaws = -1;
+                    }
                 }
 
             }
@@ -1715,17 +1741,31 @@ CheckmarxOneUtilBase.prototype = {
             var status = response.getStatusCode();
             if (status == 200 || status == 202)
                 return response;
-
             if (status <= 0)
                 throw gs.getMessage("Request could not be completed: {0} Reason : {1}", [endpoint, response.getErrorMessage()]);
             if (status == 400) {
                 throw gs.getMessage("Bad request: {0} Reason : {1}", [endpoint, response.getErrorMessage()]);
             }
             if (status == -1 || status == 408 || status == 504 || status == 502 || status == 500) {
+
+                // Special handling for status 500 with error code 5005 for deleted projects or scans
+                if (status == 500) {
+                    try {
+                        var responseBody = JSON.parse(response.getBody());
+                        var responseErrorCode = responseBody.code;
+                        if (responseErrorCode === 5005) {
+                            gs.warn("Checkmarx returned error code 5005: Project or scan not found (it may have been deleted), request URL: " + endpoint);
+                            return response;
+                        }
+                    } catch (parseError) {
+                        // If JSON parsing fails, continue with retry logic below
+                    }
+                }
+
                 this.customSleep(5000);
                 var nextResponse = request.execute();
                 var nextStatus = nextResponse.getStatusCode();
-                if (newStatus == 200 || nextStatus == 202) {
+                if (nextStatus == 200 || nextStatus == 202) {
                     return nextResponse;
                 } else {
                     throw gs.getMessage("Request timed out: {0} Reason : {1}", [endpoint, response.getErrorMessage()]);
@@ -1759,7 +1799,7 @@ CheckmarxOneUtilBase.prototype = {
             this.customSleep(5000);
             var catchResponse = request.execute();
             var catchStatus = catchResponse.getStatusCode();
-            if (newStatus == 200 || nextStatus == 202) {
+            if (catchStatus == 200 || catchStatus == 202) {
                 return catchResponse;
             } else {
                 gs.error(this.MSG + " :_checkResponseStatus :Error in checking the response of the API call." + err);
@@ -2049,28 +2089,28 @@ CheckmarxOneUtilBase.prototype = {
 
     },
 
-	// Helper function to escape CDATA content
+    // Helper function to escape CDATA content
     escapeCDATA: function(str) {
-        if (str === null || typeof str === 'undefined' || str == '') {
-			return '';
-		}
+        if (str === null || typeof str === 'undefined' || str === '') {
+            return '';
+        }
         // When ]]> appears in content, replace it with ]]]]><![CDATA[>
         var escaped = str.toString().replace(/]]>/g, ']]]]><![CDATA[>');
         return '<![CDATA[' + escaped + ']]>';
     },
 
-	// Helper function to escape xml special characters
-	escapeXmlChars: function(str) {
-		if (str === null || typeof str === 'undefined' || str == '') {
-			return '';
-		}
-		str = String(str); 
-		return str.replace(/&/g, '&amp;')
-				.replace(/</g, '&lt;')
-				.replace(/>/g, '&gt;')
-				.replace(/"/g, '&quot;')
-				.replace(/'/g, '&apos;');
-	},
+    // Helper function to escape xml special characters
+    escapeXmlChars: function(str) {
+        if (str === null || typeof str === 'undefined' || str === '') {
+            return '';
+        }
+        str = String(str);
+        return str.replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&apos;');
+    },
 
     //value of sca checkbox
     importScaFlaw: function(configId) {

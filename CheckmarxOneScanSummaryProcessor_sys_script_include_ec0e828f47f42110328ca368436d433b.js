@@ -44,8 +44,6 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                     try {
                         var SastappNode = iteration.next();
                         var Sastattributes = SastappNode.getAttributes();
-                        var prvScanId = Sastattributes.prvScanId;
-                        var prvBranch = Sastattributes.prvBranch;
                         //map attributes from CheckmarxOne into the servicenow scan summary table
                         sastdata['source_app_id'] = Sastattributes.app_id;
                         sastdata['source_scan_id'] = Sastattributes.id;
@@ -53,7 +51,9 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                         sastdata['last_scan_date'] = new GlideDateTime(Sastattributes.last_scan_date);
                         sastdata['scan_summary_name'] = Sastattributes.id + ' ' + sastdata['last_scan_date'];
                         sastdata['scan_analysis_size'] = +Sastattributes.loc;
-                        sastdata['tags'] = "Branch: " + Sastattributes.branch + " | Old ScanId: " + prvScanId + " | Old Branch: " + prvBranch;
+                        sastdata['policy'] = Sastattributes.engine;
+                        sastdata['source_sdlc_status'] = Sastattributes.scan_id;
+                        sastdata['tags'] = "Branch: " + Sastattributes.branch;
                         sastdata['scan_submitted_by'] = 'Scan Origin: ' + Sastattributes.scan_origin + '\n' + 'Scan Source: ' + Sastattributes.scan_source + '\n' + 'Scan Type: ' + Sastattributes.scan_type + '\n';
                         this._upsert(sastdata);
                     } catch (ex) {
@@ -71,14 +71,15 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                     try {
                         var appNode = iter.next();
                         var attributes = appNode.getAttributes();
-                        var scaPrvScanId = attributes.prvScanId;
                         //map attributes from Checkmarx into the servicenow scan summary table
                         data['source_app_id'] = attributes.app_id;
                         data['source_scan_id'] = attributes.id;
                         data['detected_flaw_count'] = +attributes.total_no_flaws;
                         data['last_scan_date'] = new GlideDateTime(attributes.last_scan_date);
                         data['scan_summary_name'] = attributes.id + ' ' + data['last_scan_date'];
-                        data['tags'] = "Branch: " + attributes.branch + " | Old ScanId: " + scaPrvScanId + " | Old Branch: " + prvBranch;
+                        data['policy'] = attributes.engine;
+                        data['source_sdlc_status'] = attributes.scan_id;
+                        data['tags'] = "Branch: " + attributes.branch;
                         data['scan_submitted_by'] = 'Scan Origin: ' + attributes.scan_origin + '\n' + 'Scan Source: ' + attributes.scan_source + '\n' + 'Scan Type: ' + attributes.scan_type + '\n';
                         this._upsert(data);
                     } catch (ex) {
@@ -96,14 +97,15 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                     try {
                         var kicsappNode = kicsiteration.next();
                         var kicsattributes = kicsappNode.getAttributes();
-                        var kicsPrvScanId = kicsattributes.prvScanId;
                         //map attributes from CheckmarxOne into the servicenow scan summary table
                         kicsdata['source_app_id'] = kicsattributes.app_id;
                         kicsdata['source_scan_id'] = kicsattributes.id;
                         kicsdata['detected_flaw_count'] = +kicsattributes.total_no_flaws;
                         kicsdata['last_scan_date'] = new GlideDateTime(kicsattributes.last_scan_date);
                         kicsdata['scan_summary_name'] = kicsattributes.id + ' ' + kicsdata['last_scan_date'];
-                        kicsdata['tags'] = "Branch: " + kicsattributes.branch + " | Old ScanId: " + kicsPrvScanId + " | Old Branch: " + prvBranch;
+                        kicsdata['policy'] = kicsattributes.engine;
+                        kicsdata['source_sdlc_status'] = kicsattributes.scan_id;
+                        kicsdata['tags'] = "Branch: " + kicsattributes.branch;
                         kicsdata['scan_submitted_by'] = 'Scan Origin: ' + kicsattributes.scan_origin + '\n' + 'Scan Source: ' + kicsattributes.scan_source + '\n' + 'Scan Type: ' + kicsattributes.scan_type + '\n';
                         this._upsert(kicsdata);
                     } catch (ex) {
@@ -121,14 +123,15 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                     try {
                         var conSecAppNode = conSecIteration.next();
                         var conSecAttributes = conSecAppNode.getAttributes();
-                        var conSecPrvScanId = conSecAttributes.prvScanId;
                         //map attributes from CheckmarxOne into the servicenow scan summary table
                         conSecData['source_app_id'] = conSecAttributes.app_id;
                         conSecData['source_scan_id'] = conSecAttributes.id;
                         conSecData['detected_flaw_count'] = +conSecAttributes.total_no_flaws;
                         conSecData['last_scan_date'] = new GlideDateTime(conSecAttributes.last_scan_date);
                         conSecData['scan_summary_name'] = conSecAttributes.id + ' ' + conSecData['last_scan_date'];
-                        conSecData['tags'] = "Branch: " + conSecAttributes.branch + " | Old ScanId: " + conSecPrvScanId + " | Old Branch: " + prvBranch;
+                        conSecData['policy'] = conSecAttributes.engine;
+                        conSecData['source_sdlc_status'] = conSecAttributes.scan_id;
+                        conSecData['tags'] = "Branch: " + conSecAttributes.branch;
                         conSecData['scan_submitted_by'] = 'Scan Origin: ' + conSecAttributes.scan_origin + '\n' + 'Scan Source: ' + conSecAttributes.scan_source + '\n' + 'Scan Type: ' + conSecAttributes.scan_type + '\n';
                         this._upsert(conSecData);
                     } catch (ex) {
@@ -146,14 +149,15 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                     try {
                         var apiSecAppNode = apiSecIteration.next();
                         var apiSecAttributes = apiSecAppNode.getAttributes();
-                        var apiSecPrvScanId = apiSecAttributes.prvScanId;
                         // Map API Security attributes
                         apiSecData['source_app_id'] = apiSecAttributes.app_id;
                         apiSecData['source_scan_id'] = apiSecAttributes.id;
                         apiSecData['detected_flaw_count'] = +apiSecAttributes.total_no_flaws;
                         apiSecData['last_scan_date'] = new GlideDateTime(apiSecAttributes.last_scan_date);
                         apiSecData['scan_summary_name'] = apiSecAttributes.id + ' ' + apiSecData['last_scan_date'];
-                        apiSecData['tags'] = "Branch: " + apiSecAttributes.branch + " | Old ScanId: " + apiSecPrvScanId + " | Old Branch: " + prvBranch;
+                        apiSecData['policy'] = apiSecAttributes.engine;
+                        apiSecData['source_sdlc_status'] = apiSecAttributes.scan_id;
+                        apiSecData['tags'] = "Branch: " + apiSecAttributes.branch;
                         apiSecData['scan_submitted_by'] = 'Scan Origin: ' + apiSecAttributes.scan_origin + '\n' + 'Scan Source: ' + apiSecAttributes.scan_source + '\n' + 'Scan Type: ' + apiSecAttributes.scan_type + '\n';
                         this._upsert(apiSecData);
                     } catch (ex) {
@@ -170,14 +174,15 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                     try {
                         var scoreCardAppNode = scoreCardIteration.next();
                         var scoreCardAttributes = scoreCardAppNode.getAttributes();
-                        var scoreCardcPrvScanId = scoreCardAttributes.prvScanId;
                         //map attributes from CheckmarxOne into the servicenow scan summary table
                         scoreCardData['source_app_id'] = scoreCardAttributes.app_id;
                         scoreCardData['source_scan_id'] = scoreCardAttributes.id;
                         scoreCardData['detected_flaw_count'] = +scoreCardAttributes.total_no_flaws;
                         scoreCardData['last_scan_date'] = new GlideDateTime(scoreCardAttributes.last_scan_date);
                         scoreCardData['scan_summary_name'] = scoreCardAttributes.id + ' ' + scoreCardData['last_scan_date'];
-                        scoreCardData['tags'] = "Branch: " + scoreCardAttributes.branch + " | Old ScanId: " + scoreCardcPrvScanId + " | Old Branch: " + prvBranch;
+                        scoreCardData['policy'] = scoreCardAttributes.engine;
+                        scoreCardData['source_sdlc_status'] = scoreCardAttributes.scan_id;
+                        scoreCardData['tags'] = "Branch: " + scoreCardAttributes.branch;
                         scoreCardData['scan_submitted_by'] = 'Scan Origin: ' + scoreCardAttributes.scan_origin + '\n' + 'Scan Source: ' +
                             scoreCardAttributes.scan_source + '\n' + 'Scan Type: ' + scoreCardAttributes.scan_type + '\n';
                         this._upsert(scoreCardData);
@@ -196,14 +201,15 @@ CheckmarxOneScanSummaryProcessor.prototype = Object.extendsObject(sn_vul.Applica
                     try {
                         var secretDetectionAppNode = secretDetectionIteration.next();
                         var secretDetectionAttributes = secretDetectionAppNode.getAttributes();
-                        var secretDetectionPrvScanId = secretDetectionAttributes.prvScanId;
                         //map attributes from CheckmarxOne into the servicenow scan summary table
                         secretDetectionData['source_app_id'] = secretDetectionAttributes.app_id;
                         secretDetectionData['source_scan_id'] = secretDetectionAttributes.id;
                         secretDetectionData['detected_flaw_count'] = +secretDetectionAttributes.total_no_flaws;
                         secretDetectionData['last_scan_date'] = new GlideDateTime(secretDetectionAttributes.last_scan_date);
                         secretDetectionData['scan_summary_name'] = secretDetectionAttributes.id + ' ' + secretDetectionAttributes['last_scan_date'];
-                        secretDetectionData['tags'] = "Branch: " + secretDetectionAttributes.branch + " | Old ScanId: " + secretDetectionAttributes + " | Old Branch: " + prvBranch;
+                        secretDetectionData['policy'] = secretDetectionAttributes.engine;
+                        secretDetectionData['source_sdlc_status'] = secretDetectionAttributes.scan_id;
+                        secretDetectionData['tags'] = "Branch: " + secretDetectionAttributes.branch;
                         secretDetectionData['scan_submitted_by'] = 'Scan Origin: ' + secretDetectionAttributes.scan_origin + '\n' + 'Scan Source: ' +
                             secretDetectionAttributes.scan_source + '\n' + 'Scan Type: ' + secretDetectionAttributes.scan_type + '\n';
                         this._upsert(secretDetectionData);
