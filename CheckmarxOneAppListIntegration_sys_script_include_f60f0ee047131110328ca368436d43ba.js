@@ -56,12 +56,12 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
     //Creates XML summary for Projects
     getAppList: function(filteredCount, offset) {
         try {
-            
+            var config = this.UTIL._getConfig(this.IMPLEMENTATION);
             var appListRootNodeStart = "<appInfoList><xml id=\"checkmarxone\"><projects>";
             var appListRootNodeEnd = "</projects></xml></appInfoList>";
             var appListAll = '';
-            //to start offset from 0 and limit 50
-            var newoffset = offset - 50;
+            //to start offset from 0 and config.limit 
+            var newoffset = offset - config.limit;
             var projects = this.UTIL.getNextProjectList(this.IMPLEMENTATION, newoffset);
             var groups = '';
             var groupval = ' ';
@@ -79,24 +79,17 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
                     if (null != projects[item].mainBranch && projects[item].mainBranch.length > 0)
                         primaryBranch = projects[item].mainBranch.toString();
 
-                    if (groups == 0) {
-                        appListAll += '<project id="' + projects[item].id +
-                            '" createdAt="' + projects[item].createdAt +
-                            '" applicationIds="' + applicationIds +
-                            '" groups="' + groupval + '"><primaryBranch><' +
-                            '![CDATA[' + primaryBranch + ']]' + '></primaryBranch><projectTags><' +
-                            '![CDATA[' + projectTags + ']]' + '></projectTags><name><' +
-                            '![CDATA[' + projects[item].name + ']]' + '></name></project>';
+                    var currentGroupVal = (groups.length == 0) ? groupval : projects[item].groups.toString();
 
-                    } else {
-                        appListAll += '<project id="' + projects[item].id +
-                            '" createdAt="' + projects[item].createdAt +
-                            '" applicationIds="' + applicationIds +
-                            '" groups="' + projects[item].groups.toString() + '"><primaryBranch><' +
-                            '![CDATA[' + primaryBranch + ']]' + '></primaryBranch><projectTags><' +
-                            '![CDATA[' + projectTags + ']]' + '></projectTags><name><' +
-                            '![CDATA[' + projects[item].name + ']]' + '></name></project>';
-                    }
+                    appListAll += '<project id="' + this.UTIL.escapeXmlChars(projects[item].id) + '"' +
+                        ' createdAt="' + this.UTIL.escapeXmlChars(projects[item].createdAt) + '"' +
+                        ' applicationIds="' + this.UTIL.escapeXmlChars(applicationIds) + '"' +
+                        ' groups="' + this.UTIL.escapeXmlChars(currentGroupVal) + '">' +
+                        '<primaryBranch>' + this.UTIL.escapeCDATA(primaryBranch) + '</primaryBranch>' +
+                        '<projectTags>' + this.UTIL.escapeCDATA(projectTags) + '</projectTags>' +
+                        '<name>' + this.UTIL.escapeCDATA(projects[item].name) + '</name>' +
+                        '</project>';
+
                 }
                 if (appListAll == '' && createdDate > projects[item].createdAt) {
                     return -1;
@@ -166,18 +159,20 @@ CheckmarxOneAppListIntegration.prototype = Object.extendsObject(sn_vul.Applicati
     },
     //to get offset value from total length
     _getoffsets: function(filteredCount, totalCount) {
+        var config = this.UTIL._getConfig(this.IMPLEMENTATION);
+        var limit = config.limit;
         var offsets = [];
-        var loopLength = totalCount / 50;
+        var loopLength = totalCount / limit;
         var offset = 0;
         for (var i = 0; i <= parseInt(loopLength); i++) {
-            offset += 50;
+            offset += limit;
             var offsetId = this._getoffset(filteredCount, offset);
             if (offsetId) {
                 offsets.push(offsetId);
                 var date = new GlideDateTime();
             }
         }
-        //returning offset from 50 instead of 0 because remaining value in run will throw error if 0 is passed.
+        //returning offset from of limit instead of 0 because remaining value in run will throw error if 0 is passed.
         return offsets;
     },
 
